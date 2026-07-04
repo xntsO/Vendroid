@@ -1,0 +1,25 @@
+Vendroid USB diske kalıp yazmana yardımcı olan açık kaynaklı bir yazılımdır.
+Laptop'un çalışmadığında önyüklenebilir bir işletim sistemi USB belleği oluşturmak için kullan.
+
+⭐️ Desteklenen cihazlar ⭐️
+
+✅ USB flash bellekler
+✅ USB SD kart adaptörler
+❌ USB hard diskler / SSD'ler
+❌ USB dock ve hub'lar
+❌ Dahili SD kart yuvası
+❌ Optik veya disket sürücüleri
+❌ Thunderbolt-özel cihazlar
+
+
+⭐️ Desteklenen disk kalıp türleri ⭐️
+
+✅ Arch Linux, Ubuntu, Debian, Fedora, pop!_OS, Linux Mint, FreeBSD, BlissOS ve çok daha fazlası olmak üzere modern GNU/Linux işletim sistem kalıpları
+✅ Raspberry PI SD kart kalıpları (ama öncelikle arşivden çıkarılmalı!)
+❌ Resmî Microsoft Windows ISO'ları
+⚠️ Vendroid için yapılan topluluk yapımı Windows kalıpları (dikkatli olun: imajlar virüs içerebilir!)
+❌ Apple DMG disk kalıpları
+❌ Eski GNU/Linux OS kalıpları < 2010 Damn Small Linux gibi
+
+
+Kaynak koduna GitHub'dan ulaşılabilir: https://github.com/Vendroid/Vendroid

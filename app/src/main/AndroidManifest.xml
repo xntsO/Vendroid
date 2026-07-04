@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-feature
+        android:name="android.hardware.usb.host"
+        android:required="true" />
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <application
+        android:name=".VendroidApplication"
+        android:allowBackup="true"
+        android:enableOnBackInvokedCallback="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:requestLegacyExternalStorage="true"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:resizeableActivity="true"
+        android:theme="@style/AppTheme"
+        tools:ignore="UnusedAttribute">
+
+        <activity
+            android:name=".ui.AboutActivity"
+            android:exported="false"
+            android:label="@string/about"
+            android:theme="@style/AppTheme"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".ui.ConfirmOperationActivity"
+            android:exported="false"
+            android:label="@string/title_activity_confirm_operation"
+            android:theme="@style/AppTheme"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".ui.ProgressActivity"
+            android:exported="false"
+            android:label="@string/writing_image"
+            android:theme="@style/AppTheme"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:theme="@style/AppTheme"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Open ISO files by mimetype -->
+            <intent-filter android:label="@string/app_name">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="file" />
+                <data android:scheme="content" />
+                <data android:mimeType="application/x-iso9660-image" />
+                <data android:host="*" />
+            </intent-filter>
+
+            <!-- Open ISO files by extension -->
+            <intent-filter android:label="@string/app_name">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="file" />
+                <data android:scheme="content" />
+                <data android:mimeType="*/*" />
+                <data android:host="*" />
+                <!--
+                     Work around Android's ugly primitive PatternMatcher
+                     implementation that can't cope with finding a . early in
+                     the path unless it's explicitly matched.
+                     https://stackoverflow.com/a/31028507/1124621
+                -->
+                <data android:pathPattern=".*\\.iso" />
+                <data android:pathPattern=".*\\..*\\.iso" />
+                <data android:pathPattern=".*\\..*\\..*\\.iso" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.iso" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.iso" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\.iso" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\.iso" />
+                <data android:pathPattern=".*\\.img" />
+                <data android:pathPattern=".*\\..*\\.img" />
+                <data android:pathPattern=".*\\..*\\..*\\.img" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\.img" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\.img" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\.img" />
+                <data android:pathPattern=".*\\..*\\..*\\..*\\..*\\..*\\..*\\.img" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".service.WorkerService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="This service interacts with a connected USB device to perform data transfers. One would think the `connectedDevice` service type should apply, but it can&apos;t be used since it requires me to declare completely unrelated permissions relating to NFC, UWB, Bluetooth, Wi-Fi, and no proper way to use it for USB devices is provided." />
+        </service>
+    </application>
+
+</manifest>

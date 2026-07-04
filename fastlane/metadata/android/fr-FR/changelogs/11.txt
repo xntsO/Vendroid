@@ -1,0 +1,2 @@
+- Vendroid utilise maintenant libusb sous le manteau. Cela devrait apporter une stabilité bien meilleure.
+- Le bouton interrupteur du mode nuit est désactivé sur Pie ou plus récent car il causerait des problèmes à de nombreuses personnes. Si vous aimeriez son retour, merci de me le faire savoir.

@@ -1,0 +1,274 @@
+name: Build and test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  # If changed, also update the variables in appium-tests/scripts/prepare-vm.sh
+  BLISSOS_FILE: 'Bliss-v16.9.7-x86_64-OFFICIAL-foss-20241011.iso'
+  BLISSOS_URL: 'https://deac-riga.dl.sourceforge.net/project/blissos-x86/Official/BlissOS16/FOSS/Generic/'
+  VM_DIR: /appium-vm
+
+jobs:
+  build:
+    name: Build ${{ matrix.variant }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        variant:
+          - foss
+          - gplay
+      fail-fast: false
+
+    env:
+      JAVA_TOOL_OPTIONS: "-Xmx4g"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: wrapper
+          cache-read-only: false
+          add-job-summary: on-failure
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Set up Firebase config
+        run: |
+          cat <<'EOF' > app/google-services.json
+          ${{ secrets.GOOGLE_SERVICES_JSON }}
+          EOF
+
+          # Use mock if the secret is not available
+          if [[ "$(wc -c < app/google-services.json)" -lt 10 ]]; then
+            cp misc/mock-google-services.json app/google-services.json
+          fi
+
+      - name: Build ${{ matrix.variant }}
+        run: ./gradlew assemble${VARIANT^}Debug assemble${VARIANT^}Optimized --scan --configuration-cache
+        env:
+          ETCHDROID_ENABLE_SENTRY: ${{ matrix.variant == 'Gplay' }}
+          VARIANT: ${{ matrix.variant }}
+
+      - name: Upload built debug APK
+        uses: actions/upload-artifact@v5
+        with:
+          name: app-${{ matrix.variant }}-debug
+          path: app/build/outputs/apk/${{ matrix.variant }}/debug/app-${{ matrix.variant }}-debug.apk
+
+      - name: Upload built optimized APK
+        uses: actions/upload-artifact@v5
+        with:
+          name: app-${{ matrix.variant }}-optimized
+          path: app/build/outputs/apk/${{ matrix.variant }}/optimized/app-${{ matrix.variant }}-optimized.apk
+
+  unit-tests:
+    name: Unit tests for ${{ matrix.variant }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        variant:
+          - foss
+          - gplay
+      fail-fast: false
+
+    env:
+      JAVA_TOOL_OPTIONS: "-Xmx4g"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: wrapper
+          cache-read-only: false
+          add-job-summary: on-failure
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Set up Firebase config
+        run: |
+          cat <<'EOF' > app/google-services.json
+          ${{ secrets.GOOGLE_SERVICES_JSON }}
+          EOF
+
+          # Use mock if the secret is not available
+          if [[ "$(wc -c < app/google-services.json)" -lt 10 ]]; then
+            cp misc/mock-google-services.json app/google-services.json
+          fi
+
+      - name: Run unit tests for ${{ matrix.variant }}
+        run: ./gradlew test${VARIANT^}DebugUnitTest --scan --configuration-cache
+        env:
+          ETCHDROID_ENABLE_SENTRY: ${{ matrix.variant == 'Gplay' }}
+          VARIANT: ${{ matrix.variant }}
+
+      - name: Publish test report
+        uses: mikepenz/action-junit-report@v5
+        if: (success() || failure()) && github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          check_name: Unit test report for ${{ matrix.variant }}
+          detailed_summary: true
+          report_paths: 'app/build/test-results/*/TEST-*.xml'
+          require_tests: true
+
+  qemu-tests:
+    name: End-to-end tests for ${{ matrix.variant }}
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        variant:
+          - foss
+          - gplay
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Download APK
+        uses: actions/download-artifact@v5
+        with:
+          name: app-${{ matrix.variant }}-optimized
+          path: apk
+
+      - name: Install QEMU
+        uses: etchdroid/qemu-kvm-action/setup@v1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          check-latest: true
+          cache: 'npm'
+          cache-dependency-path: appium-tests/package-lock.json
+
+      - name: Install Appium
+        run: |
+          cd appium-tests
+          npm ci
+          sudo mkdir "$VM_DIR"
+          sudo chown "$USER" "$VM_DIR"
+
+      - name: Restore BlissOS image from cache
+        uses: actions/cache/restore@v4
+        with:
+          key: ${{ env.BLISSOS_FILE }}
+          restore-keys: ${{ env.BLISSOS_FILE }}
+          path: ${{ env.VM_DIR }}
+
+      - name: Prepare BlissOS VM
+        id: prepare-vm
+        run: |
+          ./appium-tests/scripts/prepare-vm.sh
+          # Save cache space by removing the ISO, we only need the extracted contents for QEMU
+          rm -f "${{ env.VM_DIR }}/${{ env.BLISSOS_FILE }}"
+
+      - name: Store BlissOS to cache
+        uses: actions/cache/save@v4
+        if: steps.prepare-vm.outputs.cached == 0
+        with:
+          key: ${{ env.BLISSOS_FILE }}
+          path: ${{ env.VM_DIR }}
+
+      - name: Create virtual USB drive image
+        run: mkdir -p vm-outputs
+
+      - name: Run QEMU
+        id: run-qemu
+        uses: etchdroid/qemu-kvm-action@v1
+        with:
+          video-record: true
+          kernel: ${{ env.VM_DIR }}/kernel
+          initrd: ${{ env.VM_DIR }}/initrd.img
+          cmdline: 'root=/dev/ram0 androidboot.selinux=permissive console=ttyS0 FFMPEG_CODEC=1 FFMPEG_PREFER_C2=1'
+          video-output: vm-outputs/recording.mkv
+          flags: |
+            -chardev
+            stdio,id=char0,logfile=vm-outputs/serial.log,signal=off
+            -serial
+            chardev:char0
+            -netdev
+            user,id=network,hostfwd=tcp::5556-:5555
+            -device
+            virtio-net-pci,netdev=network
+            -device
+            virtio-vga-gl
+            -display
+            sdl,gl=on
+            -drive
+            index=0,if=virtio,id=system,file=${{ env.VM_DIR }}/system.efs,format=raw,readonly=on
+            -usb
+            -device
+            usb-tablet,bus=usb-bus.0
+            -device
+            nec-usb-xhci,id=xhci
+            -device
+            ich9-usb-uhci1,id=uhci
+            -drive
+            if=none,id=usbstick,file=${{ env.VM_DIR }}/usb-storage.qcow2,format=qcow2
+            -device
+            usb-storage,id=usbstick,bus=xhci.0,drive=usbstick,removable=on
+            -qmp
+            unix:/tmp/qmp.sock,server=on,wait=off
+            -monitor
+            unix:/tmp/qemu-monitor.sock,server=on,wait=off
+
+          run: |
+            cd appium-tests
+            export LOGCAT_DIR="$PWD/../vm-outputs/logcat/"
+            mkdir -p "$LOGCAT_DIR"
+            ./scripts/wait-vm-startup.sh
+            adb install -r ../apk/*.apk
+            adb logcat -d > "$LOGCAT_DIR/0_before.log" 2>&1
+            uv run pytest -sv --tb=native --junit-xml=../junit.xml
+
+      - name: Publish test report
+        uses: mikepenz/action-junit-report@v5
+        if: (success() || failure()) && github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          check_name: End-to-end test report for ${{ matrix.variant }}
+          detailed_summary: true
+          report_paths: junit.xml
+          require_tests: true
+
+      - name: Upload VM outputs
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: vm-outputs-${{ matrix.variant }}
+          path: vm-outputs/

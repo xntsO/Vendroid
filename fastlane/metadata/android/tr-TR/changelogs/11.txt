@@ -1,0 +1,2 @@
+• Vendroid artık perde arkasında libusb kullanıyor. Bu sayede daha kararlı olacaktır.
+• Birçok kişide sorunlara neden olabildiği için gece modu geçişi Pie veya daha yeni sürümlerde devre dışı bırakıldı. Lütfen geri istiyorsanız bana haber verin.

@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" comment=" App name, please do not translate " translatable="false">Vendroid</string>
+    <string name="cancel" comment="Cancel string, used all over the place">Cancel</string>
+    <string name="write_finished" comment="Notification title when the write operation is successful">Write finished</string>
+    <string name="success_notif_content_text" comment=" Notification title when the write operation is successful. Parameters: filename, device name">%1$s successfully written to %2$s</string>
+    <string name="write_failed" comment="Notification title when a non-recoverable error occurs">Write failed</string>
+    <string name="action_required" comment="Notification title when a recoverable error occurs">Action required</string>
+    <string name="notif_channel_job_progress_desc" comment="Notification channel description for long-running job progress, shown in Android settings">Used to show the progress of the current job</string>
+    <string name="notif_channel_job_progress_name" comment=" Notification channel name for long-running job progress, shown in Android settings">Job progress</string>
+    <string name="notif_channel_job_result_desc" comment=" Notification channel description for job outcome notifications, shown in Android settings">Used to show a completed job outcome</string>
+    <string name="notif_channel_job_result_name" comment=" Notification channel name for job outcome notifications, shown in Android settings">Job outcome</string>
+    <string name="notification_write_progress_title" comment=" Notification title used for long-running job status">Writing image…</string>
+    <string name="notification_verify_progress_title" comment=" Notification title used for long-running job status">Verifying image…</string>
+    <string name="notification_write_no_notifications_text" comment=" Notification content for long-running job status, used when the user has not granted the notification permission. The first parameter will be replaced with the source file name, the second one with the USB stick name">Enable notifications for progress • Writing %1$s to %2$s</string>
+    <string name="notification_write_tap_for_progress_text" comment=" Notification content for long-running job status, used when the user has granted the notification permission but no progress info is available. The first parameter will be replaced with the source file name, the second one with the USB stick name">Tap for progress • Writing %1$s to %2$s</string>
+    <string name="notification_write_progress_content" comment=" Notification content: &quot;{file name} to {device name}&quot;, used when the user has granted the notification permission; The notification title will be: &quot;Writing image…&quot; and this string will show up right below it.">%1$s to %2$s</string>
+    <string name="notification_verify_progress_content" comment=" Notification content: &quot;{device name} against {file name}&quot;, used when the user has granted the notification permission; The notification title will be: &quot;Verifying image…&quot; and this string will show up right below it.">%1$s against %2$s</string>
+    <string name="unknown_filename" comment="Placeholder file name">Unknown file name</string>
+    <string name="permission_denied_for_usb_device" comment="Displayed in a toast when the usb permission is denied">"Permission denied for USB device %1$s"</string>
+    <string name="usb_device_was_unplugged" comment="Displayed in a toast when the USB device is unplugged">USB device was unplugged</string>
+    <string name="write_an_image" comment="Displayed in the home page main call-to-action button">Write an image</string>
+    <string name="install_ventoy" comment="Displayed in the home page main call-to-action button">Install Ventoy</string>
+    <string name="force_install_ventoy" comment="Displayed as a secondary destructive install action">Force install</string>
+    <string name="whats_supported" comment="Displayed in the homepage; opens a page that lists all the supported devices and formats">What\'s supported?</string>
+    <string name="style" comment="Title of the menu that allows selecting the app color scheme">Style</string>
+    <string name="device_setting" comment="Style menu option that selects the device default light/dark theme">Device setting</string>
+    <string name="light" comment="Style menu option that selects the light theme">Light</string>
+    <string name="dark" comment="Style menu option that selects the dark theme">Dark</string>
+    <string name="dynamic_colors" comment="Style menu option that selects the Material You dynamic color scheme">Dynamic colors</string>
+    <string name="about" comment="Menu option that opens the about page">About</string>
+    <string name="is_this_a_windows_iso" comment="Dialog title; the dialog alerts the user that Windows images are not supported">Is this a Windows ISO?</string>
+    <string name="a_regular_windows_iso_won_t_work" comment="Dialog message; the dialog alerts the user that Windows images are not supported">A regular Windows ISO won\'t work with Vendroid, unless it has specifically been prepared for use with Vendroid, Etcher or dd.</string>
+    <string name="continue_anyway" comment="Dialog button text: if the user clicks it, the app ignores the warning and continues">Continue anyway</string>
+    <string name="select_a_usb_drive" comment="Title of the dialog listing the available USB drives">Select a USB drive</string>
+    <string name="connect_a_usb_drive" comment="Title of the dialog listing the available USB drives, when no USB drive is connected">Connect a USB drive</string>
+    <string name="looking_for_usb_drives">Looking for USB drives</string>
+    <string name="confirm_operation" comment="Title of the page where the operation details are listed; the user can confirm or cancel the operation from here">Confirm operation</string>
+    <string name="disk_image">Disk image</string>
+    <string name="image_to_write" comment="Label for the card that displays the details about the image that is about to be written">Image to write</string>
+    <string name="usb_drive">USB drive</string>
+    <string name="destination_usb_device" comment="Label for the card that displays the details about the USB drive that is about to be used">Destination USB device</string>
+    <string name="unknown_device" comment="Device name placeholder">Unknown device</string>
+    <string name="grant_access" comment="Displayed on the button to request the permission to write to the USB drive. Keep it short.">Grant access</string>
+    <string name="permission_granted">Permission granted</string>
+    <string name="be_careful" comment="Title of the card that alerts the user that, if they continue, all data on the USB drive will be lost">Be careful!</string>
+    <string name="writing_the_image_will_erase" comment="Message displayed on the card that alerts the user that, if they continue, all data on the USB drive will be lost">Installing Ventoy will erase all data on the selected drive</string>
+    <string name="write_image" comment="Confirmation button; when pressed, the operation starts">Install</string>
+    <string name="lay_your_device_flat_no_accel" comment="Title of the dialog that forces the user to lay the device flat on a table before continuing, when the device has no gravity sensor">Lay your device flat on a table before continuing.</string>
+    <string name="continue_" comment="Button displayed in the dialog that forces the user to lay the device flat on a table before continuing, when the device has no gravity sensor; when pressed the operation starts.">Continue</string>
+    <string name="lay_your_device_flat" comment="Title of the dialog that forces the user to lay the device flat on a table before continuing, when the device has a gravity sensor">Lay your device flat on a table and don\'t touch it</string>
+    <string name="skip" comment="Button displayed in the dialog that forces the user to lay the device flat on a table before continuing, when the device has a gravity sensor; when pressed the flat check is skipped and the operation starts.">Skip</string>
+    <string name="supported" comment="Description of a device or image type that is supported">Supported</string>
+    <string name="maybe_supported" comment="Description of a device or image type that might be supported">Maybe supported</string>
+    <string name="not_supported" comment="Description of a device or image type that is not supported">Not supported</string>
+    <string name="supported_devices_and_images" comment="Title of the page that lists all the supported devices and images">Supported devices and images</string>
+    <string name="devices" comment="Title of the section that lists all the supported device types">Devices</string>
+    <string name="usb_flash_drives" comment="Device type">USB flash drives</string>
+    <string name="memory_cards_using_a_usb_adapter" comment="Device type">Memory cards, using a USB adapter</string>
+    <string name="usb_hard_drives_ssds_some_might_work" comment="Device type">USB hard drives / SSDs (some might work)</string>
+    <string name="usb_docks_and_hubs_might_have_power_issues" comment="Device type">USB docks and hubs (they might have power issues)</string>
+    <string name="memory_cards_using_the_internal_slot" comment="Device type">Memory cards, using the internal slot</string>
+    <string name="optical_disk_drives" comment="Device type">Optical disk drives</string>
+    <string name="floppy_disk_drives" comment="Device type">Floppy disk drives</string>
+    <string name="any_thunderbolt_only_device" comment="Device type">Any Thunderbolt-only device</string>
+    <string name="very_large_drives_2tb" comment="Device type">Very large drives (≥ 2 TB)</string>
+    <string name="disk_images" comment="Title of the section that lists all the supported image types">Disk images</string>
+    <string name="microsoft_windows_isos_any_version" comment="Image type">Microsoft Windows ISOs (any version)</string>
+    <string name="apple_dmg_disk_images" comment="Image type">Apple DMG disk images</string>
+    <string name="arch_linux_ubuntu_debian_fedora_pop_os_linux_mint_freebsd_etc" comment="Image type">Arch Linux, Ubuntu, Debian, Fedora, pop!_OS, Linux Mint, FreeBSD etc.</string>
+    <string name="other_modern_gnu_linux_and_bsd_distributions_live_isos" comment="Image type">Other modern GNU/Linux and BSD distributions\' live ISOs</string>
+    <string name="raspberry_pi_sd_card_images_unzip_first" comment="Image type">Raspberry Pi SD card images (unzip first!)</string>
+    <string name="any_other_image_that_works_with_balena_etcher_or_dd" comment="Image type">Any other image that works with Balena Etcher or dd</string>
+    <string name="older_gnu_linux_distributions_isos_2010" comment="Image type">Older GNU/Linux distributions\' ISOs (&lt; 2010)</string>
+    <string name="support_for_dmg_images_was_removed" comment="At the end of the supported devices and images page we state that DMGs are no longer supported; the parameter is replaced with the word &quot;GitHub&quot;">Support for DMG images was removed in Vendroid 2.0. Older versions can be downloaded from %1$s.</string>
+    <string name="developed_by" comment="Displayed in the about page; parameters are: author name, the word &quot;contributors&quot; (translated separately), &quot;GitHub&quot;">Developed by %1$s and other %2$s.\nSource code available on %3$s.\nLicensed under the GNU GPLv3 license.</string>
+    <string name="contributors" comment="Part of the following sentence: &quot;Developed by Author Name and other contributors&quot;">contributors</string>
+    <string name="website" comment="Displayed in the about page links; keep it very short!">Website</string>
+    <string name="support_the_project" comment="Displayed in the about page links; keep it short!">Support financially</string>
+    <string name="verifying_image" comment="Title of the progress page while an image is being verified">Verifying image</string>
+    <string name="writing_image" comment="Title of the progress page while an image is being written">Writing image</string>
+    <string name="please_avoid_using_your_device" comment="Subtitle of the progress page while an image is being written">Please avoid using your device</string>
+    <string name="would_you_like_to_be_notified" comment="Displayed in a card in the progress page; keep it concise, there's not much space">Would you like to be notified when done? Only progress updates, no spam or ads.</string>
+    <string name="no_thanks" comment="Button to reject receiving notifications">No, thanks</string>
+    <string name="sure" comment="Button to accept receiving notifications">Sure</string>
+    <string name="verifying" comment="As part of the sentence: &quot;Verifying DeviceName against FileName.iso&quot;; keep the same word order as English. Open an issue if it's not possible in your language.">Verifying</string>
+    <string name="copying" comment="As part of the sentence: &quot;Copying FileName.iso to DeviceName&quot;; keep the same word order as English. Open an issue if it's not possible in your language.">Copying</string>
+    <string name="against" comment="As part of the sentence: &quot;Verifying DeviceName against FileName.iso&quot;; keep the same word order as English. Open an issue if it's not possible in your language.">against</string>
+    <string name="to" comment="As part of the sentence: &quot;Copying FileName.iso to DeviceName&quot;; keep the same word order as English. Open an issue if it's not possible in your language.">to</string>
+    <string name="getting_ready" comment="Displayed in the progress info indicator while no progress data is available">Getting ready…</string>
+    <string name="skip_verification" comment="Displayed on a button that, when pressed, skips the verification of the written image">Skip verification</string>
+    <string name="image_written_successfully" comment="Title of the success page">Image written successfully!</string>
+    <string name="ventoy_installer_name" translatable="false">Ventoy installer</string>
+    <string name="write_a_review" comment="Displayed in a button on the success page">Write a review</string>
+    <string name="star_on_github" comment="Displayed in a button on the success page">Star on GitHub</string>
+    <string name="got_an_unsupported_drive_notification" comment="Title of the card that teaches the user about any &quot;Issues with this drive&quot; notifications">Got an \"Issues with this drive\" notification?</string>
+    <string name="it_s_safe_to_ignore" comment="Message of the card that teaches the user about any &quot;Issues with this drive&quot; notifications; the parameter will be replaced with the translation of &quot;Learn what it means&quot;">It\'s safe to ignore! Just unplug your drive and use it normally. %1$s and see how to format your drive later.</string>
+    <string name="learn_what_it_means" comment="Part of the message of the card that teaches the user about any &quot;Issues with this drive&quot; notifications; the full sentence is &quot;Learn what it means and see how to format your drive later&quot;">Learn what it means</string>
+    <string name="there_was_an_error" comment="Title of the non-recoverable error page">There was an error</string>
+    <string name="error">Error</string>
+    <string name="start_over" comment="Button in the error page that, when pressed, restarts the app">Start over</string>
+    <string name="try_again" comment="Button in the error page that, when pressed, retries the write from scratch">Try again</string>
+    <string name="i_did_not_unplug_it" comment="Title of the card that, when a USB disconnection is detected, teaches the user how it could have happened inadvertently">I did not unplug it!</string>
+    <string name="how_did_this_happen" comment="Title of the card that, when a recoverable error occurs, teaches the user why it could have happened">How did this happen?</string>
+    <string name="perhaps_your_usb_port_is_dirty" comment="Message of the card that, when a USB disconnection is detected, teaches the user how it could have happened inadvertently">Perhaps your USB port is dirty, your adapter is defective, or your device can\'t provide enough electrical power. Consider trying a different adapter or device.</string>
+    <string name="usb_drives_are_unreliable" comment="Message of the card that, when a recoverable error occurs, teaches the user why it could have happened">USB drives are unreliable, and Android doesn\'t grant enough permissions to recover automatically. We have to make do with what we have!</string>
+    <string name="this_is_unexpected_it_s_probably_a_bug_please_report_it" comment="Message of the card about a recoverable unknown error">This is unexpected, it\'s probably a bug. Please report it!</string>
+    <string name="to_recover_unplug" comment="Text that explains what to do when a recoverable error has occurred">To recover, unplug your USB drive, plug it back in and grant the permission to access it again.</string>
+    <string name="representation_of_the_required_steps" comment="Textual description (for accessibility purposes) of the graphic that shows the required steps to recover from a recoverable error">Representation of the required steps: unplug, reconnect, grant permission</string>
+    <string name="plug_in_the_same_usb" comment="Message displayed when a user tries to recover from a recoverable error but plugs in a different USB device">Plug in the same USB device you used before!</string>
+    <string name="usb_device_reconnected_resuming" comment="Message displayed in a toast when the write operation is successfully resumed">USB device reconnected, resuming</string>
+    <string name="the_device_is_not_responding" comment="Error message">The device is not responding</string>
+    <string name="missing_permission_to_access_the_usb_device" comment="Error message">Missing permission to access the USB device</string>
+    <string name="the_usb_drive_is_too_large" comment="Error message">The USB drive is too large and Vendroid does not support it.</string>
+    <string name="the_image_is_is_larger_than_the_device" comment="Error message; parameters are the image file size and the device size">The image (%1$s) is larger than the device (%2$s)</string>
+    <string name="could_not_open_the_source_file" comment="Error message">Could not open the source file</string>
+    <string name="an_unknown_error_occurred" comment="Error message; parameter is the underlying error message">An unknown error occurred: %1$s</string>
+    <string name="the_usb_drive_was_unplugged" comment="Error message">The USB drive was unplugged</string>
+    <string name="the_usb_drive_stopped_responding" comment="Error message">The USB drive stopped responding</string>
+    <string name="the_usb_device_content_does_not_match_the_image" comment="Error message displayed when the verification failed">The USB device content does not match the image</string>
+    <string name="write_another_image" comment="Displayed in the successful write page, when clicked the app goes back to the initial page">Write another image</string>
+    <string name="title_activity_confirm_operation" comment="Title of the screen that displays the summary of the operation about to be performed">Confirm operation</string>
+    <string name="no_image_uri_provided" comment="Error message (shown in a toast) when the operation confirmation screen is opened without a source file; the app redirects back to the home page">No image URI provided</string>
+    <string name="no_destination_device_selected" comment="Error message (shown in a toast) when the operation confirmation screen is opened without a destination device; the app redirects back to the home page">No destination device selected</string>
+    <string name="service_timeout_message" comment="Error message displayed when the background write service does not send any progress updates for a suspiciously long time. In this case, the app assumes the service got stuck and prompts the user to try again.">The writing process seems to have gotten stuck. Please try again.</string>
+    <string name="community_windows_images" comment="&quot;You're on your own&quot; can be translated with something similar to &quot;unsupported&quot; or &quot;be careful!&quot; if it makes more sense in the target language">Community-built Windows images, made for Vendroid (you\'re on your own: they might contain viruses!)</string>
+    <string name="worker_null_device_error" comment="Error message displayed when users get a mysterious NullPointerException while starting a new write. The original translation tries to give the user a general idea of the issue without being too technical.">A write attempt was started but unfortunately some info got lost along the way. Please try again.</string>
+    <string name="please_report_fatal_issue" comment="Displayed in the fatal error screen, prompting the users to report the issue on GitHub along with the steps to reproduce it">If you can, please report this issue on GitHub along with the steps that led to this error.</string>
+    <string name="view_github_issues" comment="Displayed in the fatal error screen, in a small button. When pressed, the app opens the GitHub issues page. Since the button is small, please keep this short. You can replace it with &quot;GitHub issues&quot; if &quot;View GitHub issues&quot; is too long in your language.">View GitHub issues</string>
+    <string name="telemetry" comment="Displayed in the menu if the current app build may send telemetry (Google Play builds)">Telemetry</string>
+    <string name="privacy_policy" comment="Displayed in the app menu, as well as in other links to the privacy policy">Privacy policy</string>
+    <string name="telemetry_rationale" comment="Displayed in builds with telemetry enabled (Google Play) when the user tries to opt-out of telemetry to try to convince them not to. '%1$s' is replaced with a link to the privacy policy; the `privacy_policy` string is used.">Vendroid values your privacy and only uses minimal telemetry to investigate app issues.\n\nBe a part of our open-source community—keep telemetry enabled and help improve Vendroid for everyone!\n\nWhile we don\'t collect any personally-identifying information, we believe in transparency and want you to know that opened image file names and USB device IDs are collected anonymously to help diagnose issues with specific hardware. Unless your image file names or device IDs are highly sensitive, it\'s safe to share this data. (%1$s)</string>
+    <string name="we_need_your_help" comment="Title of the dialog that asks the user to enable telemetry">We need your help!</string>
+    <string name="telemetry_icon" comment="Description of the telemetry icon for accessibility purposes">Telemetry icon</string>
+    <string name="telemetry_opt_out" comment="Button to opt-out of telemetry; it can be translated as &quot;Disable telemetry&quot; if it fits better in the target language">Opt-out</string>
+    <string name="telemetry_keep_enabled" comment="Button to opt-in to telemetry; it can be translated as &quot;Enable telemetry&quot; if it fits better in the target language">Keep enabled</string>
+    <string name="vendroid_uses_telemetry" comment="Displayed in the main app screen on first launch in a toast/snackbar. It should be short and concise.">Vendroid sends telemetry info.</string>
+    <string name="learn_more" comment="Displayed in the main app screen on first launch as a snackbar action button. It should be short and concise.">Learn more</string>
+    <string name="send_anonymous_data" comment="Displayed in the main app menu; controls whether the app sends anonymous telemetry info.">Send anonymous data</string>
+</resources>

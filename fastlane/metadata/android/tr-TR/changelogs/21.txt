@@ -1,0 +1,6 @@
+Sil baştan Vendroid!
+
+• Yeni Material You arayüzü, çok daha ergonomik ve kullanması kolay!
+• Vendroid artık çoğu yazma hatalarından kurtarır ve USB belleğinizi çıkarmanızı ve tekrar takmanız için sorar
+• Ayrıca kalıbı yazdıktan sonra, bozulup bozulmadığına dair doğrulama yapılacaktır
+• DMG işlevi kaldırıldı; hâlâ ihtiyaç duyuyorsanız eski sürüm kullanın

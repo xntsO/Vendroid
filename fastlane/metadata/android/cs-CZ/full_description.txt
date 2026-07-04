@@ -1,0 +1,16 @@
+Vendroid je copyleftová libre GPLv3+ aplikace, která vám pomůže zapisovat obrazy na USB disky.
+Použijte jej k vytvoření bootovacího USB disku GNU/Linux, když je váš notebook mrtvý a vy jste uprostřed ničeho.
+
+Funkce:
+• Podporuje surové obrazy disků a ISO většiny distribucí GNU/Linuxu
+• Podporuje obrazy Raspberry Pi (nejdříve rozbalte soubor ZIP; použijte adaptér SD na USB, interní slot SD není podporován)
+• Podporuje většinu obrazů DMG (beta)
+• Žádný root - vše probíhá v rámci rozhraní Android API
+• Free jako svoboda
+
+Plánováno:
+• Zápis běžné distribuce GNU/Linuxu při streamování z internetu bez ukládání do zařízení
+• Podpora pro instalační ISO systému Windows (bude pravděpodobně vyžadovat root)
+• Podpora flashování obrazu ve stylu Unetbootin
+
+Zdrojový kód je na platformě GitHub: https://github.com/Depau/Vendroid
