@@ -2,14 +2,17 @@ package io.github.xntso.vendroid.ventoy
 
 import android.net.Uri
 import io.github.xntso.vendroid.MemoryBufferBlockDeviceDriver
+import io.github.xntso.vendroid.VendroidApplication
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.extension.ExtendWith
+import org.robolectric.annotation.Config
+import tech.apter.junit.jupiter.robolectric.RobolectricExtension
 import org.tukaani.xz.LZMA2Options
 import org.tukaani.xz.XZOutputStream
 import java.io.ByteArrayInputStream
@@ -167,7 +170,7 @@ class VentoyInstallerTest {
         val entries = VentoyMbr.parse(mbr)
         assertEquals(plan.partition2StartSector, entries[1].startSector)
         assertEquals(0x83, device.readBytes(plan.partition1StartSector * 512 + rootEntryOffset(device, plan), 1)[0].toInt() and 0xff)
-        assertNotEquals(0, device.readBytes(512, 1)[0].toInt())
+        assertArrayEquals(byteArrayOf(0, 1, 2, 3), device.readBytes(512, 4))
     }
 
     @Test
@@ -187,6 +190,8 @@ class VentoyInstallerTest {
     }
 }
 
+@ExtendWith(RobolectricExtension::class)
+@Config(application = VendroidApplication::class)
 class VentoyVolumeManagerTest {
     @Test
     fun `lists copies and deletes supported images`() {

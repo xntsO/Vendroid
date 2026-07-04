@@ -1,10 +1,13 @@
 from time import sleep
 
 import appium.webdriver
+import pytest
 
 from vendroid import actions as app
 from vendroid.fixtures import appium_service, driver
 from vendroid.utils import device_temp_sparse_file, used, wait_for_element
+
+pytestmark = pytest.mark.legacy_etchdroid
 
 used(appium_service)
 
