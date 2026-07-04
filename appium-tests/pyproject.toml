@@ -12,8 +12,10 @@ dependencies = [
 ]
 
 [tool.pytest.ini_options]
+addopts = ["-m", "not legacy_etchdroid"]
 markers = [
     "qemu: Run tests that require QEMU",
+    "legacy_etchdroid: Inherited EtchDroid image-writing tests that do not match the Vendroid Ventoy MVP flow",
 ]
 
 [tool.ruff]

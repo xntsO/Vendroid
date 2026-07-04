@@ -21,6 +21,8 @@ from vendroid.utils import (
     grant_permissions,
 )
 
+pytestmark = pytest.mark.legacy_etchdroid
+
 used(appium_service)
 
 

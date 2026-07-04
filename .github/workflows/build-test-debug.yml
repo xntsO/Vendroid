@@ -11,6 +11,7 @@ env:
   # If changed, also update the variables in appium-tests/scripts/prepare-vm.sh
   BLISSOS_FILE: 'Bliss-v16.9.7-x86_64-OFFICIAL-foss-20241011.iso'
   BLISSOS_URL: 'https://deac-riga.dl.sourceforge.net/project/blissos-x86/Official/BlissOS16/FOSS/Generic/'
+  VENTOY_VERSION: '1.1.16'
   VM_DIR: /appium-vm
 
 jobs:
@@ -22,7 +23,6 @@ jobs:
       matrix:
         variant:
           - foss
-          - gplay
       fail-fast: false
 
     env:
@@ -49,21 +49,16 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
 
-      - name: Set up Firebase config
+      - name: Download Ventoy payload
         run: |
-          cat <<'EOF' > app/google-services.json
-          ${{ secrets.GOOGLE_SERVICES_JSON }}
-          EOF
-
-          # Use mock if the secret is not available
-          if [[ "$(wc -c < app/google-services.json)" -lt 10 ]]; then
-            cp misc/mock-google-services.json app/google-services.json
-          fi
+          mkdir -p .vendroid-cache
+          curl --fail --location --retry 3 \
+            --output ".vendroid-cache/ventoy-${VENTOY_VERSION}-linux.tar.gz" \
+            "https://github.com/ventoy/Ventoy/releases/download/v${VENTOY_VERSION}/ventoy-${VENTOY_VERSION}-linux.tar.gz"
 
       - name: Build ${{ matrix.variant }}
-        run: ./gradlew assemble${VARIANT^}Debug assemble${VARIANT^}Optimized --scan --configuration-cache
+        run: ./gradlew assemble${VARIANT^}Debug assemble${VARIANT^}Optimized
         env:
-          ETCHDROID_ENABLE_SENTRY: ${{ matrix.variant == 'Gplay' }}
           VARIANT: ${{ matrix.variant }}
 
       - name: Upload built debug APK
@@ -86,7 +81,6 @@ jobs:
       matrix:
         variant:
           - foss
-          - gplay
       fail-fast: false
 
     env:
@@ -113,21 +107,16 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
 
-      - name: Set up Firebase config
+      - name: Download Ventoy payload
         run: |
-          cat <<'EOF' > app/google-services.json
-          ${{ secrets.GOOGLE_SERVICES_JSON }}
-          EOF
-
-          # Use mock if the secret is not available
-          if [[ "$(wc -c < app/google-services.json)" -lt 10 ]]; then
-            cp misc/mock-google-services.json app/google-services.json
-          fi
+          mkdir -p .vendroid-cache
+          curl --fail --location --retry 3 \
+            --output ".vendroid-cache/ventoy-${VENTOY_VERSION}-linux.tar.gz" \
+            "https://github.com/ventoy/Ventoy/releases/download/v${VENTOY_VERSION}/ventoy-${VENTOY_VERSION}-linux.tar.gz"
 
       - name: Run unit tests for ${{ matrix.variant }}
-        run: ./gradlew test${VARIANT^}DebugUnitTest --scan --configuration-cache
+        run: ./gradlew test${VARIANT^}DebugUnitTest
         env:
-          ETCHDROID_ENABLE_SENTRY: ${{ matrix.variant == 'Gplay' }}
           VARIANT: ${{ matrix.variant }}
 
       - name: Publish test report
@@ -147,7 +136,6 @@ jobs:
       matrix:
         variant:
           - foss
-          - gplay
       fail-fast: false
 
     steps:
