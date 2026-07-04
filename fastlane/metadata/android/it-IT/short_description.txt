@@ -1,0 +1,1 @@
+Scrivi ISO del sistema operativo su chiavette USB, senza root

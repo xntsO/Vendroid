@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_channel_job_result_desc" comment="Notification channel description">Mostra el resultat de la tasca finalitzada</string>
+    <string name="notif_channel_job_result_name">Resultat</string>
+    <string name="notif_channel_job_progress_name">Progrés de la tasca</string>
+    <string name="notif_channel_job_progress_desc" comment="Notification channel description">Mostra el progrés de la tasca actual</string>
+    <string name="write_failed">Ha fallat l\'escriptura</string>
+    <string name="success_notif_content_text">Ha finalitzat correctament l\'escriptura de %1$s a %2$s</string>
+    <string name="write_finished">Ha finalitzat el procés</string>
+    <string name="cancel">Cancel·la</string>
+    <string name="unknown_filename">Nom de fitxer desconegut</string>
+</resources>

@@ -1,0 +1,25 @@
+VendroidはUSBドライブへのイメージ書き込みを支援するオープンソースアプリケーションです。
+ノートパソコンが壊れたときに、OSを起動可能なUSBドライブを作成するために使えます。
+
+⭐️ 対応デバイス ⭐️
+
+✅USBフラッシュドライブ
+✅USB SDカードアダプタ
+❌USB ハードドライブ / SSD
+❌USBドックとハブ
+❌内蔵SDカードスロット
+❌光学またはフロッピーディスクドライブ
+❌Thunderbolt専用デバイス
+
+
+⭐️ 対応するディスクイメージの種類 ⭐️
+
+✅ Arch Linux、Ubuntu、Debian、Fedora、pop!_OS、Linux Mint、FreeBSD、BlissOS など、最新の GNU/Linux OSのイメージ。
+✅ Raspberry PI用SDカードイメージ (ただし、最初に解凍する必要があります!)
+❌公式のMicrosoft Windows ISO
+⚠Vendroid向けに作成されたコミュニティ製Windowsイメージ（注意：ウイルスが含まれている可能性があります！）。
+❌Apple DMGディスクイメージ
+❌古いGNU/Linux OSイメージ < 2010：Damn Small LinuxやPuppy Linuxなど
+
+
+ソースコードはGitHubにあります: https://github.com/Vendroid/Vendroid

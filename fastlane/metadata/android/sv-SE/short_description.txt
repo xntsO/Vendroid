@@ -1,0 +1,1 @@
+Skriv operativsystemets ISO-bilder till USB-enheter, ingen root krävs

@@ -1,0 +1,3 @@
+• Dark theme.
+• You can now open image files from an external app.
+• Minor bug fixes.

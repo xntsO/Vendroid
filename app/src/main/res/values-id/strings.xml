@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_channel_job_result_desc" comment="Notification channel description">Digunakan untuk menunjukkan hasil pekerjaan yang telah selesai</string>
+    <string name="notif_channel_job_result_name">Hasil pekerjaan</string>
+    <string name="notif_channel_job_progress_name">Kemajuan pekerjaan</string>
+    <string name="notif_channel_job_progress_desc" comment="Notification channel description">Digunakan untuk menunjukkan kemajuan pekerjaan saat ini</string>
+    <string name="write_failed">Penulisan gagal</string>
+    <string name="success_notif_content_text">%1$s berhasil ditulis ke %2$s</string>
+    <string name="write_finished">Penulisan selesai</string>
+    <string name="cancel">Batal</string>
+    <string name="unknown_filename">Nama file tidak diketahui</string>
+    <string name="notification_verify_progress_title">Memverifikasi image…</string>
+    <string name="notification_write_no_notifications_text">Aktifkan pemberitahuan untuk kemajuan - Menulis %1$s ke %2$s</string>
+    <string name="notification_write_tap_for_progress_text">Ketuk untuk kemajuan - Menulis %1$s ke %2$s</string>
+    <string name="notification_write_progress_content">%1$s ke %2$s</string>
+    <string name="notification_verify_progress_content">%1$s terhadap %2$s</string>
+    <string name="permission_denied_for_usb_device">Izin ditolak untuk perangkat USB %1$s</string>
+    <string name="usb_device_was_unplugged">Perangkat USB dicabut</string>
+    <string name="write_an_image">Menulis image</string>
+    <string name="whats_supported">Apa saja yang didukung\?</string>
+    <string name="style">Gaya</string>
+    <string name="device_setting">Pengaturan perangkat</string>
+    <string name="light">Terang</string>
+    <string name="dark">Gelap</string>
+    <string name="dynamic_colors">Warna dinamis</string>
+    <string name="about">Tentang</string>
+    <string name="action_required">Tindakan diperlukan</string>
+    <string name="notification_write_progress_title">Menulis image…</string>
+    <string name="continue_">Lanjutkan</string>
+    <string name="is_this_a_windows_iso">Apakah ini Windows ISO\?</string>
+    <string name="select_a_usb_drive">Pilih drive USB</string>
+    <string name="a_regular_windows_iso_won_t_work">ISO Windows biasa tidak akan bekerja dengan Vendroid, kecuali jika ISO tersebut secara khusus disiapkan untuk digunakan dengan Vendroid, Etcher, atau dd.</string>
+    <string name="disk_image">Disk image</string>
+    <string name="write_image">Tulis image</string>
+    <string name="destination_usb_device">Tujuan perangkat USB</string>
+    <string name="confirm_operation">Konfirmasikan operasi</string>
+    <string name="grant_access">Berikan akses</string>
+    <string name="usb_drive">Drive USB</string>
+    <string name="be_careful">Hati-hati!</string>
+    <string name="looking_for_usb_drives">Mencari drive USB</string>
+    <string name="lay_your_device_flat_no_accel">Letakkan perangkat Anda di atas meja sebelum melanjutkan.</string>
+    <string name="image_to_write">Image untuk ditulis</string>
+    <string name="unknown_device">Perangkat tidak dikenal</string>
+    <string name="continue_anyway">Lanjutkan saja</string>
+    <string name="permission_granted">Izin diberikan</string>
+    <string name="writing_the_image_will_erase">Menulis image akan menghapus semua data pada drive yang dipilih</string>
+    <string name="connect_a_usb_drive">Hubungkan drive USB</string>
+    <string name="not_supported">Tidak didukung</string>
+    <string name="usb_flash_drives">Flashdisk</string>
+    <string name="usb_hard_drives_ssds_some_might_work">Harddisk USB / SSD (beberapa mungkin bekerja)</string>
+    <string name="supported_devices_and_images">Perangkat dan gambar yang didukung</string>
+    <string name="memory_cards_using_a_usb_adapter">Kartu memori, menggunakan adaptor USB</string>
+    <string name="skip">Lewati</string>
+    <string name="memory_cards_using_the_internal_slot">Kartu memori, menggunakan slot internal</string>
+    <string name="supported">Didukung</string>
+    <string name="usb_docks_and_hubs_might_have_power_issues">USB docks dan hub (mungkin memiliki masalah daya)</string>
+    <string name="maybe_supported">Mungkin didukung</string>
+    <string name="devices">Perangkat</string>
+    <string name="lay_your_device_flat">Letakkan perangkat Anda di atas meja dan jangan menyentuhnya</string>
+    <string name="optical_disk_drives">Drive disk optik</string>
+    <string name="raspberry_pi_sd_card_images_unzip_first">Image kartu SD Raspberry Pi (buka zip terlebih dahulu!)</string>
+    <string name="support_for_dmg_images_was_removed">Dukungan untuk Image DMG telah dihapus di Vendroid 2.0. Versi yang lebih lama dapat diunduh dari %1$s.</string>
+    <string name="contributors">kontributor</string>
+    <string name="developed_by">Dikembangkan oleh %1$s dan %2$s lainnya. 
+\nKode sumber tersedia di %3$s. 
+\nDilisensikan di bawah lisensi GNU GPLv3.</string>
+    <string name="floppy_disk_drives">Drive floppy disk</string>
+    <string name="any_thunderbolt_only_device">Semua perangkat khusus Thunderbolt</string>
+    <string name="disk_images">Image disk</string>
+    <string name="microsoft_windows_isos_any_version">ISO Microsoft Windows (versi apa pun)</string>
+    <string name="apple_dmg_disk_images">Image disk DMG Apple</string>
+    <string name="arch_linux_ubuntu_debian_fedora_pop_os_linux_mint_freebsd_etc">Arch Linux, Ubuntu, Debian, Fedora, pop!_OS, Linux Mint, FreeBSD dll.</string>
+    <string name="other_modern_gnu_linux_and_bsd_distributions_live_isos">ISO live distribusi GNU/Linux dan BSD modern lainnya</string>
+    <string name="any_other_image_that_works_with_balena_etcher_or_dd">Image lainnya yang dapat digunakan dengan Balena Etcher atau dd</string>
+    <string name="older_gnu_linux_distributions_isos_2010">ISO distribusi GNU/Linux yang lebih lama (&lt; 2010)</string>
+    <string name="website">Situs web</string>
+    <string name="support_the_project">Mendukung secara finansial</string>
+    <string name="verifying_image" comment="Title of the progress page while an image is being verified">Memverifikasi image</string>
+    <string name="writing_image" comment="Title of the progress page while an image is being written">Menulis image</string>
+    <string name="please_avoid_using_your_device" comment="Subtitle of the progress page while an image is being written">Harap hindari penggunaan perangkat Anda</string>
+    <string name="would_you_like_to_be_notified" comment="Displayed in a card in the progress page; keep it concise, there's not much space">Apakah Anda ingin diberi tahu saat selesai? Hanya pembaruan progres, tanpa spam atau iklan.</string>
+    <string name="no_thanks" comment="Button to reject receiving notifications">Tidak, terima kasih</string>
+    <string name="sure" comment="Button to accept receiving notifications">Tentu</string>
+    <string name="verifying" comment="As part of the sentence: &quot;Verifying DeviceName against FileName.iso&quot;; keep the same word order as English. Open an issue if it's not possible in your language.">Memverifikasi</string>
+    <string name="copying" comment="As part of the sentence: &quot;Copying FileName.iso to DeviceName&quot;; keep the same word order as English. Open an issue if it's not possible in your language.">Menyalin</string>
+    <string name="against" comment="As part of the sentence: &quot;Verifying DeviceName against FileName.iso&quot;; keep the same word order as English. Open an issue if it's not possible in your language.">terhadap</string>
+    <string name="to" comment="As part of the sentence: &quot;Copying FileName.iso to DeviceName&quot;; keep the same word order as English. Open an issue if it's not possible in your language.">ke</string>
+    <string name="getting_ready" comment="Displayed in the progress info indicator while no progress data is available">Sedang bersiap…</string>
+    <string name="skip_verification" comment="Displayed on a button that, when pressed, skips the verification of the written image">Lewati verifikasi</string>
+    <string name="image_written_successfully" comment="Title of the success page">Image berhasil ditulis!</string>
+    <string name="write_a_review" comment="Displayed in a button on the success page">Tulis ulasan</string>
+    <string name="star_on_github" comment="Displayed in a button on the success page">Beri bintang di GitHub</string>
+    <string name="got_an_unsupported_drive_notification" comment="Title of the card that teaches the user about any &quot;Issues with this drive&quot; notifications">Mendapatkan pemberitahuan \"Ada masalah dengan drive ini\"?</string>
+    <string name="it_s_safe_to_ignore" comment="Message of the card that teaches the user about any &quot;Issues with this drive&quot; notifications; the parameter will be replaced with the translation of &quot;Learn what it means&quot;">Aman untuk diabaikan! Cukup cabut drive Anda dan gunakan seperti biasa. %1$s dan lihat cara memformat drive Anda nanti.</string>
+    <string name="learn_what_it_means" comment="Part of the message of the card that teaches the user about any &quot;Issues with this drive&quot; notifications; the full sentence is &quot;Learn what it means and see how to format your drive later&quot;">Pelajari apa artinya</string>
+    <string name="there_was_an_error" comment="Title of the non-recoverable error page">Terjadi kesalahan</string>
+    <string name="error">Kesalahan</string>
+    <string name="start_over" comment="Button in the error page that, when pressed, restarts the app">Mulai dari awal</string>
+    <string name="try_again" comment="Button in the error page that, when pressed, retries the write from scratch">Coba lagi</string>
+    <string name="i_did_not_unplug_it" comment="Title of the card that, when a USB disconnection is detected, teaches the user how it could have happened inadvertently">Saya belum mencabutnya!</string>
+    <string name="how_did_this_happen" comment="Title of the card that, when a recoverable error occurs, teaches the user why it could have happened">Bagaimana ini bisa terjadi?</string>
+    <string name="perhaps_your_usb_port_is_dirty" comment="Message of the card that, when a USB disconnection is detected, teaches the user how it could have happened inadvertently">Mungkin port USB Anda kotor, adaptor Anda rusak, atau perangkat Anda tidak dapat memberikan daya listrik yang cukup. Pertimbangkan untuk mencoba adaptor atau perangkat lain.</string>
+    <string name="usb_drives_are_unreliable" comment="Message of the card that, when a recoverable error occurs, teaches the user why it could have happened">Drive USB tidak andal, dan Android tidak memberikan izin yang cukup untuk pemulihan otomatis. Kita harus memanfaatkan apa yang ada!</string>
+    <string name="this_is_unexpected_it_s_probably_a_bug_please_report_it" comment="Message of the card about a recoverable unknown error">Ini tidak terduga, kemungkinan ini adalah bug. Silakan laporkan!</string>
+    <string name="to_recover_unplug" comment="Text that explains what to do when a recoverable error has occurred">Untuk memulihkan, cabut drive USB Anda, colokkan kembali dan berikan izin untuk mengaksesnya lagi.</string>
+    <string name="representation_of_the_required_steps" comment="Textual description (for accessibility purposes) of the graphic that shows the required steps to recover from a recoverable error">Representasi langkah yang diperlukan: cabut, sambungkan kembali, beri izin</string>
+    <string name="plug_in_the_same_usb" comment="Message displayed when a user tries to recover from a recoverable error but plugs in a different USB device">Colokkan perangkat USB yang sama seperti sebelumnya!</string>
+    <string name="usb_device_reconnected_resuming" comment="Message displayed in a toast when the write operation is successfully resumed">Perangkat USB tersambung kembali, melanjutkan</string>
+    <string name="the_device_is_not_responding" comment="Error message">Perangkat tidak merespons</string>
+    <string name="missing_permission_to_access_the_usb_device" comment="Error message">Izin untuk mengakses perangkat USB tidak ada</string>
+    <string name="the_image_is_is_larger_than_the_device" comment="Error message; parameters are the image file size and the device size">Image (%1$s) lebih besar dari perangkat (%2$s)</string>
+    <string name="could_not_open_the_source_file" comment="Error message">Tidak dapat membuka file sumber</string>
+    <string name="an_unknown_error_occurred" comment="Error message; parameter is the underlying error message">Terjadi kesalahan yang tidak diketahui: %1$s</string>
+    <string name="the_usb_drive_was_unplugged" comment="Error message">Drive USB telah dicabut</string>
+    <string name="the_usb_drive_stopped_responding" comment="Error message">Drive USB berhenti merespons</string>
+    <string name="the_usb_device_content_does_not_match_the_image" comment="Error message displayed when the verification failed">Isi perangkat USB tidak cocok dengan image</string>
+    <string name="write_another_image" comment="Displayed in the successful write page, when clicked the app goes back to the initial page">Tulis image lain</string>
+    <string name="title_activity_confirm_operation" comment="Title of the screen that displays the summary of the operation about to be performed">Konfirmasi operasi</string>
+    <string name="no_image_uri_provided" comment="Error message (shown in a toast) when the operation confirmation screen is opened without a source file; the app redirects back to the home page">Tidak ada URI image yang diberikan</string>
+    <string name="no_destination_device_selected" comment="Error message (shown in a toast) when the operation confirmation screen is opened without a destination device; the app redirects back to the home page">Tidak ada perangkat tujuan yang dipilih</string>
+    <string name="service_timeout_message" comment="Error message displayed when the background write service does not send any progress updates for a suspiciously long time. In this case, the app assumes the service got stuck and prompts the user to try again.">Proses penulisan tampaknya macet. Silakan coba lagi.</string>
+    <string name="community_windows_images" comment="&quot;You're on your own&quot; can be translated with something similar to &quot;unsupported&quot; or &quot;be careful!&quot; if it makes more sense in the target language">Image Windows buatan komunitas, dibuat untuk Vendroid (gunakan dengan risiko Anda sendiri: bisa saja mengandung virus!)</string>
+    <string name="worker_null_device_error" comment="Error message displayed when users get a mysterious NullPointerException while starting a new write. The original translation tries to give the user a general idea of the issue without being too technical.">Upaya penulisan telah dimulai tetapi sayangnya beberapa informasi hilang di tengah jalan. Silakan coba lagi.</string>
+    <string name="please_report_fatal_issue" comment="Displayed in the fatal error screen, prompting the users to report the issue on GitHub along with the steps to reproduce it">Jika memungkinkan, silakan laporkan masalah ini di GitHub beserta langkah-langkah yang menyebabkan kesalahan ini.</string>
+    <string name="view_github_issues" comment="Displayed in the fatal error screen, in a small button. When pressed, the app opens the GitHub issues page. Since the button is small, please keep this short. You can replace it with &quot;GitHub issues&quot; if &quot;View GitHub issues&quot; is too long in your language.">Lihat isu GitHub</string>
+    <string name="telemetry" comment="Displayed in the menu if the current app build may send telemetry (Google Play builds)">Telemetri</string>
+    <string name="privacy_policy" comment="Displayed in the app menu, as well as in other links to the privacy policy">Kebijakan privasi</string>
+    <string name="telemetry_rationale" comment="Displayed in builds with telemetry enabled (Google Play) when the user tries to opt-out of telemetry to try to convince them not to. '%1$s' is replaced with a link to the privacy policy; the `privacy_policy` string is used.">Vendroid menghargai privasi Anda dan hanya menggunakan telemetri minimal untuk menyelidiki masalah aplikasi.  \n\nJadilah bagian dari komunitas sumber terbuka kami — biarkan telemetri tetap aktif dan bantu meningkatkan Vendroid untuk semua orang!  \n\nMeskipun kami tidak mengumpulkan informasi yang dapat mengidentifikasi secara pribadi, kami percaya pada transparansi dan ingin Anda tahu bahwa nama file image yang dibuka dan ID perangkat USB dikumpulkan secara anonim untuk membantu mendiagnosis masalah pada perangkat keras tertentu. Kecuali nama file image atau ID perangkat Anda sangat sensitif, aman untuk membagikan data ini. (%1$s)</string>
+    <string name="we_need_your_help" comment="Title of the dialog that asks the user to enable telemetry">Kami membutuhkan bantuan Anda!</string>
+    <string name="telemetry_icon" comment="Description of the telemetry icon for accessibility purposes">Ikon telemetri</string>
+    <string name="telemetry_opt_out" comment="Button to opt-out of telemetry; it can be translated as &quot;Disable telemetry&quot; if it fits better in the target language">Menolak</string>
+    <string name="telemetry_keep_enabled" comment="Button to opt-in to telemetry; it can be translated as &quot;Enable telemetry&quot; if it fits better in the target language">Biarkan tetap aktif</string>
+    <string name="vendroid_uses_telemetry" comment="Displayed in the main app screen on first launch in a toast/snackbar. It should be short and concise.">Vendroid mengirimkan info telemetri.</string>
+    <string name="learn_more" comment="Displayed in the main app screen on first launch as a snackbar action button. It should be short and concise.">Pelajari lebih lanjut</string>
+    <string name="send_anonymous_data" comment="Displayed in the main app menu; controls whether the app sends anonymous telemetry info.">Kirim data anonim</string>
+</resources>

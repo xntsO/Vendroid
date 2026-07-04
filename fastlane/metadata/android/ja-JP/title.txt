@@ -1,0 +1,1 @@
+Vendroid ISOからUSBへ書き込み

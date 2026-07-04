@@ -1,0 +1,3 @@
+• Tema scuro.
+• Puoi ora aprire i file di immagine da un'altra app.
+• Risolti alcuni bug.

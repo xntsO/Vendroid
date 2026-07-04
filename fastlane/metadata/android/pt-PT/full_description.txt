@@ -1,0 +1,25 @@
+Vendroid é uma aplicação open-source que ajudará-lhe a escrever ISOs para USBs.
+Use para fazer USBs bootaveis com OS quando o OS do seu PC estiver morto.
+
+⭐️ Dispositivos Suportados ⭐️
+
+✅ Drives USB
+✅ Apdatadores USB SD
+❌ HDDs / SSDs Externos
+❌ USB Hubs e docks
+❌ Slot SD card interno
+❌ CDs/Floppy disks
+❌ Apenas Dispositivos Thunderbolt
+
+
+⭐️ ISOs Suportadas⭐️
+
+✅ ISOsGNU/Linux modernos, incluindo Arch Linux, Ubuntu, Debian, Fedora, pop!_OS, Linux Mint, FreeBSD, BlissOS e muito mais.
+✅ Imagens Raspberry PI SD card ( Precisas de descompactar primeiro!)
+❌ Windows ISOs oficiais da Microsoft
+⚠️ Windows ISOs da comunidade, feitas para o Vendroid (CUIDADO: Elas poderão conter virus!)
+❌ Imagnes Apple DMG
+❌ ISOs GNU/Linux Antigos < 2010 como Damn Small Linux
+
+
+Codigo-fonte está no GitHub: https://github.com/Vendroid/Vendroid

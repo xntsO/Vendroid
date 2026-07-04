@@ -1,0 +1,6 @@
+Vendroid-in əsas yenidən yazılması!
+
+• Yeni Material Siz UI, daha intuitiv və istifadəsi daha asandır!
+• Vendroid indi əksər yazma uğursuzluqlarından sağalacaq və sizdən USB diskinizi ayırıb yenidən birləşdirməyi xahiş edəcək.
+• Şəkil yazıldıqdan sonra onun pozulmamasını təmin etmək üçün də yoxlanılacaq.
+• DMG funksionallığı silindi; hələ də ehtiyacınız varsa, köhnə versiyalar üzərində işləmək.

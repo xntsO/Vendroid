@@ -1,0 +1,38 @@
+[project]
+name = "appium-tests"
+version = "0.1.0"
+description = "End-to-end tests for Vendroid"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "appium-python-client>=5.0.0",
+    "pexpect>=4.9.0",
+    "pytest>=9.0.3",
+    "qemu-qmp>=0.0.3",
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "qemu: Run tests that require QEMU",
+]
+
+[tool.ruff]
+line-length = 120
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "ptipython>=1.0.1",
+    "ruff>=0.11.3",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["vendroid"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "vendroid/**/*.py",
+]

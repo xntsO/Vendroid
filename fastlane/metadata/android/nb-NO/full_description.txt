@@ -1,0 +1,38 @@
+Vendroid er en åpen kildekode-applikasjon som hjelper deg med å skrive bilder til USB-stasjoner. 
+Bruk den til å lage en oppstartbar USB-stasjon for operativsystemet når den bærbare datamaskinen er død. 
+
+⭐️ Støttede enheter ⭐️ 
+
+✅ USB-flash-stasjoner 
+✅ USB SD-kortadaptere 
+❌ USB-harddisker / SSD-er 
+❌ USB-dokkingstasjoner og huber 
+❌ Internt SD-kortspor 
+❌ Optiske stasjoner eller diskettstasjoner 
+❌ Bare Thunderbolt-enheter 
+
+⭐️ Støttede diskbildetyper ⭐️ 
+
+✅ Moderne GNU/Linux-operativsystembilder, inkludert Arch Linux, Ubuntu, Debian, Fedora, pop!Vendroid er en åpen kildekode-applikasjon som hjelper deg med å skrive bilder til USB-stasjoner. 
+Bruk den til å lage en oppstartbar USB-stasjon for operativsystemet når den bærbare datamaskinen er død. 
+
+⭐️ Støttede enheter ⭐️ 
+
+✅ USB-flash-stasjoner 
+✅ USB SD-kortadaptere 
+❌ USB-harddisker / SSD-er 
+❌ USB-dokkingstasjoner og huber 
+❌ Internt SD-kortspor 
+❌ Optiske stasjoner eller diskettstasjoner 
+❌ Bare Thunderbolt-enheter 
+
+⭐️ Støttede diskbildetyper ⭐️ 
+
+✅ Moderne GNU/Linux-operativsystembilder, inkludert Arch Linux, Ubuntu, Debian, Fedora, pop!_OS, Linux Mint, FreeBSD, BlissOS og mange flere 
+✅ Raspberry PI SD-kortbilder (men du må pakke dem ut først!) 
+❌ Offisielle Microsoft Windows ISO-er 
+⚠️ Community-bygde Windows-bilder, laget for Vendroid (vær forsiktig: de kan inneholde virus!) 
+❌ Apple DMG-diskbilder 
+❌ Eldre GNU/Linux OS-bilder < 2010, for eksempel Damn Small Linux 
+
+Kildekoden er på GitHub: https://github.com/Vendroid/Vendroid

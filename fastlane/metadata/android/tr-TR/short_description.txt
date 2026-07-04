@@ -1,0 +1,1 @@
+İşletim sistemi ISO kalıplarını USB belleklere yazın, root gerekmez

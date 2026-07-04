@@ -1,0 +1,25 @@
+Vendroid is an open-source application that helps you write images to USB drives.
+Use it to make a bootable operating system USB drive when your laptop is dead.
+
+⭐️ Supported devices ⭐️
+
+✅ USB flash drives
+✅ USB SD card adapters
+❌ USB hard drives / SSDs
+❌ USB docks and hubs
+❌ Internal SD card slot
+❌ Optical or floppy disk drives
+❌ Thunderbolt-only devices
+
+
+⭐️ Supported disk image types ⭐️
+
+✅ Modern GNU/Linux operating system images, including Arch Linux, Ubuntu, Debian, Fedora, pop!_OS, Linux Mint, FreeBSD, BlissOS and many more
+✅ Raspberry PI SD card images (but you must unzip them first!)
+❌ Official Microsoft Windows ISOs
+⚠️ Community-built Windows images, made for Vendroid (be careful: they may contain viruses!)
+❌ Apple DMG disk images
+❌ Older GNU/Linux OS images < 2010 such as Damn Small Linux
+
+
+Source code is on GitHub: https://github.com/Vendroid/Vendroid
