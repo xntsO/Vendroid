@@ -3,6 +3,8 @@ package io.github.xntso.vendroid.ventoy
 import android.net.Uri
 import io.github.xntso.vendroid.MemoryBufferBlockDeviceDriver
 import io.github.xntso.vendroid.VendroidApplication
+import io.github.xntso.vendroid.utils.exception.UsbCommunicationException
+import me.jahnen.libaums.core.driver.BlockDeviceDriver
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -18,7 +20,9 @@ import org.tukaani.xz.XZOutputStream
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.io.IOException
 import java.io.OutputStream
+import java.nio.ByteBuffer
 import java.security.SecureRandom
 
 class VentoyLayoutTest {
@@ -188,6 +192,47 @@ class VentoyInstallerTest {
         assertTrue(info.supportedForUpgrade)
         assertArrayEquals(marker, device.readBytes(markerOffset, marker.size))
     }
+}
+
+class BlockDeviceRawBlockDeviceTest {
+    @Test
+    fun `classifies driver read failures as recoverable USB errors`() {
+        val exception = assertThrows<UsbCommunicationException> {
+            BlockDeviceRawBlockDevice(failingDriver()).read(0, ByteArray(512))
+        }
+
+        assertTrue(exception.cause is IOException)
+        assertTrue(exception.cause?.message?.contains("MAX_RECOVERY_ATTEMPTS") == true)
+    }
+
+    @Test
+    fun `classifies driver write failures as recoverable USB errors`() {
+        val exception = assertThrows<UsbCommunicationException> {
+            BlockDeviceRawBlockDevice(failingDriver()).write(0, ByteArray(512))
+        }
+
+        assertTrue(exception.cause is IOException)
+        assertTrue(exception.cause?.message?.contains("MAX_RECOVERY_ATTEMPTS") == true)
+    }
+
+    private fun failingDriver() = object : BlockDeviceDriver {
+        override val blockSize = 512
+        override val blocks = 1024L
+
+        override fun init() = Unit
+
+        override fun read(deviceOffset: Long, buffer: ByteBuffer) {
+            throw transferFailure()
+        }
+
+        override fun write(deviceOffset: Long, buffer: ByteBuffer) {
+            throw transferFailure()
+        }
+    }
+
+    private fun transferFailure() = IOException(
+        "MAX_RECOVERY_ATTEMPTS Exceeded while trying to transfer command to device"
+    )
 }
 
 @ExtendWith(RobolectricExtension::class)
