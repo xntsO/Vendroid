@@ -7,6 +7,13 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: build-test-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   # If changed, also update the variables in appium-tests/scripts/prepare-vm.sh
   BLISSOS_FILE: 'Bliss-v16.9.7-x86_64-OFFICIAL-foss-20241011.iso'
@@ -17,7 +24,9 @@ env:
 jobs:
   build:
     name: Build ${{ matrix.variant }}
-    runs-on: ubuntu-latest
+    # The standard Ubuntu runner is x86-64, matching Google's Linux AAPT2 binary.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
 
     strategy:
       matrix:
@@ -75,7 +84,8 @@ jobs:
 
   unit-tests:
     name: Unit tests for ${{ matrix.variant }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
 
     strategy:
       matrix:
@@ -128,9 +138,57 @@ jobs:
           report_paths: 'app/build/test-results/*/TEST-*.xml'
           require_tests: true
 
+  lint:
+    name: Android lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    env:
+      JAVA_TOOL_OPTIONS: "-Xmx4g"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: wrapper
+          cache-read-only: false
+          add-job-summary: on-failure
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Download Ventoy payload
+        run: |
+          mkdir -p .vendroid-cache
+          curl --fail --location --retry 3 \
+            --output ".vendroid-cache/ventoy-${VENTOY_VERSION}-linux.tar.gz" \
+            "https://github.com/ventoy/Ventoy/releases/download/v${VENTOY_VERSION}/ventoy-${VENTOY_VERSION}-linux.tar.gz"
+
+      - name: Run Android lint
+        run: ./gradlew lint
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: android-lint-report
+          path: app/build/reports/lint-results-*
+          if-no-files-found: ignore
+
   qemu-tests:
     name: End-to-end tests for ${{ matrix.variant }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
     needs: build
     strategy:
       matrix:
@@ -260,3 +318,33 @@ jobs:
         with:
           name: vm-outputs-${{ matrix.variant }}
           path: vm-outputs/
+
+  quality-gate:
+    name: Required quality gate
+    if: always()
+    needs:
+      - build
+      - unit-tests
+      - lint
+      - qemu-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Verify all required jobs passed
+        env:
+          BUILD_RESULT: ${{ needs.build.result }}
+          UNIT_TEST_RESULT: ${{ needs.unit-tests.result }}
+          LINT_RESULT: ${{ needs.lint.result }}
+          QEMU_TEST_RESULT: ${{ needs.qemu-tests.result }}
+        run: |
+          if [[ "$BUILD_RESULT" != "success" ||
+                "$UNIT_TEST_RESULT" != "success" ||
+                "$LINT_RESULT" != "success" ||
+                "$QEMU_TEST_RESULT" != "success" ]]; then
+            echo "Build: $BUILD_RESULT"
+            echo "Unit tests: $UNIT_TEST_RESULT"
+            echo "Lint: $LINT_RESULT"
+            echo "QEMU tests: $QEMU_TEST_RESULT"
+            exit 1
+          fi
