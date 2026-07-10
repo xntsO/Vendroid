@@ -1,7 +1,9 @@
 package io.github.xntso.vendroid.ventoy
 
+import io.github.xntso.vendroid.utils.exception.UsbCommunicationException
 import me.jahnen.libaums.core.driver.BlockDeviceDriver
 import java.io.EOFException
+import java.io.IOException
 import java.nio.ByteBuffer
 
 interface RawBlockDevice {
@@ -38,7 +40,11 @@ class BlockDeviceRawBlockDevice(
             val withinBlock = (currentOffset % blockSize).toInt()
             val copyLength = minOf(remaining, blockSize - withinBlock)
             val buffer = ByteBuffer.wrap(block).apply { clear() }
-            driver.read(blockNumber, buffer)
+            try {
+                driver.read(blockNumber, buffer)
+            } catch (exception: IOException) {
+                throw UsbCommunicationException(exception)
+            }
             System.arraycopy(block, withinBlock, destination, outputOffset, copyLength)
 
             currentOffset += copyLength
@@ -68,11 +74,19 @@ class BlockDeviceRawBlockDevice(
                 ByteBuffer.wrap(source, inputOffset, copyLength)
             } else {
                 val readBuffer = ByteBuffer.wrap(block).apply { clear() }
-                driver.read(blockNumber, readBuffer)
+                try {
+                    driver.read(blockNumber, readBuffer)
+                } catch (exception: IOException) {
+                    throw UsbCommunicationException(exception)
+                }
                 System.arraycopy(source, inputOffset, block, withinBlock, copyLength)
                 ByteBuffer.wrap(block)
             }
-            driver.write(blockNumber, writeBuffer)
+            try {
+                driver.write(blockNumber, writeBuffer)
+            } catch (exception: IOException) {
+                throw UsbCommunicationException(exception)
+            }
 
             currentOffset += copyLength
             inputOffset += copyLength
