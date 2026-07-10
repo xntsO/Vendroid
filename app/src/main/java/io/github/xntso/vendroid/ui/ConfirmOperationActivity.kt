@@ -557,10 +557,11 @@ fun ConfirmationView(
                     ) {
                         val sourceUri = uiState.openedImage
                         val context = LocalContext.current
-                        val sourceFileName by remember {
+                        val unknownFileName = stringResource(R.string.unknown_filename)
+                        val sourceFileName by remember(sourceUri, context, unknownFileName) {
                             derivedStateOf {
                                 sourceUri?.getFileName(context)
-                                    ?: context.getString(R.string.unknown_filename)
+                                    ?: unknownFileName
                             }
                         }
                         val sourceFileSize by remember {

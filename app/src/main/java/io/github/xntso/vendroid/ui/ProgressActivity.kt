@@ -79,6 +79,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.LinkAnnotation
@@ -1171,6 +1172,7 @@ fun AutoJobRestarter(
     resumeOffset: Long,
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val activity = remember { context.activity } ?: run {
         Log.e(TAG, "AutoJobRestarter: activity not found")
         return
@@ -1203,7 +1205,7 @@ fun AutoJobRestarter(
                     if (!usbDevice.isMassStorageDevice) return@broadcastReceiver
                     if (usbDevice doesNotMatch expectedDevice.usbDevice) {
                         activity.toast(
-                            context.getString(R.string.plug_in_the_same_usb), Toast.LENGTH_SHORT
+                            resources.getString(R.string.plug_in_the_same_usb), Toast.LENGTH_SHORT
                         )
                     } else {
                         onUsbAttached(usbDevice)
@@ -1216,7 +1218,7 @@ fun AutoJobRestarter(
                     val msd = expectedDevice.findMatchingForNew(usbDevice)
                     if (msd == null) {
                         activity.toast(
-                            context.getString(R.string.plug_in_the_same_usb), Toast.LENGTH_SHORT
+                            resources.getString(R.string.plug_in_the_same_usb), Toast.LENGTH_SHORT
                         )
                         return@broadcastReceiver
                     }
@@ -1224,12 +1226,12 @@ fun AutoJobRestarter(
                     val granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
                     if (!granted) {
                         activity.toast(
-                            context.getString(
+                            resources.getString(
                                 R.string.permission_denied_for_usb_device, usbDevice.deviceName
                             )
                         )
                     } else {
-                        activity.toast(context.getString(R.string.usb_device_reconnected_resuming))
+                        activity.toast(resources.getString(R.string.usb_device_reconnected_resuming))
                         val serviceIntent = getStartJobIntent(
                             imageUri,
                             msd,
