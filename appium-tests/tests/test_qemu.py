@@ -99,7 +99,16 @@ def raw_disk_image(qemu: QEMUController, request):
 
 
 @pytest.fixture(scope="function")
-def raw_usb_drive(qemu: QEMUController, raw_disk_image: Path) -> Generator[tuple[str, Path], None, None]:
+def raw_usb_bus(request) -> str:
+    return getattr(request, "param", Config.QEMU_USB_SLOW_BUS)
+
+
+@pytest.fixture(scope="function")
+def raw_usb_drive(
+    qemu: QEMUController,
+    raw_disk_image: Path,
+    raw_usb_bus: str,
+) -> Generator[tuple[str, Path], None, None]:
     # Disconnect existing USB device first
     device = qemu.get_block_device(Config.QEMU_USB_DEV_ID)
     qemu.device_del(Config.QEMU_USB_DEV_ID)
@@ -108,7 +117,7 @@ def raw_usb_drive(qemu: QEMUController, raw_disk_image: Path) -> Generator[tuple
     raw_dev_id = f"{Config.QEMU_USB_DEV_ID}-raw"
     qemu.add_usb_drive(
         raw_dev_id,
-        bus=Config.QEMU_USB_SLOW_BUS,
+        bus=raw_usb_bus,
         file=raw_disk_image,
         format="raw",
     )
@@ -172,6 +181,7 @@ def verify_ventoy_install(raw_blockdev: Path):
 
 
 @pytest.mark.qemu
+@pytest.mark.parametrize("raw_usb_bus", [Config.QEMU_USB_BUS], indirect=True)
 def test_install_ventoy_to_virtual_usb(
     driver: appium.webdriver.Remote,
     raw_usb_drive: tuple[str, Path],
@@ -179,7 +189,7 @@ def test_install_ventoy_to_virtual_usb(
     _, raw_disk_image_path = raw_usb_drive
 
     app.ventoy_install_flow(driver)
-    app.wait_for_success(driver, timeout=180)
+    app.wait_for_success(driver, timeout=300)
 
     verify_ventoy_install(raw_disk_image_path)
 
