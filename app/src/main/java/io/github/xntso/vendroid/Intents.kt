@@ -37,6 +37,8 @@ data class JobStatusInfo(
     val jobId: Int,
     val isVerifying: Boolean = false,
     val exception: VendroidException? = null,
+    val operation: String = Intents.OPERATION_WRITE_IMAGE,
+    val forceInstall: Boolean = false,
 ) : Parcelable {
     @IgnoredOnParcel
     val percent =
@@ -88,6 +90,8 @@ fun getStartJobIntent(
     verifyOnly: Boolean = false,
     packageContext: Context? = null,
     cls: Class<*>? = null,
+    operation: String = Intents.OPERATION_WRITE_IMAGE,
+    forceInstall: Boolean = false,
 ): Intent {
     return mkIntent(packageContext, cls).apply {
         action = Intents.START_JOB
@@ -97,6 +101,8 @@ fun getStartJobIntent(
         putExtra("jobId", jobId)
         putExtra("offset", offset)
         putExtra("verifyOnly", verifyOnly)
+        putExtra(Intents.EXTRA_OPERATION, operation)
+        putExtra(Intents.EXTRA_FORCE_INSTALL, forceInstall)
     }
 }
 
@@ -130,13 +136,17 @@ fun getProgressUpdateIntent(
     isVerifying: Boolean = false,
     packageContext: Context? = null,
     cls: Class<*>? = null,
+    operation: String = Intents.OPERATION_WRITE_IMAGE,
+    forceInstall: Boolean = false,
 ) = mkIntent(packageContext, cls).apply {
     action = Intents.JOB_PROGRESS
     putExtra("sourceUri", sourceUri)
     putExtra(
         "status", JobStatusInfo(
             sourceUri, destDevice, processedBytes, totalBytes, speed, jobId,
-            isVerifying = isVerifying
+            isVerifying = isVerifying,
+            operation = operation,
+            forceInstall = forceInstall,
         )
     )
 }
@@ -150,6 +160,8 @@ fun getErrorIntent(
     exception: VendroidException,
     packageContext: Context? = null,
     cls: Class<*>? = null,
+    operation: String = Intents.OPERATION_WRITE_IMAGE,
+    forceInstall: Boolean = false,
 ) = mkIntent(packageContext, cls).apply {
     action = Intents.ERROR
     putExtra("sourceUri", sourceUri)
@@ -157,7 +169,10 @@ fun getErrorIntent(
         "status",
         JobStatusInfo(
             sourceUri, destDevice, processedBytes, totalBytes,
-            jobId = jobId, exception = exception
+            jobId = jobId,
+            exception = exception,
+            operation = operation,
+            forceInstall = forceInstall,
         )
     )
 }
@@ -168,10 +183,23 @@ fun getFinishedIntent(
     totalBytes: Long,
     packageContext: Context? = null,
     cls: Class<*>? = null,
+    operation: String = Intents.OPERATION_WRITE_IMAGE,
+    forceInstall: Boolean = false,
 ) = mkIntent(packageContext, cls).apply {
     action = Intents.FINISHED
     putExtra("sourceUri", sourceUri)
-    putExtra("status", JobStatusInfo(sourceUri, destDevice, totalBytes, totalBytes, jobId = -1))
+    putExtra(
+        "status",
+        JobStatusInfo(
+            sourceUri,
+            destDevice,
+            totalBytes,
+            totalBytes,
+            jobId = -1,
+            operation = operation,
+            forceInstall = forceInstall,
+        ),
+    )
 }
 
 fun Intent.getProgressActivityPendingIntent(

@@ -57,6 +57,7 @@ import io.github.xntso.vendroid.utils.timeoutWatchdog
 import io.github.xntso.vendroid.ventoy.BlockDeviceRawBlockDevice
 import io.github.xntso.vendroid.ventoy.VentoyInstallOptions
 import io.github.xntso.vendroid.ventoy.VentoyInstallProgress
+import io.github.xntso.vendroid.ventoy.VentoyInstallStage
 import io.github.xntso.vendroid.ventoy.VentoyInstaller
 import io.github.xntso.vendroid.ventoy.VentoyPayload
 import kotlinx.coroutines.CancellationException
@@ -188,11 +189,17 @@ class WorkerService : LifecycleService() {
                                 status.totalBytes,
                                 isVerifying = status.isVerifying,
                                 packageContext = this@WorkerService,
-                                cls = ProgressActivity::class.java
+                                cls = ProgressActivity::class.java,
+                                operation = status.operation,
+                                forceInstall = status.forceInstall,
                             ).getProgressActivityPendingIntent(this@WorkerService)
                         )
                         .setSubText(
-                            "${status.processedBytes.toHRSize()} • ${status.speed.toHRSize()}/s"
+                            if (status.operation == Intents.OPERATION_VENTOY_INSTALL) {
+                                "${status.percent.coerceAtLeast(0)}%"
+                            } else {
+                                "${status.processedBytes.toHRSize()} • ${status.speed.toHRSize()}/s"
+                            }
                         )
                         .setProgress(100, max(status.percent, 0), status.percent < 0)
                         .setOngoing(true)
@@ -227,7 +234,9 @@ class WorkerService : LifecycleService() {
                                 status.totalBytes,
                                 status.exception,
                                 packageContext = this@WorkerService,
-                                cls = ProgressActivity::class.java
+                                cls = ProgressActivity::class.java,
+                                operation = status.operation,
+                                forceInstall = status.forceInstall,
                             ).getProgressActivityPendingIntent(this@WorkerService)
                         )
                         .setOngoing(false)
@@ -256,7 +265,9 @@ class WorkerService : LifecycleService() {
                                 mDestDevice,
                                 status.totalBytes,
                                 packageContext = this@WorkerService,
-                                cls = ProgressActivity::class.java
+                                cls = ProgressActivity::class.java,
+                                operation = status.operation,
+                                forceInstall = status.forceInstall,
                             ).getProgressActivityPendingIntent(this@WorkerService)
                         )
                         .setOngoing(false)
@@ -348,7 +359,14 @@ class WorkerService : LifecycleService() {
                 val downstreamException =
                     exception as? VendroidException ?: UnknownException(exception)
                 getErrorIntent(
-                    mSourceUri, mDestDevice, mJobId, 0, 0, exception = downstreamException
+                    mSourceUri,
+                    mDestDevice,
+                    mJobId,
+                    0,
+                    0,
+                    exception = downstreamException,
+                    operation = mOperation,
+                    forceInstall = mForceInstall,
                 ).broadcastLocallySync(this@WorkerService)
             }
             stopSelf()
@@ -417,6 +435,8 @@ class WorkerService : LifecycleService() {
                         0f,
                         0,
                         imageSize,
+                        operation = mOperation,
+                        forceInstall = mForceInstall,
                     ).broadcastLocallySync(this@WorkerService)
 
                     VentoyInstaller(VentoyPayload.fromAssets(assets)).install(
@@ -425,7 +445,13 @@ class WorkerService : LifecycleService() {
                         onProgress = ::sendVentoyProgressUpdate,
                     )
 
-                    getFinishedIntent(mSourceUri, mDestDevice, imageSize).broadcastLocallySync(
+                    getFinishedIntent(
+                        mSourceUri,
+                        mDestDevice,
+                        imageSize,
+                        operation = mOperation,
+                        forceInstall = mForceInstall,
+                    ).broadcastLocallySync(
                         this@WorkerService
                     )
                     return@launch
@@ -449,7 +475,9 @@ class WorkerService : LifecycleService() {
                     0f,
                     currentOffset,
                     imageSize,
-                    isVerifying = verifyOnly
+                    isVerifying = verifyOnly,
+                    operation = mOperation,
+                    forceInstall = mForceInstall,
                 ).broadcastLocallySync(this@WorkerService)
 
                 val bufferSize = BUFFER_BLOCKS * blockDev.blockSize
@@ -506,7 +534,13 @@ class WorkerService : LifecycleService() {
                     ::ensureWakelock
                 )
 
-                getFinishedIntent(mSourceUri, mDestDevice, imageSize).broadcastLocallySync(
+                getFinishedIntent(
+                    mSourceUri,
+                    mDestDevice,
+                    imageSize,
+                    operation = mOperation,
+                    forceInstall = mForceInstall,
+                ).broadcastLocallySync(
                     this@WorkerService
                 )
 
@@ -523,7 +557,9 @@ class WorkerService : LifecycleService() {
                     mJobId,
                     currentOffset,
                     imageSize,
-                    exception = downstreamException
+                    exception = downstreamException,
+                    operation = mOperation,
+                    forceInstall = mForceInstall,
                 ).broadcastLocallySync(this@WorkerService)
             } finally {
                 finish()
@@ -588,7 +624,9 @@ class WorkerService : LifecycleService() {
             newSpeed,
             processedBytes,
             imageSize,
-            isVerifying = isVerifying
+            isVerifying = isVerifying,
+            operation = mOperation,
+            forceInstall = mForceInstall,
         ).broadcastLocally(this@WorkerService)
 
         mLastProgressUpdate = newTime
@@ -597,20 +635,29 @@ class WorkerService : LifecycleService() {
 
     private fun sendVentoyProgressUpdate(progress: VentoyInstallProgress) {
         ensureWakelock()
-        val total = if (progress.totalBytes > 0) progress.totalBytes else 100L
-        val processed = if (progress.totalBytes > 0) {
-            progress.processedBytes
-        } else {
-            ((progress.stage.ordinal + 1) * 100L / 7L).coerceAtMost(100L)
+        val range = when (progress.stage) {
+            VentoyInstallStage.ValidatingPayload -> 0L..5L
+            VentoyInstallStage.Partitioning -> 5L..10L
+            VentoyInstallStage.WritingBootloader -> 10L..20L
+            VentoyInstallStage.WritingVentoyPayload -> 20L..70L
+            VentoyInstallStage.FormattingExFat -> 70L..95L
+            VentoyInstallStage.Verifying -> 95L..99L
+            VentoyInstallStage.Complete -> 100L..100L
         }
+        val fraction = if (progress.totalBytes > 0) {
+            (progress.processedBytes.toDouble() / progress.totalBytes).coerceIn(0.0, 1.0)
+        } else 0.0
+        val processed = range.first + ((range.last - range.first) * fraction).toLong()
         getProgressUpdateIntent(
             mSourceUri,
             mDestDevice,
             mJobId,
             0f,
             processed,
-            total,
+            100,
             isVerifying = false,
+            operation = mOperation,
+            forceInstall = mForceInstall,
         ).broadcastLocally(this@WorkerService)
     }
 

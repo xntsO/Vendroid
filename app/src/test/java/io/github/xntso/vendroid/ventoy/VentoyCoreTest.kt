@@ -196,6 +196,20 @@ class VentoyInstallerTest {
 
 class BlockDeviceRawBlockDeviceTest {
     @Test
+    fun `batches aligned transfers into one driver command`() {
+        val driver = CountingBlockDeviceDriver(blocks = 16, blockSize = 512)
+        val device = BlockDeviceRawBlockDevice(driver)
+        val bytes = ByteArray(4 * 512) { (it % 251).toByte() }
+
+        device.write(2L * 512, bytes)
+        val readBack = device.readBytes(2L * 512, bytes.size)
+
+        assertArrayEquals(bytes, readBack)
+        assertEquals(1, driver.writeCalls)
+        assertEquals(1, driver.readCalls)
+    }
+
+    @Test
     fun `classifies driver read failures as recoverable USB errors`() {
         val exception = assertThrows<UsbCommunicationException> {
             BlockDeviceRawBlockDevice(failingDriver()).read(0, ByteArray(512))
@@ -233,6 +247,29 @@ class BlockDeviceRawBlockDeviceTest {
     private fun transferFailure() = IOException(
         "MAX_RECOVERY_ATTEMPTS Exceeded while trying to transfer command to device"
     )
+}
+
+private class CountingBlockDeviceDriver(
+    override val blocks: Long,
+    override val blockSize: Int,
+) : BlockDeviceDriver {
+    private val bytes = ByteArray((blocks * blockSize).toInt())
+    var readCalls = 0
+    var writeCalls = 0
+
+    override fun init() = Unit
+
+    override fun read(deviceOffset: Long, buffer: ByteBuffer) {
+        readCalls++
+        val offset = (deviceOffset * blockSize).toInt()
+        buffer.put(bytes, offset, buffer.remaining())
+    }
+
+    override fun write(deviceOffset: Long, buffer: ByteBuffer) {
+        writeCalls++
+        val offset = (deviceOffset * blockSize).toInt()
+        buffer.get(bytes, offset, buffer.remaining())
+    }
 }
 
 @ExtendWith(RobolectricExtension::class)

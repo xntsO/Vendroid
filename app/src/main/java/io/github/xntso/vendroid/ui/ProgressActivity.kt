@@ -269,7 +269,9 @@ class ProgressActivity : ActivityBase() {
                     JobState.SUCCESS -> {
                         BackHandler { finish() }
                         TelemetryTraced("success_screen") {
-                            SuccessView()
+                            SuccessView(
+                                isVentoyInstall = appState.operation == Intents.OPERATION_VENTOY_INSTALL,
+                            )
                         }
                     }
 
@@ -664,50 +666,75 @@ fun JobInProgressView(
                 modifier = Modifier.padding(horizontal = 32.dp)
             ) {
                 val context = LocalContext.current
-                Row(
-                    modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = if (uiState.isVerifying) stringResource(R.string.verifying) else stringResource(
-                            R.string.copying
+                if (uiState.operation == Intents.OPERATION_VENTOY_INSTALL) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        Text(text = stringResource(R.string.installing_ventoy))
+                        Text(
+                            text = " ${uiState.destDevice?.name}",
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
-                    )
+                    }
                     Text(
-                        text = " " + if (uiState.isVerifying) uiState.destDevice?.name
-                        else uiState.sourceUri?.getDisplayName(context),
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        text = if (uiState.percent >= 0) {
+                            stringResource(R.string.percent_complete, uiState.percent)
+                        } else stringResource(R.string.getting_ready),
+                        style = MaterialTheme.typography.titleMedium,
+                        textAlign = TextAlign.Center,
                     )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = if (uiState.isVerifying) stringResource(
-                            R.string.against
-                        ) else stringResource(R.string.to)
-                    )
-                    Text(
-                        text = " " + if (uiState.isVerifying) uiState.sourceUri?.getDisplayName(
-                            context
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = if (uiState.isVerifying) stringResource(R.string.verifying) else stringResource(
+                                R.string.copying
+                            )
                         )
-                        else uiState.destDevice?.name,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                        Text(
+                            text = " " + if (uiState.isVerifying) uiState.destDevice?.name
+                            else uiState.sourceUri?.getDisplayName(context),
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = if (uiState.isVerifying) stringResource(
+                                R.string.against
+                            ) else stringResource(R.string.to)
+                        )
+                        Text(
+                            text = " " + if (uiState.isVerifying) uiState.sourceUri?.getDisplayName(
+                                context
+                            )
+                            else uiState.destDevice?.name,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
 
-                Text(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    text = if (uiState.percent >= 0) "${uiState.processedBytes.toHRSize()} / ${uiState.totalBytes.toHRSize()}" + " ${if (uiState.isVerifying) "verified" else "written"}, ${uiState.speed.toHRSize()}/s"
-                    else stringResource(R.string.getting_ready),
-                    style = MaterialTheme.typography.titleMedium,
-                    textAlign = TextAlign.Center
-                )
+                    Text(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        text = if (uiState.percent >= 0) "${uiState.processedBytes.toHRSize()} / ${uiState.totalBytes.toHRSize()}" + " ${if (uiState.isVerifying) "verified" else "written"}, ${uiState.speed.toHRSize()}/s"
+                        else stringResource(R.string.getting_ready),
+                        style = MaterialTheme.typography.titleMedium,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
 
             if (uiState.percent >= 0) {
@@ -748,7 +775,9 @@ fun JobInProgressView(
             uiState.jobId,
             uiState.isVerifying,
             uiState.destDevice!!,
-            uiState.processedBytes
+            uiState.processedBytes,
+            uiState.operation,
+            uiState.forceInstall,
         )
         ReconnectUsbDriveDialog(exception = uiState.exception as RecoverableException)
     }
@@ -859,13 +888,16 @@ fun SuccessViewLayout(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SuccessView() {
+fun SuccessView(isVentoyInstall: Boolean = false) {
     SuccessViewLayout(
         modifier = Modifier.fillMaxSize(),
         title = {
             Text(
                 modifier = Modifier.appiumTag("success_write_title"),
-                text = stringResource(R.string.image_written_successfully),
+                text = stringResource(
+                    if (isVentoyInstall) R.string.ventoy_installed_successfully
+                    else R.string.image_written_successfully,
+                ),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.titleLarge.copy(fontSize = 28.sp),
             )
@@ -934,7 +966,12 @@ fun SuccessView() {
                 })
                 activity?.finish()
             }) {
-                Text(stringResource(R.string.write_another_image))
+                Text(
+                    stringResource(
+                        if (isVentoyInstall) R.string.install_ventoy_another_drive
+                        else R.string.write_another_image,
+                    )
+                )
             }
         },
         bottomCard = {
@@ -1170,6 +1207,8 @@ fun AutoJobRestarter(
     isVerifying: Boolean,
     expectedDevice: UsbMassStorageDeviceDescriptor,
     resumeOffset: Long,
+    operation: String,
+    forceInstall: Boolean,
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -1239,7 +1278,9 @@ fun AutoJobRestarter(
                             resumeOffset,
                             isVerifying,
                             activity,
-                            WorkerService::class.java
+                            WorkerService::class.java,
+                            operation = operation,
+                            forceInstall = forceInstall,
                         )
                         Log.d(TAG, "Starting service with intent: $serviceIntent")
                         activity.startForegroundServiceCompat(serviceIntent)

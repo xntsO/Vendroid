@@ -236,7 +236,17 @@ class ConfirmOperationActivity : ActivityBase() {
         startForegroundServiceCompat(intent)
         startActivity(
             getProgressUpdateIntent(
-                uri, device, jobId, 0f, 0, 0, false, this, ProgressActivity::class.java
+                uri,
+                device,
+                jobId,
+                0f,
+                0,
+                0,
+                isVerifying = false,
+                packageContext = this,
+                cls = ProgressActivity::class.java,
+                operation = mOperation,
+                forceInstall = mForceInstall,
             )
         )
         finish()
