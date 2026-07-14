@@ -22,4 +22,4 @@ Använd det för att skapa en startbar USB-enhet med operativsystem när din bä
 ❌ Äldre GNU/Linux OS-avbildningar < 2010, t.ex. Damn Small Linux
 
 
-Källkoden finns på GitHub: https://github.com/Vendroid/Vendroid
+Källkoden finns på GitHub: https://github.com/xntsO/Vendroid

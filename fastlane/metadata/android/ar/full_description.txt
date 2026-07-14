@@ -22,4 +22,4 @@ Vendroid هو تطبيق مفتوح المصدر يساعدك على كتابة 
 ❌ صور نظام التشغيل GNU/Linux الأقدم <2010 مثل Damn Small Linux 
 
 
-كود المصدر موجود على GitHub: https://github.com/Vendroid/Vendroid
+كود المصدر موجود على GitHub: https://github.com/xntsO/Vendroid

@@ -1,66 +1,52 @@
-# Project Instructions: Vendroid
+# Project instructions: Vendroid
 
-This repository hosts **Vendroid**, an Android application for writing OS images to USB drives.
+Vendroid is a no-root Android application for installing and upgrading Ventoy on external USB drives. Treat all block-device code as destructive and verify boundaries, alignment, and failure handling carefully.
 
-## Project Structure
-- `app/` – Android app module
-  - `src/main/` – Kotlin sources and Compose UI
-  - `src/foss/` – F-Droid flavor overrides
-  - `src/gplay/` – Google Play flavor overrides (telemetry, in-app review)
-  - `src/test/` – Unit tests
-- `appium-tests/` – End-to-end tests written in Python with Appium.
-- `misc/` – Helper scripts and `mock-google-services.json` used for GPlay builds
-- `fastlane/` – Play Store text and images
-- Top-level `build.gradle.kts` and `settings.gradle.kts` define the Gradle build.
+## Project structure
 
-## Development Workflow & Conventions
+- `app/src/main/` — Kotlin sources, Compose UI, and the Ventoy installer under `vendroid/ventoy/`.
+- `app/src/foss/` — FOSS-flavor overrides.
+- `app/src/test/` — JUnit 5 and Robolectric unit tests.
+- `appium-tests/` — Python/Appium end-to-end tests, including QEMU virtual-USB tests.
+- `fastlane/` — Android store metadata.
 
-### 1. Linear History (No Merge Commits)
-We use a **rebase-only workflow**. Your branch must be rebased onto the latest `main` branch.
-- **Do:** Use `git rebase main`.
-- **Don't:** Use `git merge main`.
+## Workflow
 
-### 2. Atomic & Concise Commits
-- **One Thing Per Commit:** Each commit should perform one logical task.
-- **Separate Cleanup from Logic:** Do not lump stylistic/formatting/cleanup changes into functional commits.
-- **Commit Messages:** Be descriptive. Use [Conventional Commits](https://www.conventionalcommits.org/) format (e.g., `feat(ui): add progress bar`).
+- Keep pull requests focused and commits concise. Conventional Commit messages are preferred.
+- Rebase feature branches onto `main`; do not merge `main` into a feature branch.
+- Preserve EtchDroid attribution when changing inherited code.
+- Never add a release archive or generated payload assets to Git.
 
-### 3. Build and Unit Test
-- The first build and test run may take up to **10 minutes**.
-- Run the build as a background process (`is_background: true`) and log to a file for long runs.
-- Do not use `--scan` when invoking Gradle.
+## Build and test
 
-#### FOSS variant
-1. Ensure `ETCHDROID_ENABLE_SENTRY` is **unset** or empty.
-2. Build: `./gradlew assembleFossDebug`
-3. Test: `./gradlew testFossDebugUnitTest`
+The official Ventoy Linux archive must exist at `.vendroid-cache/ventoy-1.1.16-linux.tar.gz`, or its location must be supplied with `-PventoyPayloadArchive=/path/to/archive`. Gradle verifies the pinned SHA-256 before extracting any payload.
 
-#### GPlay variant
-1. Set `ETCHDROID_ENABLE_SENTRY=true`.
-2. Prepare: `cp misc/mock-google-services.json app/google-services.json`
-3. Build: `./gradlew assembleGplayDebug`
-4. Test: `./gradlew testGplayDebugUnitTest`
+Run:
 
-### 4. End-to-End (Appium) Tests
-Agents should run Appium tests unless instructed otherwise.
-- Requirements: Android SDK, `uv`, `7z`, `qemu-img`, `node`/`npm` installed.
-- **Install Appium**:
-  ```bash
-  cd appium-tests
-  npm ci
-  ```
-- Location: `appium-tests/`
+```sh
+./gradlew assembleFossDebug
+./gradlew testFossDebugUnitTest
+./gradlew lint
+```
 
-#### Running Bliss OS VM locally:
-1. Prepare the VM files: `./appium-tests/scripts/prepare-vm.sh` (downloads ISO, extracts files, creates USB image in `.appium-vm/`).
-2. Run the VM (in a separate terminal): `./appium-tests/scripts/run-vm.sh` (shows GTK UI, serial console on stdio, ADB on 5556).
-3. Wait for the VM to boot: `./appium-tests/scripts/wait-vm-startup.sh`
-4. Build and install the app: `./gradlew installFossDebug`
-5. Run the tests: `uv run pytest -sv` (inside `appium-tests/`)
+The first Gradle run can take several minutes. Do not use `--scan`.
 
-- Run only generic tests (excluding QEMU): `uv run pytest -m "not qemu" -sv`
-- *Note: QEMU tests require a specific setup (see `appium-tests/README.md`). If the environment supports KVM/QEMU, they should be run.*
-- **Proxy gotcha:** if `HTTP_PROXY`/`HTTPS_PROXY` are set in the environment, selenium/urllib3 route the localhost Appium connection through the proxy and fail with `SSL: CERTIFICATE_VERIFY_FAILED`. Exclude localhost when running: `NO_PROXY=127.0.0.1,localhost,127.0.0.10 no_proxy=127.0.0.1,localhost,127.0.0.10 uv run pytest -sv`.
+## End-to-end tests
 
-### 5. Linting
-Run `./gradlew lint` before submitting changes.
+Appium tests require Android SDK tools, `uv`, Node/npm, QEMU/KVM, and the Bliss OS VM described in `appium-tests/README.md`.
+
+```sh
+cd appium-tests
+npm ci
+uv run pytest -sv
+```
+
+QEMU tests exercise both the inherited raw-image writer and Vendroid's Ventoy installer against a virtual USB disk. Tests against a physical device can erase the attached USB drive; identify it explicitly and use disposable media.
+
+If proxy variables are set, exclude the local Appium endpoints:
+
+```sh
+NO_PROXY=127.0.0.1,localhost,127.0.0.10 \
+no_proxy=127.0.0.1,localhost,127.0.0.10 \
+uv run pytest -sv
+```

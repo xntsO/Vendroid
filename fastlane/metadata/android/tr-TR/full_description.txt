@@ -22,4 +22,4 @@ Laptop'un çalışmadığında önyüklenebilir bir işletim sistemi USB belleğ
 ❌ Eski GNU/Linux OS kalıpları < 2010 Damn Small Linux gibi
 
 
-Kaynak koduna GitHub'dan ulaşılabilir: https://github.com/Vendroid/Vendroid
+Kaynak koduna GitHub'dan ulaşılabilir: https://github.com/xntsO/Vendroid

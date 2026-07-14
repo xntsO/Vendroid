@@ -22,4 +22,4 @@ Sử dụng để ghi file ảnh khởi động hệ điều hành vào thiết 
 ❌ Các bản phân phối GNU/Linux cũ < 2010 như Damn Small Linux
 
 
-Mã nguồn ứng dụng trên GitHub: https://github.com/Vendroid/Vendroid
+Mã nguồn ứng dụng trên GitHub: https://github.com/xntsO/Vendroid

@@ -22,4 +22,4 @@ Zo kun je bijv. een opstartbare GNU/Linux usb-schijf maken voor als je laptop de
 ❌ Oudere GNU/Linux-iso's (vóór 2010), zoals Damn Small Linux.
 
 
-De broncode is beschikbaar op GitHub: https://github.com/Vendroid/Vendroid
+De broncode is beschikbaar op GitHub: https://github.com/xntsO/Vendroid

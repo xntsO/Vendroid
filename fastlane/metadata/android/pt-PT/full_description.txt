@@ -22,4 +22,4 @@ Use para fazer USBs bootaveis com OS quando o OS do seu PC estiver morto.
 ❌ ISOs GNU/Linux Antigos < 2010 como Damn Small Linux
 
 
-Codigo-fonte está no GitHub: https://github.com/Vendroid/Vendroid
+Codigo-fonte está no GitHub: https://github.com/xntsO/Vendroid

@@ -22,4 +22,4 @@
 ❌ < 2010 年的舊款 GNU/Linux 作業系統鏡像檔，例如 Damn Small Linux
 
 
-原始碼已在 GitHub 上網公開：https://github.com/Vendroid/Vendroid
+原始碼已在 GitHub 上網公開：https://github.com/xntsO/Vendroid

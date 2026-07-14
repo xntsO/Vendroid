@@ -13,4 +13,4 @@ Planlaşdırılan:
 • Windows quraşdırma ISO dəstəyi (ehtimal ki, root tələb edəcək)
 • Unetbootin üslubunda təsvirin yanıb-sönməsinə dəstək
 
-Mənbə kodu GitHub-dadır: https://github.com/Vendroid/Vendroid
+Mənbə kodu GitHub-dadır: https://github.com/xntsO/Vendroid

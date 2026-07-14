@@ -22,4 +22,4 @@ Vendroid é unha aplicación de código aberto que che axuda a gravar imaxes en 
 ❌ Imaxes antigas de SO GNU/Linux anteriores a 2010, como Damn Small Linux
 
 
-O código fonte está en GitHub: https://github.com/Vendroid/Vendroid
+O código fonte está en GitHub: https://github.com/xntsO/Vendroid

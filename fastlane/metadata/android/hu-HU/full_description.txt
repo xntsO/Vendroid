@@ -22,4 +22,4 @@ Bootolható USB eszközök létrehozására is használható, ha a notebook felm
 ❌ Régi, GNU/Linux operációs rendszerek lemezképei < 2010, mint például Damn Small Linux
 
 
-Forráskód a GitHub-on: https://github.com/Vendroid/Vendroid
+Forráskód a GitHub-on: https://github.com/xntsO/Vendroid

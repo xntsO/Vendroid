@@ -35,4 +35,4 @@ Bruk den til å lage en oppstartbar USB-stasjon for operativsystemet når den b�
 ❌ Apple DMG-diskbilder 
 ❌ Eldre GNU/Linux OS-bilder < 2010, for eksempel Damn Small Linux 
 
-Kildekoden er på GitHub: https://github.com/Vendroid/Vendroid
+Kildekoden er på GitHub: https://github.com/xntsO/Vendroid

@@ -22,4 +22,4 @@ Vendroid es una aplicación de código abierto que te ayuda a escribir imágenes
 ❌ Imágenes anteriores al 2010 del sistema operativo GNU/Linux , como Damn Small Linux
 
 
-El código fuente está en GitHub: https://github.com/Vendroid/Vendroid
+El código fuente está en GitHub: https://github.com/xntsO/Vendroid

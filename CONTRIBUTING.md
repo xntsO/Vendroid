@@ -1,67 +1,53 @@
 # Contributing to Vendroid
 
-Thanks for taking the time to contribute! To maintain a high standard of code quality and a clean project history, please follow these guidelines.
+Thanks for helping improve Vendroid. Because the app writes partition tables and boot data, changes should favor data safety, clear failure modes, and reproducible tests.
 
-## 🤝 Code of Conduct
-Vendroid follows the [Contributor Covenant Code of Conduct](https://www.contributor-covenant.org/version/1/4/code-of-conduct/). In short: be helpful, don't take code critiques personally, and **Don't Be A Dick™️**.
+## Conduct
 
----
+Be respectful, constructive, and patient. Critique the change, not the contributor. Harassment and discriminatory behavior are not accepted.
 
-## 🐛 Reporting Bugs & Suggestions
-* **Check for duplicates:** Ensure the issue hasn't been reported or suggested already.
-* **Troubleshoot hardware:** Many "bugs" are actually bad cables or sleep settings. Try writing while the device is on a table with the screen kept on.
-* **Use the templates:** Fill out the requested information in the issue template so the bug can be reproduced.
-* **Scope:** Features requiring root privileges or those outside the app's scope will not be accepted.
+## Bugs and proposals
 
----
+- Search existing issues before opening a new one.
+- Include the Android version, device model, USB adapter, drive model/capacity, and a reproducible sequence.
+- Remove secrets and personal file names from logs before attaching them.
+- For large features or changes to disk layout, open an issue before implementation.
+- Root-only features and phone-as-USB gadget mode are currently outside project scope.
 
-## 🌍 Translating
-* **Weblate Only:** All translations must be done via [Weblate](https://hosted.weblate.org/engage/vendroid/). **Pull requests for string files will be rejected.**
-* **Credits:** After translating, you may send a PR to update [`about.xml`](https://github.com/Vendroid/Vendroid/blob/main/app/src/main/res/xml/about.xml) to be credited in the app.
+## Translations
 
----
+Until an official translation platform is configured, translation fixes may be submitted as focused pull requests. Keep placeholders and XML escaping intact. Translator-credit updates belong in `app/src/main/res/xml/about.xml`.
 
-## 🛠 Development Workflow
+## Development workflow
 
-### 1. Linear History (No Merge Commits)
-We use a **rebase-only workflow**. Your branch must be rebased onto the latest `main` branch.
-* **Do:** Use `git rebase main`.
-* **Do:** Use `git rebase -i main` to clean up your history.
-* **Don't:** Use `git merge main` or the GitHub "Resolve conflicts" button.
+- Create a focused feature branch and rebase it onto the latest `main`.
+- Do not merge `main` into the feature branch.
+- Prefer small, self-contained commits. Conventional Commit messages are encouraged.
+- Separate unrelated formatting or cleanup from functional changes.
+- Review the final diff for generated files, debug logs, and accidental payload archives.
 
-### 2. Atomic & Concise Commits
-* **One Thing Per Commit:** Each commit should perform one logical task. 
-* **Small PRs:** If you are fixing multiple unrelated bugs, submit them as separate PRs.
-* **No "Fixup" History:** Do not include commits that revert or fix changes introduced earlier in the same PR. Use `git commit --amend` or `git rebase -i` to squash mistakes before submitting.
+## Build and verification
 
-### 3. Separate Cleanup from Logic
-**Do not lump stylistic/formatting/cleanup changes into functional commits.**
-* If you need to reformat code, do it in a dedicated commit (or separate PR).
-* **Rule of thumb:** Do not fix what isn't broken unless it's necessary for your change.
+Prepare the pinned Ventoy payload as documented in the README, then run:
 
-### 4. Commit Messages
-Be descriptive. We suggest (but don't require) the [Conventional Commits](https://www.conventionalcommits.org/) format (e.g., `feat(ui): add progress bar`).
+```sh
+./gradlew assembleFossDebug
+./gradlew testFossDebugUnitTest
+./gradlew lint
+```
 
----
+The Appium suite can run against the Bliss OS/QEMU setup documented in `appium-tests/README.md`:
 
-## 💻 Coding Standards & Testing
+```sh
+cd appium-tests
+npm ci
+uv run pytest -sv
+```
 
-* **Formatting:** Use default Android Studio formatting (`Ctrl+Alt+L`).
-* **Clean Code:** Use constants instead of magic numbers and write self-documenting code. **Comments should explain *why*, not *what***.
-* **Testing:**
-    * Run unit tests via Android Studio or `./gradlew test`.
-    * Manually verify your changes by running the app and flashing a test image.
-    * **End-to-End Tests:** We use Appium for E2E tests. You are encouraged to run them locally:
-        * **Linux:** (probably macOS too, untested) You can run the tests using a Bliss OS VM. See `appium-tests/README.md` for setup instructions.
-        * **Physical Device:** Connect a device via ADB and plug in a USB drive (at least 2GB).
-        * **Note:** On physical devices, skip QEMU tests using `uv run pytest -m "not qemu" -sv`. The tests **will fully erase** the connected USB drive since random data will be written to it.
+QEMU tests install Ventoy onto a disposable virtual USB image and validate the disk layout. When testing on physical hardware, use a disposable USB drive and confirm the selected device—the test and install flows erase or repartition it.
 
----
+## Pull requests
 
-## 🚀 Pull Request Process
-1. **Discuss Big Changes:** For significant features, open an issue first to ensure it aligns with project goals.
-2. **Self-Review:** Review your own code for typos or leftover debug logs before submitting.
-3. **Be Professional:** If changes are requested, explain your reasoning if you disagree. Disagreements are fine; the goal is to find a compromise.
+Describe the problem, the chosen approach, user-visible or compatibility impact, and the checks you ran. Respond professionally to review feedback; technical disagreement is welcome when supported by evidence.
 
-By contributing, you agree that your code will be licensed under the project's [GPLv3 License](LICENSE).
-
+Contributions are licensed under the project's [GPL-3.0 license](LICENSE).

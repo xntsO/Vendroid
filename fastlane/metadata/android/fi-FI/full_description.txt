@@ -22,4 +22,4 @@ Ei: Apple DMG levykuvat
 Ei: Vanhemmat (< 2010) GNU/Linux käyttöjärjestelmä kuvat (Esimerkiksi Damn Small Linux)
 
 
-Lähdekoodi on GitHub:issa: https://github.com/Vendroid/Vendroid
+Lähdekoodi on GitHub:issa: https://github.com/xntsO/Vendroid

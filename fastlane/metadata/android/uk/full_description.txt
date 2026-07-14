@@ -27,4 +27,4 @@ Vendroid — це програма з відкритим кодом, яка до
 ---
 
 Вихідний код доступний на GitHub:
-https://github.com/Vendroid/Vendroid
+https://github.com/xntsO/Vendroid

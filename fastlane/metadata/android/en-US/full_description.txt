@@ -22,4 +22,4 @@ Use it to make a bootable operating system USB drive when your laptop is dead.
 ❌ Older GNU/Linux OS images < 2010 such as Damn Small Linux
 
 
-Source code is on GitHub: https://github.com/Vendroid/Vendroid
+Source code is on GitHub: https://github.com/xntsO/Vendroid

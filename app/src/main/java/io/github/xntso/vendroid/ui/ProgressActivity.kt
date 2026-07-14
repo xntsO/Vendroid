@@ -916,16 +916,6 @@ fun SuccessView() {
                     )
                 }
             }
-            OutlinedButton(onClick = {
-                activity?.startActivity(
-                    Intent(
-                        Intent.ACTION_VIEW,
-                        "https://vendroid.app/donate/".toUri()
-                    )
-                )
-            }) {
-                Text(stringResource(R.string.support_the_project))
-            }
             val context = LocalContext.current
             OutlinedButton(onClick = {
                 context.startActivity(Intent(context, MainActivity::class.java).apply {
@@ -966,7 +956,7 @@ fun SuccessView() {
                             ), start = startIndex, end = endIndex
                         )
                         addLink(
-                            LinkAnnotation.Url("https://vendroid.app/broken_usb/"),
+                            LinkAnnotation.Url("https://github.com/xntsO/Vendroid/issues"),
                             startIndex,
                             endIndex
                         )
@@ -1126,7 +1116,7 @@ fun FatalErrorView(
                 activity?.startActivity(
                     Intent(
                         Intent.ACTION_VIEW,
-                        "https://github.com/vendroid/vendroid/issues".toUri()
+                        "https://github.com/xntsO/Vendroid/issues".toUri()
                     )
                 )
             }) {

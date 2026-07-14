@@ -265,12 +265,12 @@ fun AboutView(viewModel: ThemeViewModel) {
                     nameEnd
                 )
                 addLink(
-                    LinkAnnotation.Url("https://github.com/Vendroid/Vendroid/graphs/contributors"),
+                    LinkAnnotation.Url("https://github.com/xntsO/Vendroid/graphs/contributors"),
                     contributorsStart,
                     contributorsEnd
                 )
                 addLink(
-                    LinkAnnotation.Url("https://github.com/vendroid/vendroid"),
+                    LinkAnnotation.Url("https://github.com/xntsO/Vendroid"),
                     githubStart,
                     githubEnd
                 )
@@ -314,24 +314,12 @@ fun AboutView(viewModel: ThemeViewModel) {
                     activity?.startActivity(
                         Intent(
                             Intent.ACTION_VIEW,
-                            "https://vendroid.app".toUri()
+                            "https://github.com/xntsO/Vendroid".toUri()
                         )
                     )
                 }
             ) {
                 Text(stringResource(R.string.website))
-            }
-            OutlinedButton(
-                onClick = {
-                    activity?.startActivity(
-                        Intent(
-                            Intent.ACTION_VIEW,
-                            "https://vendroid.app/donate".toUri()
-                        )
-                    )
-                }
-            ) {
-                Text(stringResource(R.string.support_the_project))
             }
             val reviewHelper = remember { activity?.let { WriteReviewHelper(it) } }
             if (reviewHelper != null) {

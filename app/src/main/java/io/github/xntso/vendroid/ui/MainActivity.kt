@@ -1076,7 +1076,7 @@ fun WhatCanIWriteBottomSheet(onDismissRequest: () -> Unit, darkTheme: Boolean = 
                         ), start = startIndex, end = endIndex
                     )
                     addLink(
-                        LinkAnnotation.Url("https://github.com/Vendroid/Vendroid/releases/tag/dmg-support"),
+                        LinkAnnotation.Url("https://github.com/EtchDroid/EtchDroid/releases/tag/dmg-support"),
                         startIndex,
                         endIndex
                     )

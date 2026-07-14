@@ -22,4 +22,4 @@ Utilisez-le pour créer une clé USB amorçable lorsque votre ordinateur portabl
 ❌ Les images de systèmes d'exploitation GNU/Linux antérieures à 2010, comme Damn Small Linux
 
 
-Le code source est sur GitHub : https ://github.com/Vendroid/Vendroid
+Le code source est sur GitHub : https://github.com/xntsO/Vendroid

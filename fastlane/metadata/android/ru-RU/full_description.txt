@@ -22,4 +22,4 @@ Vendroid — это приложение с открытым исходным к
 ❌ Старые образы ОС GNU/Linux < 2010, такие как Damn Small Linux
 
 
-Исходный код находится на GitHub: https://github.com/Vendroid/Vendroid
+Исходный код находится на GitHub: https://github.com/xntsO/Vendroid

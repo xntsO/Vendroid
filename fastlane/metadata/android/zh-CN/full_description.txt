@@ -22,4 +22,4 @@ Vendroid是一个开源的应用，能帮助你写入镜像到USB设备。
 ❌2010 年前发布的更老的GNU/Linux 操作系统镜像，像Damn Small Linux
 
 
-源代码托管在Github上: https://github.com/Vendroid/Vendroid
+源代码托管在Github上: https://github.com/xntsO/Vendroid

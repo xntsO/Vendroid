@@ -22,4 +22,4 @@ Usalo per creare una chiavetta di installazione del sistema operativo quando il 
 ❌ Immagini di sistemi operativi GNU/Linux vecchi < 2010, ad esempio Damn Small Linux
 
 
-Il codice sorgente è disponibile su GitHub: https://github.com/Vendroid/Vendroid
+Il codice sorgente è disponibile su GitHub: https://github.com/xntsO/Vendroid

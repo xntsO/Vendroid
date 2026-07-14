@@ -22,4 +22,4 @@ VendroidはUSBドライブへのイメージ書き込みを支援するオープ
 ❌古いGNU/Linux OSイメージ < 2010：Damn Small LinuxやPuppy Linuxなど
 
 
-ソースコードはGitHubにあります: https://github.com/Vendroid/Vendroid
+ソースコードはGitHubにあります: https://github.com/xntsO/Vendroid

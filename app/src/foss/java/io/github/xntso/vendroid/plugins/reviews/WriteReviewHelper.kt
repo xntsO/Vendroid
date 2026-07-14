@@ -10,7 +10,7 @@ class WriteReviewHelper(private val mActivity: Activity) : IWriteReviewHelper {
 
     override fun launchReviewFlow() {
         mActivity.startActivity(
-            Intent(Intent.ACTION_VIEW, "https://github.com/Vendroid/Vendroid/".toUri())
+            Intent(Intent.ACTION_VIEW, "https://github.com/xntsO/Vendroid/".toUri())
         )
     }
 }
