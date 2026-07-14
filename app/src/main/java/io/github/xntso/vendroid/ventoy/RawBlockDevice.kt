@@ -38,14 +38,16 @@ class BlockDeviceRawBlockDevice(
         while (remaining > 0) {
             val blockNumber = currentOffset / blockSize
             val withinBlock = (currentOffset % blockSize).toInt()
-            val copyLength = minOf(remaining, blockSize - withinBlock)
-            val buffer = ByteBuffer.wrap(block).apply { clear() }
-            try {
-                driver.read(blockNumber, buffer)
-            } catch (exception: IOException) {
-                throw UsbCommunicationException(exception)
+            val copyLength: Int
+
+            if (withinBlock == 0 && remaining >= blockSize) {
+                copyLength = remaining - (remaining % blockSize)
+                readBlocks(blockNumber, ByteBuffer.wrap(destination, outputOffset, copyLength).slice())
+            } else {
+                copyLength = minOf(remaining, blockSize - withinBlock)
+                readBlocks(blockNumber, ByteBuffer.wrap(block))
+                System.arraycopy(block, withinBlock, destination, outputOffset, copyLength)
             }
-            System.arraycopy(block, withinBlock, destination, outputOffset, copyLength)
 
             currentOffset += copyLength
             outputOffset += copyLength
@@ -67,30 +69,38 @@ class BlockDeviceRawBlockDevice(
         while (remaining > 0) {
             val blockNumber = currentOffset / blockSize
             val withinBlock = (currentOffset % blockSize).toInt()
-            val copyLength = minOf(remaining, blockSize - withinBlock)
-            val wholeBlockWrite = withinBlock == 0 && copyLength == blockSize
+            val copyLength: Int
 
-            val writeBuffer = if (wholeBlockWrite) {
-                ByteBuffer.wrap(source, inputOffset, copyLength)
+            val writeBuffer = if (withinBlock == 0 && remaining >= blockSize) {
+                copyLength = remaining - (remaining % blockSize)
+                ByteBuffer.wrap(source, inputOffset, copyLength).slice()
             } else {
-                val readBuffer = ByteBuffer.wrap(block).apply { clear() }
-                try {
-                    driver.read(blockNumber, readBuffer)
-                } catch (exception: IOException) {
-                    throw UsbCommunicationException(exception)
-                }
+                copyLength = minOf(remaining, blockSize - withinBlock)
+                readBlocks(blockNumber, ByteBuffer.wrap(block))
                 System.arraycopy(source, inputOffset, block, withinBlock, copyLength)
                 ByteBuffer.wrap(block)
             }
-            try {
-                driver.write(blockNumber, writeBuffer)
-            } catch (exception: IOException) {
-                throw UsbCommunicationException(exception)
-            }
+            writeBlocks(blockNumber, writeBuffer)
 
             currentOffset += copyLength
             inputOffset += copyLength
             remaining -= copyLength
+        }
+    }
+
+    private fun readBlocks(blockNumber: Long, buffer: ByteBuffer) {
+        try {
+            driver.read(blockNumber, buffer)
+        } catch (exception: IOException) {
+            throw UsbCommunicationException(exception)
+        }
+    }
+
+    private fun writeBlocks(blockNumber: Long, buffer: ByteBuffer) {
+        try {
+            driver.write(blockNumber, buffer)
+        } catch (exception: IOException) {
+            throw UsbCommunicationException(exception)
         }
     }
 
