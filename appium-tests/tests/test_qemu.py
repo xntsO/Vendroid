@@ -10,7 +10,7 @@ import pytest
 
 from vendroid import actions as app
 from vendroid.config import Config
-from vendroid.fixtures import appium_service, driver, qemu
+from vendroid.fixtures import appium_service, driver as driver_fixture, qemu as qemu_fixture
 from vendroid.qemu import QEMUController
 from vendroid.utils import (
     used,
@@ -21,9 +21,7 @@ from vendroid.utils import (
     grant_permissions,
 )
 
-pytestmark = pytest.mark.legacy_etchdroid
-
-used(appium_service)
+used(appium_service, driver_fixture, qemu_fixture)
 
 
 def unplug_and_reconnect_usb(
@@ -89,6 +87,9 @@ def raw_disk_image(qemu: QEMUController, request):
         with open(filename, "wb") as f:
             for i in range(size_bytes // 1024 // 1024):
                 f.write(os.urandom(1024 * 1024))
+            # Ensure the random fixture cannot accidentally look like an existing MBR.
+            f.seek(510)
+            f.write(b"\x00\x00")
 
         yield filename
 
@@ -131,7 +132,58 @@ def verify_written_image(payload: bytes, raw_blockdev: Path):
         assert written_data == payload, "Written data does not match expected data"
 
 
+def read_mbr_partition_entry(mbr: bytes, index: int) -> dict[str, int]:
+    offset = 446 + (index * 16)
+    return {
+        "active": mbr[offset],
+        "type": mbr[offset + 4],
+        "start_sector": int.from_bytes(mbr[offset + 8:offset + 12], "little"),
+        "sector_count": int.from_bytes(mbr[offset + 12:offset + 16], "little"),
+    }
+
+
+def verify_ventoy_install(raw_blockdev: Path):
+    with open(raw_blockdev, "rb") as f:
+        mbr = f.read(512)
+        assert mbr[510:512] == b"\x55\xaa", "Ventoy MBR signature is missing"
+
+        data_partition = read_mbr_partition_entry(mbr, 0)
+        boot_partition = read_mbr_partition_entry(mbr, 1)
+        assert data_partition["active"] == 0x80
+        assert data_partition["type"] == 0x07
+        assert data_partition["start_sector"] == 2048
+        assert boot_partition["active"] == 0x00
+        assert boot_partition["type"] == 0xEF
+        assert boot_partition["sector_count"] == 65_536
+        assert boot_partition["start_sector"] == (
+            data_partition["start_sector"] + data_partition["sector_count"]
+        )
+        assert boot_partition["start_sector"] % 8 == 0
+
+        f.seek(data_partition["start_sector"] * 512)
+        exfat_boot_sector = f.read(512)
+        assert exfat_boot_sector[3:11] == b"EXFAT   "
+        assert exfat_boot_sector[510:512] == b"\x55\xaa"
+
+        f.seek(boot_partition["start_sector"] * 512)
+        assert f.read(512) != bytes(512), "Ventoy boot payload was not written"
+
+
 @pytest.mark.qemu
+def test_install_ventoy_to_virtual_usb(
+    driver: appium.webdriver.Remote,
+    raw_usb_drive: tuple[str, Path],
+):
+    _, raw_disk_image_path = raw_usb_drive
+
+    app.ventoy_install_flow(driver)
+    app.wait_for_success(driver, timeout=180)
+
+    verify_ventoy_install(raw_disk_image_path)
+
+
+@pytest.mark.qemu
+@pytest.mark.legacy_etchdroid
 def test_unplug_xhci(driver: appium.webdriver.Remote, qemu: QEMUController):
     with device_temp_sparse_file(driver, "vendroid_test_unplug_xhci_", ".iso", "1000M") as image:
         app.basic_flow(driver, image.filename)
@@ -146,6 +198,7 @@ def test_unplug_xhci(driver: appium.webdriver.Remote, qemu: QEMUController):
 
 
 @pytest.mark.qemu
+@pytest.mark.legacy_etchdroid
 def test_regular_flow_with_random_data_uhci(
     driver: appium.webdriver.Remote,
     random_image_file: tuple[str, bytes],
@@ -162,6 +215,7 @@ def test_regular_flow_with_random_data_uhci(
 
 
 @pytest.mark.qemu
+@pytest.mark.legacy_etchdroid
 def test_unplug_with_random_data_uhci(
     driver: appium.webdriver.Remote,
     random_image_file: tuple[str, bytes],
@@ -186,6 +240,7 @@ def test_unplug_with_random_data_uhci(
 
 
 @pytest.mark.qemu
+@pytest.mark.legacy_etchdroid
 def test_unplug_resume_from_notification(driver: appium.webdriver.Remote, qemu: QEMUController):
     grant_permissions(driver, ["android.permission.POST_NOTIFICATIONS"])
 
@@ -211,7 +266,7 @@ def test_unplug_resume_from_notification(driver: appium.webdriver.Remote, qemu: 
 
         notification = wait_for_element(
             driver,
-            f'//android.widget.TextView[@resource-id="android:id/title" and @text="Action required"]',
+            '//android.widget.TextView[@resource-id="android:id/title" and @text="Action required"]',
             timeout=5,
         )
         notification.click()

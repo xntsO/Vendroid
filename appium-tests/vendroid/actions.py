@@ -16,6 +16,19 @@ def basic_flow(driver: Remote, image_filename: str):
     skip_lay_flat_sheet(driver)
 
 
+def ventoy_install_flow(driver: Remote):
+    tap_install_ventoy(driver)
+    select_first_usb_device_if_multiple(driver)
+    grant_usb_permission(driver)
+    confirm_write_image(driver)
+    skip_lay_flat_sheet(driver)
+
+
+def tap_install_ventoy(driver: Remote):
+    btn = wait_for_element(driver, '//*[@resource-id="installVentoyCTA"]')
+    btn.click()
+
+
 def tap_write_image(driver: Remote):
     btn = wait_for_element(driver, '//*[@resource-id="writeImageCTA"]')
     btn.click()

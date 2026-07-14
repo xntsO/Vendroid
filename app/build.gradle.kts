@@ -4,6 +4,7 @@ import java.security.MessageDigest
 import java.util.Locale
 
 val pinnedVentoyVersion = "1.1.16"
+val pinnedVentoyArchiveSha256 = "a9ffd7bd5e26df486cafff924b8dbcb6caae20cbe2b179a009fe59ae740c7572"
 val ventoyPayloadArchive = providers.gradleProperty("ventoyPayloadArchive")
     .orElse(providers.environmentVariable("VENTOY_PAYLOAD_ARCHIVE"))
     .orElse(
@@ -174,6 +175,7 @@ val prepareVentoyPayload = tasks.register("prepareVentoyPayload") {
     val archivePath = ventoyPayloadArchive.get()
     val outputAssetsDir = generatedVentoyPayloadAssets.get().asFile
     inputs.property("pinnedVentoyVersion", pinnedVentoyVersion)
+    inputs.property("pinnedVentoyArchiveSha256", pinnedVentoyArchiveSha256)
     inputs.property("ventoyPayloadArchive", archivePath)
     outputs.dir(outputAssetsDir)
 
@@ -182,6 +184,10 @@ val prepareVentoyPayload = tasks.register("prepareVentoyPayload") {
         check(archive.isFile) {
             "Missing Ventoy payload archive: ${archive.absolutePath}. " +
                 "Download the official Linux release package or set -PventoyPayloadArchive=/path/to/ventoy-$pinnedVentoyVersion-linux.tar.gz"
+        }
+        val archiveSha256 = archive.sha256()
+        check(archiveSha256 == pinnedVentoyArchiveSha256) {
+            "Ventoy archive SHA-256 mismatch: expected $pinnedVentoyArchiveSha256, found $archiveSha256"
         }
 
         val requiredPaths = listOf(

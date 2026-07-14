@@ -19,6 +19,7 @@ env:
   BLISSOS_FILE: 'Bliss-v16.9.7-x86_64-OFFICIAL-foss-20241011.iso'
   BLISSOS_URL: 'https://deac-riga.dl.sourceforge.net/project/blissos-x86/Official/BlissOS16/FOSS/Generic/'
   VENTOY_VERSION: '1.1.16'
+  VENTOY_SHA256: 'a9ffd7bd5e26df486cafff924b8dbcb6caae20cbe2b179a009fe59ae740c7572'
   VM_DIR: /appium-vm
 
 jobs:
@@ -64,6 +65,7 @@ jobs:
           curl --fail --location --retry 3 \
             --output ".vendroid-cache/ventoy-${VENTOY_VERSION}-linux.tar.gz" \
             "https://github.com/ventoy/Ventoy/releases/download/v${VENTOY_VERSION}/ventoy-${VENTOY_VERSION}-linux.tar.gz"
+          printf '%s  %s\n' "$VENTOY_SHA256" ".vendroid-cache/ventoy-${VENTOY_VERSION}-linux.tar.gz" | sha256sum --check --strict
 
       - name: Build ${{ matrix.variant }}
         run: ./gradlew assemble${VARIANT^}Debug assemble${VARIANT^}Optimized
@@ -123,6 +125,7 @@ jobs:
           curl --fail --location --retry 3 \
             --output ".vendroid-cache/ventoy-${VENTOY_VERSION}-linux.tar.gz" \
             "https://github.com/ventoy/Ventoy/releases/download/v${VENTOY_VERSION}/ventoy-${VENTOY_VERSION}-linux.tar.gz"
+          printf '%s  %s\n' "$VENTOY_SHA256" ".vendroid-cache/ventoy-${VENTOY_VERSION}-linux.tar.gz" | sha256sum --check --strict
 
       - name: Run unit tests for ${{ matrix.variant }}
         run: ./gradlew test${VARIANT^}DebugUnitTest
@@ -173,6 +176,7 @@ jobs:
           curl --fail --location --retry 3 \
             --output ".vendroid-cache/ventoy-${VENTOY_VERSION}-linux.tar.gz" \
             "https://github.com/ventoy/Ventoy/releases/download/v${VENTOY_VERSION}/ventoy-${VENTOY_VERSION}-linux.tar.gz"
+          printf '%s  %s\n' "$VENTOY_SHA256" ".vendroid-cache/ventoy-${VENTOY_VERSION}-linux.tar.gz" | sha256sum --check --strict
 
       - name: Run Android lint
         run: ./gradlew lint
