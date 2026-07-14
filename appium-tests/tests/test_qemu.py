@@ -1,3 +1,5 @@
+# ruff: noqa: F811
+
 import base64
 import os
 import tempfile
@@ -10,7 +12,7 @@ import pytest
 
 from vendroid import actions as app
 from vendroid.config import Config
-from vendroid.fixtures import appium_service, driver as driver_fixture, qemu as qemu_fixture
+from vendroid.fixtures import appium_service, driver, qemu  # noqa: F401
 from vendroid.qemu import QEMUController
 from vendroid.utils import (
     used,
@@ -21,7 +23,7 @@ from vendroid.utils import (
     grant_permissions,
 )
 
-used(appium_service, driver_fixture, qemu_fixture)
+used(appium_service)
 
 
 def unplug_and_reconnect_usb(
