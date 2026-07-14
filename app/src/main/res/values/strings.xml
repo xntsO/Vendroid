@@ -22,6 +22,10 @@
     <string name="write_an_image" comment="Displayed in the home page main call-to-action button">Write an image</string>
     <string name="install_ventoy" comment="Displayed in the home page main call-to-action button">Install Ventoy</string>
     <string name="force_install_ventoy" comment="Displayed as a secondary destructive install action">Force install</string>
+    <string name="installing_ventoy">Installing Ventoy on</string>
+    <string name="ventoy_installed_successfully">Ventoy installed successfully</string>
+    <string name="install_ventoy_another_drive">Install Ventoy on another drive</string>
+    <string name="percent_complete">%1$d%% complete</string>
     <string name="whats_supported" comment="Displayed in the homepage; opens a page that lists all the supported devices and formats">What\'s supported?</string>
     <string name="style" comment="Title of the menu that allows selecting the app color scheme">Style</string>
     <string name="device_setting" comment="Style menu option that selects the device default light/dark theme">Device setting</string>
