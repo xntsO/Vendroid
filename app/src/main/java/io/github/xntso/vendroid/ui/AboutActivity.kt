@@ -21,18 +21,13 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.LinkAnnotation
@@ -53,7 +48,6 @@ import io.github.xntso.vendroid.plugins.reviews.WriteReviewHelper
 import io.github.xntso.vendroid.plugins.telemetry.Telemetry
 import io.github.xntso.vendroid.ui.composables.MainView
 import io.github.xntso.vendroid.ui.composables.ScreenSizeLayoutSelector
-import io.github.xntso.vendroid.ui.composables.coloredShadow
 import io.github.xntso.vendroid.utils.ktexts.activity
 
 class AboutActivity : ActivityBase() {
@@ -70,7 +64,7 @@ class AboutActivity : ActivityBase() {
 
         setContent {
             MainView(viewModel = mViewModel) {
-                AboutView(mViewModel)
+                AboutView()
             }
         }
     }
@@ -183,7 +177,7 @@ fun AboutViewLayout(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun AboutView(viewModel: ThemeViewModel) {
+fun AboutView() {
     AboutViewLayout(
         modifier = Modifier.fillMaxSize(),
         appTitle = {
@@ -206,88 +200,55 @@ fun AboutView(viewModel: ThemeViewModel) {
             }
         },
         logo = {
-            val darkMode by viewModel.darkMode
-            val iconBackgroundColor = MaterialTheme.colorScheme.onSurfaceVariant
-            Icon(
-                modifier = Modifier
-                    .size(128.dp)
-                    .run {
-                        if (darkMode) {
-                            coloredShadow(
-                                MaterialTheme.colorScheme.onSecondaryContainer,
-                                borderRadius = 64.dp, shadowRadius = 128.dp, alpha = 0.5f
-                            )
-                        } else {
-                            drawBehind {
-                                drawCircle(
-                                    color = iconBackgroundColor, radius = 96.dp.toPx()
-                                )
-                            }
-                        }
-                    }, imageVector = getVendroidIcon(
-                    headColor = if (darkMode) MaterialTheme.colorScheme.primary.toArgb()
-                        .toLong() else MaterialTheme.colorScheme.primaryContainer.toArgb()
-                        .toLong(),
-                ), contentDescription = "Vendroid", tint = Color.Unspecified
+            VendroidLogo(
+                modifier = Modifier.size(128.dp),
+                contentDescription = stringResource(R.string.app_name),
             )
         },
         contributorsInfo = {
+            val developerName = stringResource(R.string.developer_name)
+            val github = "GitHub"
+            val ventoy = "Ventoy"
+            val etchDroid = "EtchDroid"
+            val developerLine = stringResource(R.string.developer_credit, developerName)
+            val sourceLine = stringResource(R.string.project_source, github)
+            val upstreamLine = stringResource(R.string.upstream_projects, ventoy, etchDroid)
+            val linkStyle = SpanStyle(
+                color = MaterialTheme.colorScheme.primary,
+                textDecoration = TextDecoration.Underline,
+            )
             val annotatedText = buildAnnotatedString {
-                val name = "Davide Depau"
-                val contributors = stringResource(R.string.contributors)
-                val github = "GitHub"
-                val str = stringResource(R.string.developed_by, name, contributors, github)
-                val nameStart = str.indexOf(name)
-                val nameEnd = nameStart + name.length
-                val contributorsStart = str.indexOf(contributors)
-                val contributorsEnd = contributorsStart + contributors.length
-                val githubStart = str.indexOf(github)
-                val githubEnd = githubStart + github.length
-                append(str)
-
-                for ((start, end) in listOf(
-                    nameStart to nameEnd,
-                    contributorsStart to contributorsEnd,
-                    githubStart to githubEnd
-                )) {
-                    addStyle(
-                        style = SpanStyle(
-                            color = MaterialTheme.colorScheme.primary,
-                            textDecoration = TextDecoration.Underline
-                        ),
-                        start = start,
-                        end = end
+                append(stringResource(R.string.about_project_summary))
+                append("\n\n")
+                appendLinkedText(developerLine, developerName, "https://github.com/xntso", linkStyle)
+                append("\n")
+                appendLinkedText(
+                    sourceLine,
+                    github,
+                    "https://github.com/xntsO/Vendroid",
+                    linkStyle,
+                )
+                append("\n")
+                appendLinkedText(upstreamLine, ventoy, "https://www.ventoy.net", linkStyle)
+                val etchDroidStart = upstreamLine.indexOf(etchDroid)
+                if (etchDroidStart >= 0) {
+                    val absoluteStart = length - upstreamLine.length + etchDroidStart
+                    addStyle(linkStyle, absoluteStart, absoluteStart + etchDroid.length)
+                    addLink(
+                        LinkAnnotation.Url("https://etchdroid.app"),
+                        absoluteStart,
+                        absoluteStart + etchDroid.length,
                     )
                 }
-                addLink(
-                    LinkAnnotation.Url("https://depau.eu"),
-                    nameStart,
-                    nameEnd
-                )
-                addLink(
-                    LinkAnnotation.Url("https://github.com/Vendroid/Vendroid/graphs/contributors"),
-                    contributorsStart,
-                    contributorsEnd
-                )
-                addLink(
-                    LinkAnnotation.Url("https://github.com/vendroid/vendroid"),
-                    githubStart,
-                    githubEnd
-                )
+                append("\n")
+                append(stringResource(R.string.gpl_license_notice))
 
                 if (!Telemetry.isStub) {
                     val privacyPolicyStr = stringResource(R.string.privacy_policy)
                     append("\n$privacyPolicyStr")
-                    val privacyPolicyStart = str.length + 1
+                    val privacyPolicyStart = length - privacyPolicyStr.length
                     val privacyPolicyEnd = privacyPolicyStart + privacyPolicyStr.length
-                    addStyle(
-                        style = SpanStyle(
-                            color = MaterialTheme.colorScheme.primary,
-                            textDecoration = TextDecoration.Underline
-                        ),
-                        start = privacyPolicyStart,
-                        end = privacyPolicyEnd
-                    )
+                    addStyle(linkStyle, privacyPolicyStart, privacyPolicyEnd)
                     addLink(
                         LinkAnnotation.Url(PRIVACY_URL),
                         privacyPolicyStart,
@@ -314,24 +275,36 @@ fun AboutView(viewModel: ThemeViewModel) {
                     activity?.startActivity(
                         Intent(
                             Intent.ACTION_VIEW,
-                            "https://vendroid.app".toUri()
+                            "https://github.com/xntsO/Vendroid".toUri()
                         )
                     )
                 }
             ) {
-                Text(stringResource(R.string.website))
+                Text(stringResource(R.string.project_on_github))
             }
             OutlinedButton(
                 onClick = {
                     activity?.startActivity(
                         Intent(
                             Intent.ACTION_VIEW,
-                            "https://vendroid.app/donate".toUri()
+                            "https://www.ventoy.net".toUri()
                         )
                     )
                 }
             ) {
-                Text(stringResource(R.string.support_the_project))
+                Text("Ventoy")
+            }
+            OutlinedButton(
+                onClick = {
+                    activity?.startActivity(
+                        Intent(
+                            Intent.ACTION_VIEW,
+                            "https://etchdroid.app".toUri()
+                        )
+                    )
+                }
+            ) {
+                Text("EtchDroid")
             }
             val reviewHelper = remember { activity?.let { WriteReviewHelper(it) } }
             if (reviewHelper != null) {
@@ -354,6 +327,23 @@ fun AboutView(viewModel: ThemeViewModel) {
 fun AboutViewPreview() {
     val viewModel = remember { ThemeViewModel() }
     MainView(viewModel) {
-        AboutView(viewModel)
+        AboutView()
     }
+}
+
+private fun androidx.compose.ui.text.AnnotatedString.Builder.appendLinkedText(
+    text: String,
+    linkedPart: String,
+    url: String,
+    style: SpanStyle,
+) {
+    val lineStart = length
+    append(text)
+    val relativeStart = text.indexOf(linkedPart)
+    if (relativeStart < 0) return
+
+    val start = lineStart + relativeStart
+    val end = start + linkedPart.length
+    addStyle(style, start, end)
+    addLink(LinkAnnotation.Url(url), start, end)
 }

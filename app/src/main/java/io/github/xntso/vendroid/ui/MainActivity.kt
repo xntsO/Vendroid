@@ -75,9 +75,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -109,7 +106,6 @@ import io.github.xntso.vendroid.plugins.telemetry.TelemetryLevel
 import io.github.xntso.vendroid.ui.composables.MainView
 import io.github.xntso.vendroid.ui.composables.ScreenSizeLayoutSelector
 import io.github.xntso.vendroid.ui.composables.appiumTag
-import io.github.xntso.vendroid.ui.composables.coloredShadow
 import io.github.xntso.vendroid.ui.theme.notSupportedRed
 import io.github.xntso.vendroid.ui.theme.partiallySupportedYellow
 import io.github.xntso.vendroid.ui.theme.supportedGreen
@@ -507,7 +503,6 @@ fun StartView(
     var menuOpen by remember { mutableStateOf(false) }
     var whatCanIWriteOpen by remember { mutableStateOf(false) }
 
-    val iconBackgroundColor = MaterialTheme.colorScheme.onSurfaceVariant
     val systemInDarkMode = isSystemInDarkTheme()
     val darkMode by remember {
         derivedStateOf {
@@ -531,30 +526,7 @@ fun StartView(
             )
         },
         logo = {
-            Icon(
-                modifier = Modifier
-                    .size(128.dp)
-                    .run {
-                        if (darkMode) {
-                            coloredShadow(
-                                MaterialTheme.colorScheme.onSecondaryContainer,
-                                borderRadius = 64.dp,
-                                shadowRadius = 128.dp,
-                                alpha = 0.5f
-                            )
-                        } else {
-                            drawBehind {
-                                drawCircle(
-                                    color = iconBackgroundColor, radius = 96.dp.toPx()
-                                )
-                            }
-                        }
-                    }, imageVector = getVendroidIcon(
-                    headColor = if (darkMode) MaterialTheme.colorScheme.primary.toArgb()
-                        .toLong() else MaterialTheme.colorScheme.primaryContainer.toArgb()
-                        .toLong(),
-                ), contentDescription = null, tint = Color.Unspecified
-            )
+            VendroidLogo(modifier = Modifier.size(128.dp))
         },
         mainButton = {
             val label = stringResource(R.string.install_ventoy)
