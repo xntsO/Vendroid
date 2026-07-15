@@ -135,4 +135,10 @@
     <string name="vendroid_uses_telemetry" comment="Displayed in the main app screen on first launch in a toast/snackbar. It should be short and concise.">يرسل Vendroid معلومات القياس عن بُعد.</string>
     <string name="learn_more" comment="Displayed in the main app screen on first launch as a snackbar action button. It should be short and concise.">احصل على المزيد من المعلومات</string>
     <string name="send_anonymous_data" comment="Displayed in the main app menu; controls whether the app sends anonymous telemetry info.">أرسل بيانات مجهولة</string>
+    <string name="about_project_summary">فيندرويد تطبيق أندرويد مفتوح المصدر لتثبيت Ventoy على وحدات تخزين USB وإدارة ملفات الإقلاع.</string>
+    <string name="developer_credit">طوّره %1$s.</string>
+    <string name="project_source">الشيفرة المصدرية للمشروع: %1$s.</string>
+    <string name="upstream_projects">يستخدم %1$s ويستند إلى %2$s.</string>
+    <string name="gpl_license_notice">مرخّص بموجب رخصة GNU GPLv3.</string>
+    <string name="project_on_github">المشروع على GitHub</string>
 </resources>

@@ -78,6 +78,13 @@
     <string name="older_gnu_linux_distributions_isos_2010" comment="Image type">Older GNU/Linux distributions\' ISOs (&lt; 2010)</string>
     <string name="support_for_dmg_images_was_removed" comment="At the end of the supported devices and images page we state that DMGs are no longer supported; the parameter is replaced with the word &quot;GitHub&quot;">Support for DMG images was removed in Vendroid 2.0. Older versions can be downloaded from %1$s.</string>
     <string name="developed_by" comment="Displayed in the about page; parameters are: author name, the word &quot;contributors&quot; (translated separately), &quot;GitHub&quot;">Developed by %1$s and other %2$s.\nSource code available on %3$s.\nLicensed under the GNU GPLv3 license.</string>
+    <string name="about_project_summary">Vendroid is an open-source Android app for installing Ventoy on USB drives and managing boot image files.</string>
+    <string name="developer_name" translatable="false">Faisal Sumayli</string>
+    <string name="developer_credit">Developed by %1$s.</string>
+    <string name="project_source">Project source code: %1$s.</string>
+    <string name="upstream_projects">Uses %1$s and is based on %2$s.</string>
+    <string name="gpl_license_notice">Licensed under the GNU GPLv3 license.</string>
+    <string name="project_on_github">Project on GitHub</string>
     <string name="contributors" comment="Part of the following sentence: &quot;Developed by Author Name and other contributors&quot;">contributors</string>
     <string name="website" comment="Displayed in the about page links; keep it very short!">Website</string>
     <string name="support_the_project" comment="Displayed in the about page links; keep it short!">Support financially</string>
