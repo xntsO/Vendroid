@@ -17,6 +17,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import io.github.xntso.vendroid.Intents
 import io.github.xntso.vendroid.JobStatusInfo
 import io.github.xntso.vendroid.R
+import io.github.xntso.vendroid.VentoyJobOptions
 import io.github.xntso.vendroid.getErrorIntent
 import io.github.xntso.vendroid.getFinishedIntent
 import io.github.xntso.vendroid.getProgressActivityPendingIntent
@@ -55,7 +56,6 @@ import io.github.xntso.vendroid.utils.ktexts.toHRSize
 import io.github.xntso.vendroid.utils.lateInit
 import io.github.xntso.vendroid.utils.timeoutWatchdog
 import io.github.xntso.vendroid.ventoy.BlockDeviceRawBlockDevice
-import io.github.xntso.vendroid.ventoy.VentoyInstallOptions
 import io.github.xntso.vendroid.ventoy.VentoyInstallProgress
 import io.github.xntso.vendroid.ventoy.VentoyInstallStage
 import io.github.xntso.vendroid.ventoy.VentoyInstaller
@@ -93,6 +93,7 @@ class WorkerService : LifecycleService() {
     private var mJobId by lateInit<Int>(mutable = true)
     private var mOperation: String = Intents.OPERATION_WRITE_IMAGE
     private var mForceInstall: Boolean = false
+    private var mVentoyOptions: VentoyJobOptions = VentoyJobOptions()
     private var mWakelockAcquireTime = -1L
     private var mWakeLock: PowerManager.WakeLock? = null
     private var mVerificationCancelled = false
@@ -192,10 +193,11 @@ class WorkerService : LifecycleService() {
                                 cls = ProgressActivity::class.java,
                                 operation = status.operation,
                                 forceInstall = status.forceInstall,
+                                ventoyOptions = status.ventoyOptions,
                             ).getProgressActivityPendingIntent(this@WorkerService)
                         )
                         .setSubText(
-                            if (status.operation == Intents.OPERATION_VENTOY_INSTALL) {
+                            if (Intents.isVentoyOperation(status.operation)) {
                                 "${status.percent.coerceAtLeast(0)}%"
                             } else {
                                 "${status.processedBytes.toHRSize()} • ${status.speed.toHRSize()}/s"
@@ -237,6 +239,7 @@ class WorkerService : LifecycleService() {
                                 cls = ProgressActivity::class.java,
                                 operation = status.operation,
                                 forceInstall = status.forceInstall,
+                                ventoyOptions = status.ventoyOptions,
                             ).getProgressActivityPendingIntent(this@WorkerService)
                         )
                         .setOngoing(false)
@@ -268,6 +271,7 @@ class WorkerService : LifecycleService() {
                                 cls = ProgressActivity::class.java,
                                 operation = status.operation,
                                 forceInstall = status.forceInstall,
+                                ventoyOptions = status.ventoyOptions,
                             ).getProgressActivityPendingIntent(this@WorkerService)
                         )
                         .setOngoing(false)
@@ -317,6 +321,8 @@ class WorkerService : LifecycleService() {
             verifyOnly = intent.getBooleanExtra("verifyOnly", false)
             mOperation = intent.getStringExtra(Intents.EXTRA_OPERATION) ?: Intents.OPERATION_WRITE_IMAGE
             mForceInstall = intent.getBooleanExtra(Intents.EXTRA_FORCE_INSTALL, false)
+            mVentoyOptions = intent.safeParcelableExtra<VentoyJobOptions>(Intents.EXTRA_VENTOY_OPTIONS)
+                ?: VentoyJobOptions(forceInstall = mForceInstall)
 
             val fileName = mSourceUri.getFileName(this@WorkerService) ?: "Unknown file"
             Telemetry.configureScope {
@@ -367,6 +373,7 @@ class WorkerService : LifecycleService() {
                     exception = downstreamException,
                     operation = mOperation,
                     forceInstall = mForceInstall,
+                    ventoyOptions = mVentoyOptions,
                 ).broadcastLocallySync(this@WorkerService)
             }
             stopSelf()
@@ -424,7 +431,7 @@ class WorkerService : LifecycleService() {
                     throw UsbDriveTooLargeException()
                 }
 
-                if (mOperation == Intents.OPERATION_VENTOY_INSTALL) {
+                if (Intents.isVentoyOperation(mOperation)) {
                     val rawBlockDevice = BlockDeviceRawBlockDevice(blockDev)
                     imageSize = rawBlockDevice.sizeBytes
 
@@ -437,13 +444,22 @@ class WorkerService : LifecycleService() {
                         imageSize,
                         operation = mOperation,
                         forceInstall = mForceInstall,
+                        ventoyOptions = mVentoyOptions,
                     ).broadcastLocallySync(this@WorkerService)
 
-                    VentoyInstaller(VentoyPayload.fromAssets(assets)).install(
-                        device = rawBlockDevice,
-                        options = VentoyInstallOptions(forceInstall = mForceInstall),
-                        onProgress = ::sendVentoyProgressUpdate,
-                    )
+                    val installer = VentoyInstaller(VentoyPayload.fromAssets(assets))
+                    if (mOperation == Intents.OPERATION_VENTOY_UPDATE) {
+                        installer.upgrade(
+                            device = rawBlockDevice,
+                            onProgress = ::sendVentoyProgressUpdate,
+                        )
+                    } else {
+                        installer.install(
+                            device = rawBlockDevice,
+                            options = mVentoyOptions.toInstallOptions(),
+                            onProgress = ::sendVentoyProgressUpdate,
+                        )
+                    }
 
                     getFinishedIntent(
                         mSourceUri,
@@ -451,6 +467,7 @@ class WorkerService : LifecycleService() {
                         imageSize,
                         operation = mOperation,
                         forceInstall = mForceInstall,
+                        ventoyOptions = mVentoyOptions,
                     ).broadcastLocallySync(
                         this@WorkerService
                     )
@@ -478,6 +495,7 @@ class WorkerService : LifecycleService() {
                     isVerifying = verifyOnly,
                     operation = mOperation,
                     forceInstall = mForceInstall,
+                    ventoyOptions = mVentoyOptions,
                 ).broadcastLocallySync(this@WorkerService)
 
                 val bufferSize = BUFFER_BLOCKS * blockDev.blockSize
@@ -540,6 +558,7 @@ class WorkerService : LifecycleService() {
                     imageSize,
                     operation = mOperation,
                     forceInstall = mForceInstall,
+                    ventoyOptions = mVentoyOptions,
                 ).broadcastLocallySync(
                     this@WorkerService
                 )
@@ -560,6 +579,7 @@ class WorkerService : LifecycleService() {
                     exception = downstreamException,
                     operation = mOperation,
                     forceInstall = mForceInstall,
+                    ventoyOptions = mVentoyOptions,
                 ).broadcastLocallySync(this@WorkerService)
             } finally {
                 finish()
@@ -627,6 +647,7 @@ class WorkerService : LifecycleService() {
             isVerifying = isVerifying,
             operation = mOperation,
             forceInstall = mForceInstall,
+            ventoyOptions = mVentoyOptions,
         ).broadcastLocally(this@WorkerService)
 
         mLastProgressUpdate = newTime
@@ -658,11 +679,12 @@ class WorkerService : LifecycleService() {
             isVerifying = false,
             operation = mOperation,
             forceInstall = mForceInstall,
+            ventoyOptions = mVentoyOptions,
         ).broadcastLocally(this@WorkerService)
     }
 
     private val filenameStr: String by lazy {
-        if (mOperation == Intents.OPERATION_VENTOY_INSTALL) {
+        if (Intents.isVentoyOperation(mOperation)) {
             getString(R.string.ventoy_installer_name)
         } else {
             mSourceUri.getDisplayName(this) ?: getString(R.string.unknown_filename)

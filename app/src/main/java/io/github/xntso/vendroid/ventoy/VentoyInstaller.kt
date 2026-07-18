@@ -9,8 +9,15 @@ class VentoyInstaller(
     private val scanner: VentoyDiskScanner = VentoyDiskScanner(),
     private val random: SecureRandom = SecureRandom(),
 ) {
-    fun plan(device: RawBlockDevice): VentoyInstallPlan =
-        VentoyDiskLayout.plan(device.sizeBytes, device.blockSize, payload.version)
+    fun plan(
+        device: RawBlockDevice,
+        options: VentoyInstallOptions = VentoyInstallOptions(),
+    ): VentoyInstallPlan = VentoyDiskLayout.plan(
+        diskSizeBytes = device.sizeBytes,
+        blockSize = device.blockSize,
+        payloadVersion = payload.version,
+        reservedSpaceBytes = options.reservedSpaceBytes,
+    )
 
     fun install(
         device: RawBlockDevice,
@@ -23,10 +30,11 @@ class VentoyInstaller(
         require(options.secureBoot) {
             "Secure Boot is always enabled in this version."
         }
+        options.validate()
 
         onProgress(VentoyInstallProgress(VentoyInstallStage.ValidatingPayload))
         payload.validate()
-        val plan = plan(device)
+        val plan = plan(device, options)
 
         if (!options.forceInstall && scanner.hasAnyMbrPartition(device) && scanner.scan(device) == null) {
             throw IllegalStateException("The USB drive already has a partition table. Use force install to overwrite it.")
@@ -48,6 +56,7 @@ class VentoyInstaller(
             partitionStartSector = plan.partition1StartSector,
             partitionSectorCount = plan.partition1SectorCount,
             label = options.label,
+            clusterSize = options.clusterSize,
         )
 
         onProgress(VentoyInstallProgress(VentoyInstallStage.Verifying))
@@ -75,6 +84,10 @@ class VentoyInstaller(
             VentoyDiskLayout.DISK_SIGNATURE_OFFSET,
             VentoyDiskLayout.DISK_SIGNATURE_OFFSET + 4,
         )
+        val preservedExtraPartitionEntries = mbr.copyOfRange(
+            VentoyDiskLayout.MBR_PARTITION_TABLE_OFFSET + 2 * 16,
+            VentoyDiskLayout.MBR_PARTITION_TABLE_OFFSET + 4 * 16,
+        )
         val plan = VentoyInstallPlan(
             diskSizeBytes = device.sizeBytes,
             partition1StartSector = diskInfo.partition1StartSector,
@@ -85,7 +98,13 @@ class VentoyInstaller(
         )
 
         onProgress(VentoyInstallProgress(VentoyInstallStage.WritingBootloader))
-        writeMbr(device, plan, preservedUuid, preservedDiskSignature)
+        writeMbr(
+            device,
+            plan,
+            preservedUuid,
+            preservedDiskSignature,
+            preservedExtraPartitionEntries,
+        )
         writeCoreImage(device, onProgress)
 
         onProgress(VentoyInstallProgress(VentoyInstallStage.WritingVentoyPayload))
@@ -110,6 +129,7 @@ class VentoyInstaller(
         plan: VentoyInstallPlan,
         preservedVentoyUuid: ByteArray? = null,
         preservedDiskSignature: ByteArray? = null,
+        preservedExtraPartitionEntries: ByteArray? = null,
     ) {
         val mbr = VentoyMbr.build(
             bootImage = payload.bootImage(),
@@ -117,6 +137,7 @@ class VentoyInstaller(
             random = random,
             preservedVentoyUuid = preservedVentoyUuid,
             preservedDiskSignature = preservedDiskSignature,
+            preservedExtraPartitionEntries = preservedExtraPartitionEntries,
         )
         device.write(0, mbr)
     }

@@ -28,8 +28,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -41,12 +43,17 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -70,6 +77,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -90,9 +98,11 @@ import io.github.xntso.vendroid.AppSettings
 import io.github.xntso.vendroid.Intents
 import io.github.xntso.vendroid.R
 import io.github.xntso.vendroid.VENTOY_INSTALL_URI
+import io.github.xntso.vendroid.VentoyJobOptions
 import io.github.xntso.vendroid.getProgressUpdateIntent
 import io.github.xntso.vendroid.getStartJobIntent
 import io.github.xntso.vendroid.getStartVentoyInstallJobIntent
+import io.github.xntso.vendroid.getStartVentoyUpdateJobIntent
 import io.github.xntso.vendroid.massstorage.PreviewUsbDevice
 import io.github.xntso.vendroid.massstorage.UsbMassStorageDeviceDescriptor
 import io.github.xntso.vendroid.plugins.telemetry.Telemetry
@@ -110,6 +120,12 @@ import io.github.xntso.vendroid.utils.ktexts.startForegroundServiceCompat
 import io.github.xntso.vendroid.utils.ktexts.toHRSize
 import io.github.xntso.vendroid.utils.ktexts.toast
 import io.github.xntso.vendroid.utils.ktexts.usbDevice
+import io.github.xntso.vendroid.ventoy.BlockDeviceRawBlockDevice
+import io.github.xntso.vendroid.ventoy.VentoyDiskScanner
+import io.github.xntso.vendroid.ventoy.VentoyClusterSize
+import io.github.xntso.vendroid.ventoy.VentoyPayload
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
 private const val TAG = "ConfirmOperationActivit"
@@ -216,16 +232,26 @@ class ConfirmOperationActivity : ActivityBase() {
     private fun writeImage(uri: Uri, device: UsbMassStorageDeviceDescriptor) {
         println("writeImage $uri, $device")
         val jobId = Random.nextInt()
-        val intent = if (mOperation == Intents.OPERATION_VENTOY_INSTALL) {
-            getStartVentoyInstallJobIntent(
+        val state = mViewModel.state.value
+        val operation = state.operation
+        val ventoyOptions = state.ventoyOptions
+        val intent = when (operation) {
+            Intents.OPERATION_VENTOY_INSTALL -> getStartVentoyInstallJobIntent(
                 destDevice = device,
                 jobId = jobId,
                 forceInstall = mForceInstall,
+                ventoyOptions = ventoyOptions,
                 packageContext = this,
                 cls = WorkerService::class.java,
             )
-        } else {
-            getStartJobIntent(uri, device, jobId, 0, false, this, WorkerService::class.java)
+            Intents.OPERATION_VENTOY_UPDATE -> getStartVentoyUpdateJobIntent(
+                destDevice = device,
+                jobId = jobId,
+                ventoyOptions = ventoyOptions,
+                packageContext = this,
+                cls = WorkerService::class.java,
+            )
+            else -> getStartJobIntent(uri, device, jobId, 0, false, this, WorkerService::class.java)
         }
         Telemetry.addBreadcrumb {
             category = "flow"
@@ -245,8 +271,9 @@ class ConfirmOperationActivity : ActivityBase() {
                 isVerifying = false,
                 packageContext = this,
                 cls = ProgressActivity::class.java,
-                operation = mOperation,
+                operation = operation,
                 forceInstall = mForceInstall,
+                ventoyOptions = ventoyOptions,
             )
         )
         finish()
@@ -273,7 +300,9 @@ class ConfirmOperationActivity : ActivityBase() {
                 finish()
                 return
             }
-        mViewModel.init(openedImage, selectedDevice)
+        if (mViewModel.state.value.selectedDevice == null) {
+            mViewModel.init(openedImage, selectedDevice, mOperation, mForceInstall)
+        }
 
         val imageFileName = openedImage.getFileName(this) ?: "unknown"
         Telemetry.addBreadcrumb {
@@ -319,6 +348,16 @@ class ConfirmOperationActivity : ActivityBase() {
             MainView(mViewModel) {
                 val uiState by mViewModel.state.collectAsState()
                 var showLayFlatDialog by rememberSaveable { mutableStateOf(false) }
+                var showAdvancedOptions by rememberSaveable { mutableStateOf(false) }
+
+                LaunchedEffect(uiState.hasUsbPermission, uiState.ventoyDriveState) {
+                    if (
+                        uiState.hasUsbPermission &&
+                        uiState.ventoyDriveState == VentoyDriveState.AwaitingPermission
+                    ) {
+                        scanVentoyDrive(uiState.selectedDevice!!)
+                    }
+                }
 
                 LaunchedEffect(uiState.selectedDevice) {
                     if (uiState.selectedDevice == null) {
@@ -331,6 +370,10 @@ class ConfirmOperationActivity : ActivityBase() {
                     showLayFlatDialog = true
                 }, onCancel = {
                     finish()
+                }, onEditVentoyOptions = {
+                    showAdvancedOptions = true
+                }, onRetryVentoyScan = {
+                    mViewModel.retryVentoyScan()
                 }, askUsbPermission = {
                     val usbManager = getSystemService(USB_SERVICE) as UsbManager
 //                    Monitoring.addBreadcrumb("Requesting USB permission", "usb")
@@ -360,9 +403,51 @@ class ConfirmOperationActivity : ActivityBase() {
                         onDismissRequest = { showLayFlatDialog = false },
                     )
                 }
+
+                if (showAdvancedOptions) {
+                    VentoyAdvancedOptionsBottomSheet(
+                        options = uiState.ventoyOptions,
+                        diskSizeBytes = uiState.scannedDiskSizeBytes,
+                        onApply = {
+                            mViewModel.setVentoyOptions(it)
+                            showAdvancedOptions = false
+                        },
+                        onDismissRequest = { showAdvancedOptions = false },
+                    )
+                }
             }
         }
 
+    }
+
+    private suspend fun scanVentoyDrive(device: UsbMassStorageDeviceDescriptor) {
+        mViewModel.setVentoyScanning()
+        withContext(Dispatchers.IO) {
+            var massStorageDevice: io.github.xntso.vendroid.massstorage.VendroidUsbMassStorageDevice? = null
+            try {
+                val openedDevice = device.buildDevice(this@ConfirmOperationActivity)
+                massStorageDevice = openedDevice
+                openedDevice.init()
+                val blockDevice = openedDevice.blockDevices[0]
+                    ?: error("The USB drive does not expose a usable block device.")
+                val rawDevice = BlockDeviceRawBlockDevice(blockDevice)
+                val scanner = VentoyDiskScanner()
+                val diskInfo = scanner.scan(rawDevice)
+                val hasAnyPartition = scanner.hasAnyMbrPartition(rawDevice)
+                val bundledVersion = VentoyPayload.fromAssets(assets).version
+                mViewModel.setVentoyScanResult(
+                    diskInfo = diskInfo,
+                    hasAnyPartition = hasAnyPartition,
+                    diskSizeBytes = rawDevice.sizeBytes,
+                    bundledVersion = bundledVersion,
+                )
+            } catch (exception: Exception) {
+                Log.e(TAG, "Failed to inspect Ventoy drive", exception)
+                mViewModel.setVentoyScanError(exception.message)
+            } finally {
+                runCatching { massStorageDevice?.close() }
+            }
+        }
     }
 }
 
@@ -530,6 +615,8 @@ fun ConfirmationView(
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
     askUsbPermission: () -> Unit,
+    onEditVentoyOptions: () -> Unit = {},
+    onRetryVentoyScan: () -> Unit = {},
 ) {
     val uiState by viewModel.state.collectAsState()
 
@@ -585,28 +672,50 @@ fun ConfirmationView(
                             }
                         }
 
+                        val isVentoyOperation = Intents.isVentoyOperation(uiState.operation)
                         Text(
-                            text = stringResource(R.string.image_to_write),
+                            text = stringResource(
+                                if (isVentoyOperation) R.string.ventoy_installer_name
+                                else R.string.image_to_write,
+                            ),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 8.dp)
                         )
 
-                        Column {
-                            Text(
-                                text = sourceFileName,
-                                style = MaterialTheme.typography.labelLarge,
-                                maxLines = 2,
-                                softWrap = true,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = sourceFileSize,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontStyle = FontStyle.Italic,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            if (isVentoyOperation) {
+                                VentoyDriveStatus(uiState, onRetryVentoyScan)
+                                if (uiState.operation == Intents.OPERATION_VENTOY_INSTALL &&
+                                    uiState.ventoyDriveState == VentoyDriveState.ReadyToInstall
+                                ) {
+                                    Text(
+                                        text = ventoyOptionsSummary(uiState.ventoyOptions),
+                                        style = MaterialTheme.typography.labelMedium,
+                                    )
+                                    TextButton(
+                                        modifier = Modifier.appiumTag("ventoyAdvancedOptionsButton"),
+                                        onClick = onEditVentoyOptions,
+                                    ) {
+                                        Text(stringResource(R.string.advanced_options))
+                                    }
+                                }
+                            } else {
+                                Text(
+                                    text = sourceFileName,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    maxLines = 2,
+                                    softWrap = true,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = sourceFileSize,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontStyle = FontStyle.Italic,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     }
                 }
@@ -679,13 +788,22 @@ fun ConfirmationView(
             }
         },
         warningCard = {
+            val isUpdate = uiState.operation == Intents.OPERATION_VENTOY_UPDATE
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    containerColor = if (isUpdate) {
+                        MaterialTheme.colorScheme.secondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.errorContainer
+                    },
+                    contentColor = if (isUpdate) {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onErrorContainer
+                    },
                 )
             ) {
                 Row(
@@ -702,15 +820,27 @@ fun ConfirmationView(
                     )
                     Column {
                         Text(
-                            text = stringResource(R.string.be_careful),
+                            text = stringResource(
+                                if (isUpdate) R.string.files_will_be_preserved
+                                else R.string.be_careful,
+                            ),
                             style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onErrorContainer
+                            color = if (isUpdate) {
+                                MaterialTheme.colorScheme.onSecondaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onErrorContainer
+                            },
                         )
                         Text(
                             text = stringResource(
-                                R.string.writing_the_image_will_erase
+                                if (isUpdate) R.string.updating_ventoy_preserves_files
+                                else R.string.writing_the_image_will_erase
                             ), style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
+                            color = if (isUpdate) {
+                                MaterialTheme.colorScheme.onSecondaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onErrorContainer
+                            },
                         )
                     }
                 }
@@ -722,15 +852,342 @@ fun ConfirmationView(
             }
         },
         confirmButton = {
+            val ventoyReady = when (uiState.ventoyDriveState) {
+                VentoyDriveState.ReadyToInstall,
+                VentoyDriveState.UpdateAvailable,
+                VentoyDriveState.ReadyToRepair,
+                VentoyDriveState.NotApplicable -> true
+                else -> false
+            }
             Button(
                 modifier = Modifier.appiumTag("writeImageButton"),
                 onClick = onConfirm,
-                enabled = uiState.selectedDevice != null && uiState.hasUsbPermission
+                enabled = uiState.selectedDevice != null && uiState.hasUsbPermission && ventoyReady,
             ) {
-                Text(text = stringResource(R.string.write_image))
+                Text(
+                    text = stringResource(
+                        when (uiState.ventoyDriveState) {
+                            VentoyDriveState.UpdateAvailable -> R.string.update_ventoy
+                            VentoyDriveState.ReadyToRepair -> R.string.repair_ventoy
+                            else -> R.string.write_image
+                        },
+                    ),
+                )
             }
         }
     )
+}
+
+@Composable
+private fun VentoyDriveStatus(
+    state: ConfirmOperationActivityState,
+    onRetry: () -> Unit,
+) {
+    val installed = state.installedVentoyVersion ?: stringResource(R.string.unknown_version)
+    val bundled = state.bundledVentoyVersion ?: stringResource(R.string.unknown_version)
+    when (state.ventoyDriveState) {
+        VentoyDriveState.AwaitingPermission -> Text(
+            stringResource(R.string.grant_access_to_check_ventoy),
+            style = MaterialTheme.typography.labelMedium,
+        )
+        VentoyDriveState.Scanning -> Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            Text(stringResource(R.string.checking_ventoy_installation))
+        }
+        VentoyDriveState.ReadyToInstall -> Text(
+            stringResource(R.string.ready_to_install_ventoy_version, bundled),
+            style = MaterialTheme.typography.labelLarge,
+        )
+        VentoyDriveState.UpdateAvailable -> {
+            Text(
+                stringResource(R.string.ventoy_update_available, installed, bundled),
+                style = MaterialTheme.typography.labelLarge,
+            )
+            Text(
+                stringResource(R.string.files_will_be_preserved),
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
+        VentoyDriveState.ReadyToRepair -> Text(
+            stringResource(R.string.ventoy_ready_to_repair, installed),
+            style = MaterialTheme.typography.labelLarge,
+        )
+        VentoyDriveState.NewerVersion -> Text(
+            stringResource(R.string.ventoy_newer_than_bundled, installed, bundled),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.error,
+        )
+        VentoyDriveState.ExistingPartitions -> Text(
+            stringResource(R.string.existing_partitions_use_force_install),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.error,
+        )
+        VentoyDriveState.ScanFailed -> Column {
+            Text(
+                state.scanError ?: stringResource(R.string.could_not_check_ventoy),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+            TextButton(onClick = onRetry) {
+                Text(stringResource(R.string.try_again))
+            }
+        }
+        VentoyDriveState.NotApplicable -> Unit
+    }
+}
+
+@Composable
+private fun ventoyOptionsSummary(options: VentoyJobOptions): String {
+    val cluster = when (options.clusterSize) {
+        VentoyClusterSize.Automatic -> stringResource(R.string.automatic)
+        VentoyClusterSize.KiB32 -> "32 KiB"
+        VentoyClusterSize.KiB64 -> "64 KiB"
+        VentoyClusterSize.KiB128 -> "128 KiB"
+        VentoyClusterSize.KiB256 -> "256 KiB"
+    }
+    val gibibyte = 1024L * 1024L * 1024L
+    val mebibyte = 1024L * 1024L
+    val reserved = if (
+        options.reservedSpaceBytes >= gibibyte && options.reservedSpaceBytes % gibibyte == 0L
+    ) {
+        "${options.reservedSpaceBytes / gibibyte} GiB"
+    } else {
+        "${options.reservedSpaceBytes / mebibyte} MiB"
+    }
+    return stringResource(
+        R.string.ventoy_options_summary,
+        options.label,
+        cluster,
+        reserved,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun VentoyAdvancedOptionsBottomSheet(
+    options: VentoyJobOptions,
+    diskSizeBytes: Long,
+    onApply: (VentoyJobOptions) -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    val mebibyte = 1024L * 1024L
+    val gibibyte = 1024L * mebibyte
+    val initialUnit = if (
+        options.reservedSpaceBytes >= gibibyte && options.reservedSpaceBytes % gibibyte == 0L
+    ) {
+        ReservedSpaceUnit.GiB
+    } else {
+        ReservedSpaceUnit.MiB
+    }
+    var label by rememberSaveable(options) { mutableStateOf(options.label) }
+    var reserveEnabled by rememberSaveable(options) {
+        mutableStateOf(options.reservedSpaceBytes > 0)
+    }
+    var reservedUnit by rememberSaveable(options) { mutableStateOf(initialUnit) }
+    var reservedAmount by rememberSaveable(options) {
+        mutableStateOf((options.reservedSpaceBytes / initialUnit.bytes).toString())
+    }
+    var clusterSize by rememberSaveable(options) { mutableStateOf(options.clusterSize) }
+    var clusterMenuOpen by remember { mutableStateOf(false) }
+    var unitMenuOpen by remember { mutableStateOf(false) }
+    val parsedReservedAmount = reservedAmount.toLongOrNull()
+    val maximumReservedAmount = if (diskSizeBytes > 40L * mebibyte) {
+        (diskSizeBytes - 40L * mebibyte) / reservedUnit.bytes
+    } else {
+        0
+    }
+    val labelError = label.length !in 1..11
+    val reservedError = reserveEnabled && (
+        parsedReservedAmount == null || parsedReservedAmount <= 0 ||
+            parsedReservedAmount > Long.MAX_VALUE / reservedUnit.bytes ||
+            (diskSizeBytes > 0 && parsedReservedAmount > maximumReservedAmount)
+        )
+
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(
+                stringResource(R.string.advanced_options),
+                style = MaterialTheme.typography.titleLarge,
+            )
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth().appiumTag("ventoyVolumeLabelField"),
+                value = label,
+                onValueChange = { label = it },
+                label = { Text(stringResource(R.string.volume_label)) },
+                supportingText = { Text(stringResource(R.string.exfat_label_limit)) },
+                isError = labelError,
+                singleLine = true,
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.cluster_size), fontWeight = FontWeight.Bold)
+                Box {
+                    OutlinedButton(
+                        modifier = Modifier.appiumTag("ventoyClusterSizeButton"),
+                        onClick = { clusterMenuOpen = true },
+                    ) {
+                        Text(
+                            when (clusterSize) {
+                                VentoyClusterSize.Automatic -> stringResource(R.string.automatic)
+                                VentoyClusterSize.KiB32 -> "32 KiB"
+                                VentoyClusterSize.KiB64 -> "64 KiB"
+                                VentoyClusterSize.KiB128 -> "128 KiB"
+                                VentoyClusterSize.KiB256 -> "256 KiB"
+                            },
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = clusterMenuOpen,
+                        onDismissRequest = { clusterMenuOpen = false },
+                    ) {
+                        VentoyClusterSize.entries.forEach { size ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        when (size) {
+                                            VentoyClusterSize.Automatic -> stringResource(R.string.automatic)
+                                            VentoyClusterSize.KiB32 -> "32 KiB"
+                                            VentoyClusterSize.KiB64 -> "64 KiB"
+                                            VentoyClusterSize.KiB128 -> "128 KiB"
+                                            VentoyClusterSize.KiB256 -> "256 KiB"
+                                        },
+                                    )
+                                },
+                                onClick = {
+                                    clusterSize = size
+                                    clusterMenuOpen = false
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.reserve_space), fontWeight = FontWeight.Bold)
+                    Text(
+                        stringResource(R.string.reserve_space_description),
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
+                Switch(
+                    modifier = Modifier.appiumTag("ventoyReserveSpaceSwitch"),
+                    checked = reserveEnabled,
+                    onCheckedChange = { reserveEnabled = it },
+                )
+            }
+            if (reserveEnabled) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    OutlinedTextField(
+                        modifier = Modifier.weight(1f).appiumTag("ventoyReservedSpaceField"),
+                        value = reservedAmount,
+                        onValueChange = { value -> reservedAmount = value.filter(Char::isDigit) },
+                        label = { Text(stringResource(R.string.reserved_space)) },
+                        supportingText = {
+                            if (diskSizeBytes > 0) {
+                                Text(
+                                    stringResource(
+                                        R.string.maximum_reserved_space,
+                                        maximumReservedAmount,
+                                        reservedUnit.label,
+                                    ),
+                                )
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = reservedError,
+                        singleLine = true,
+                    )
+                    Box {
+                        OutlinedButton(
+                            modifier = Modifier.appiumTag("ventoyReservedSpaceUnitButton"),
+                            onClick = { unitMenuOpen = true },
+                        ) {
+                            Text(reservedUnit.label)
+                        }
+                        DropdownMenu(
+                            expanded = unitMenuOpen,
+                            onDismissRequest = { unitMenuOpen = false },
+                        ) {
+                            ReservedSpaceUnit.entries.forEach { unit ->
+                                DropdownMenuItem(
+                                    text = { Text(unit.label) },
+                                    onClick = {
+                                        val safeAmount = parsedReservedAmount?.takeIf {
+                                            it <= Long.MAX_VALUE / reservedUnit.bytes
+                                        } ?: 0L
+                                        val bytes = safeAmount * reservedUnit.bytes
+                                        reservedUnit = unit
+                                        reservedAmount = (bytes / unit.bytes).coerceAtLeast(1).toString()
+                                        unitMenuOpen = false
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            Text(
+                stringResource(R.string.partitions_aligned_4k),
+                style = MaterialTheme.typography.labelMedium,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
+            ) {
+                OutlinedButton(onClick = onDismissRequest) {
+                    Text(stringResource(R.string.cancel))
+                }
+                Button(
+                    modifier = Modifier.appiumTag("ventoyApplyOptionsButton"),
+                    enabled = !labelError && !reservedError,
+                    onClick = {
+                        onApply(
+                            options.copy(
+                                label = label,
+                                reservedSpaceBytes = if (reserveEnabled) {
+                                    parsedReservedAmount!! * reservedUnit.bytes
+                                } else {
+                                    0
+                                },
+                                clusterSize = clusterSize,
+                            ),
+                        )
+                    },
+                ) {
+                    Text(stringResource(R.string.apply))
+                }
+            }
+        }
+    }
+}
+
+private enum class ReservedSpaceUnit(
+    val bytes: Long,
+    val label: String,
+) {
+    MiB(1024L * 1024L, "MiB"),
+    GiB(1024L * 1024L * 1024L, "GiB"),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

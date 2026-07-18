@@ -21,6 +21,39 @@ def tap_write_image(driver: Remote):
     btn.click()
 
 
+def tap_install_ventoy(driver: Remote):
+    btn = wait_for_element(driver, '//*[@resource-id="installVentoyCTA"]')
+    btn.click()
+
+
+def open_ventoy_advanced_options(driver: Remote):
+    button = wait_for_element(driver, '//*[@resource-id="ventoyAdvancedOptionsButton"]', timeout=30)
+    button.click()
+
+
+def configure_ventoy_options(
+    driver: Remote,
+    label: str,
+    reserved_mib: int,
+    cluster_size: str,
+):
+    label_field = wait_for_element(driver, '//*[@resource-id="ventoyVolumeLabelField"]')
+    label_field.clear()
+    label_field.send_keys(label)
+
+    cluster_button = wait_for_element(driver, '//*[@resource-id="ventoyClusterSizeButton"]')
+    cluster_button.click()
+    wait_for_element(driver, f'//*[@text="{cluster_size}"]').click()
+
+    reserve_switch = wait_for_element(driver, '//*[@resource-id="ventoyReserveSpaceSwitch"]')
+    if reserve_switch.get_attribute("checked") != "true":
+        reserve_switch.click()
+    reserve_field = wait_for_element(driver, '//*[@resource-id="ventoyReservedSpaceField"]')
+    reserve_field.clear()
+    reserve_field.send_keys(str(reserved_mib))
+    wait_for_element(driver, '//*[@resource-id="ventoyApplyOptionsButton"]').click()
+
+
 def find_and_open_file(driver: Remote, filename: str):
     search_btn = wait_for_element(driver, '//*[@content-desc="Search"]')
     search_btn.click()

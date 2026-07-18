@@ -21,6 +21,7 @@ class ExFatFormatter {
         partitionStartSector: Long,
         partitionSectorCount: Long,
         label: String = "Ventoy",
+        clusterSize: VentoyClusterSize = VentoyClusterSize.Automatic,
     ): ExFatFormatInfo {
         require(device.blockSize == VentoyDiskLayout.SECTOR_SIZE) {
             "exFAT formatter requires a 512-byte block device"
@@ -30,8 +31,15 @@ class ExFatFormatter {
         }
         require(label.length in 1..11) { "exFAT volume label must be 1..11 UTF-16 code units" }
 
-        val clusterSize = if (device.sizeBytes / GIB <= 32) 32 * 1024 else 128 * 1024
-        val layout = calculateLayout(partitionStartSector, partitionSectorCount, clusterSize, label)
+        val partitionSizeBytes = partitionSectorCount * VentoyDiskLayout.SECTOR_SIZE
+        val clusterSizeBytes = clusterSize.bytes
+            ?: if (partitionSizeBytes / GIB <= 32) 32 * 1024 else 128 * 1024
+        val layout = calculateLayout(
+            partitionStartSector,
+            partitionSectorCount,
+            clusterSizeBytes,
+            label,
+        )
         val partitionOffsetBytes = partitionStartSector * VentoyDiskLayout.SECTOR_SIZE
 
         val bootRegion = buildBootRegion(layout, label)

@@ -8,6 +8,8 @@ import android.os.Parcelable
 import io.github.xntso.vendroid.massstorage.UsbMassStorageDeviceDescriptor
 import io.github.xntso.vendroid.utils.exception.base.VendroidException
 import io.github.xntso.vendroid.utils.ktexts.safeParcelableExtra
+import io.github.xntso.vendroid.ventoy.VentoyClusterSize
+import io.github.xntso.vendroid.ventoy.VentoyInstallOptions
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import java.util.Random
@@ -21,11 +23,31 @@ object Intents {
     const val FINISHED = "io.github.xntso.vendroid.broadcast.FINISHED"
     const val EXTRA_OPERATION = "operation"
     const val EXTRA_FORCE_INSTALL = "forceInstall"
+    const val EXTRA_VENTOY_OPTIONS = "ventoyOptions"
     const val OPERATION_WRITE_IMAGE = "write_image"
     const val OPERATION_VENTOY_INSTALL = "ventoy_install"
+    const val OPERATION_VENTOY_UPDATE = "ventoy_update"
+
+    fun isVentoyOperation(operation: String): Boolean =
+        operation == OPERATION_VENTOY_INSTALL || operation == OPERATION_VENTOY_UPDATE
 }
 
 val VENTOY_INSTALL_URI: Uri = Uri.parse("vendroid://ventoy/install")
+
+@Parcelize
+data class VentoyJobOptions(
+    val forceInstall: Boolean = false,
+    val label: String = "Ventoy",
+    val reservedSpaceBytes: Long = 0,
+    val clusterSize: VentoyClusterSize = VentoyClusterSize.Automatic,
+) : Parcelable {
+    fun toInstallOptions(): VentoyInstallOptions = VentoyInstallOptions(
+        forceInstall = forceInstall,
+        label = label,
+        reservedSpaceBytes = reservedSpaceBytes,
+        clusterSize = clusterSize,
+    )
+}
 
 @Parcelize
 data class JobStatusInfo(
@@ -39,6 +61,7 @@ data class JobStatusInfo(
     val exception: VendroidException? = null,
     val operation: String = Intents.OPERATION_WRITE_IMAGE,
     val forceInstall: Boolean = false,
+    val ventoyOptions: VentoyJobOptions = VentoyJobOptions(forceInstall = forceInstall),
 ) : Parcelable {
     @IgnoredOnParcel
     val percent =
@@ -57,6 +80,7 @@ fun getConfirmOperationActivityIntent(
     cls: Class<*>? = null,
     operation: String = Intents.OPERATION_WRITE_IMAGE,
     forceInstall: Boolean = false,
+    ventoyOptions: VentoyJobOptions = VentoyJobOptions(forceInstall = forceInstall),
 ): Intent {
     return mkIntent(packageContext, cls).apply {
         data = sourceUri
@@ -64,6 +88,7 @@ fun getConfirmOperationActivityIntent(
         putExtra("destDevice", destDevice)
         putExtra(Intents.EXTRA_OPERATION, operation)
         putExtra(Intents.EXTRA_FORCE_INSTALL, forceInstall)
+        putExtra(Intents.EXTRA_VENTOY_OPTIONS, ventoyOptions)
     }
 }
 
@@ -92,6 +117,7 @@ fun getStartJobIntent(
     cls: Class<*>? = null,
     operation: String = Intents.OPERATION_WRITE_IMAGE,
     forceInstall: Boolean = false,
+    ventoyOptions: VentoyJobOptions = VentoyJobOptions(forceInstall = forceInstall),
 ): Intent {
     return mkIntent(packageContext, cls).apply {
         action = Intents.START_JOB
@@ -103,6 +129,7 @@ fun getStartJobIntent(
         putExtra("verifyOnly", verifyOnly)
         putExtra(Intents.EXTRA_OPERATION, operation)
         putExtra(Intents.EXTRA_FORCE_INSTALL, forceInstall)
+        putExtra(Intents.EXTRA_VENTOY_OPTIONS, ventoyOptions)
     }
 }
 
@@ -110,6 +137,7 @@ fun getStartVentoyInstallJobIntent(
     destDevice: UsbMassStorageDeviceDescriptor,
     jobId: Int,
     forceInstall: Boolean = false,
+    ventoyOptions: VentoyJobOptions = VentoyJobOptions(forceInstall = forceInstall),
     packageContext: Context? = null,
     cls: Class<*>? = null,
 ): Intent {
@@ -123,8 +151,26 @@ fun getStartVentoyInstallJobIntent(
         putExtra("verifyOnly", false)
         putExtra(Intents.EXTRA_OPERATION, Intents.OPERATION_VENTOY_INSTALL)
         putExtra(Intents.EXTRA_FORCE_INSTALL, forceInstall)
+        putExtra(Intents.EXTRA_VENTOY_OPTIONS, ventoyOptions)
     }
 }
+
+fun getStartVentoyUpdateJobIntent(
+    destDevice: UsbMassStorageDeviceDescriptor,
+    jobId: Int,
+    ventoyOptions: VentoyJobOptions = VentoyJobOptions(),
+    packageContext: Context? = null,
+    cls: Class<*>? = null,
+): Intent = getStartJobIntent(
+    sourceUri = VENTOY_INSTALL_URI,
+    destDevice = destDevice,
+    jobId = jobId,
+    packageContext = packageContext,
+    cls = cls,
+    operation = Intents.OPERATION_VENTOY_UPDATE,
+    forceInstall = false,
+    ventoyOptions = ventoyOptions.copy(forceInstall = false),
+)
 
 fun getProgressUpdateIntent(
     sourceUri: Uri,
@@ -138,6 +184,7 @@ fun getProgressUpdateIntent(
     cls: Class<*>? = null,
     operation: String = Intents.OPERATION_WRITE_IMAGE,
     forceInstall: Boolean = false,
+    ventoyOptions: VentoyJobOptions = VentoyJobOptions(forceInstall = forceInstall),
 ) = mkIntent(packageContext, cls).apply {
     action = Intents.JOB_PROGRESS
     putExtra("sourceUri", sourceUri)
@@ -147,6 +194,7 @@ fun getProgressUpdateIntent(
             isVerifying = isVerifying,
             operation = operation,
             forceInstall = forceInstall,
+            ventoyOptions = ventoyOptions,
         )
     )
 }
@@ -162,6 +210,7 @@ fun getErrorIntent(
     cls: Class<*>? = null,
     operation: String = Intents.OPERATION_WRITE_IMAGE,
     forceInstall: Boolean = false,
+    ventoyOptions: VentoyJobOptions = VentoyJobOptions(forceInstall = forceInstall),
 ) = mkIntent(packageContext, cls).apply {
     action = Intents.ERROR
     putExtra("sourceUri", sourceUri)
@@ -173,6 +222,7 @@ fun getErrorIntent(
             exception = exception,
             operation = operation,
             forceInstall = forceInstall,
+            ventoyOptions = ventoyOptions,
         )
     )
 }
@@ -185,6 +235,7 @@ fun getFinishedIntent(
     cls: Class<*>? = null,
     operation: String = Intents.OPERATION_WRITE_IMAGE,
     forceInstall: Boolean = false,
+    ventoyOptions: VentoyJobOptions = VentoyJobOptions(forceInstall = forceInstall),
 ) = mkIntent(packageContext, cls).apply {
     action = Intents.FINISHED
     putExtra("sourceUri", sourceUri)
@@ -198,6 +249,7 @@ fun getFinishedIntent(
             jobId = -1,
             operation = operation,
             forceInstall = forceInstall,
+            ventoyOptions = ventoyOptions,
         ),
     )
 }

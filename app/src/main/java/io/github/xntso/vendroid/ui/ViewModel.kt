@@ -16,6 +16,7 @@ import io.github.xntso.vendroid.Intents
 import io.github.xntso.vendroid.JobStatusInfo
 import io.github.xntso.vendroid.SettingChangeListener
 import io.github.xntso.vendroid.ThemeMode
+import io.github.xntso.vendroid.VentoyJobOptions
 import io.github.xntso.vendroid.massstorage.VendroidUsbMassStorageDevice.Companion.massStorageDevices
 import io.github.xntso.vendroid.massstorage.UsbMassStorageDeviceDescriptor
 import io.github.xntso.vendroid.plugins.telemetry.Telemetry
@@ -24,6 +25,9 @@ import io.github.xntso.vendroid.utils.exception.ServiceTimeoutException
 import io.github.xntso.vendroid.utils.exception.base.VendroidException
 import io.github.xntso.vendroid.utils.exception.base.RecoverableException
 import io.github.xntso.vendroid.utils.ktexts.safeParcelableExtra
+import io.github.xntso.vendroid.ventoy.VentoyDiskInfo
+import io.github.xntso.vendroid.ventoy.VentoyVersion
+import io.github.xntso.vendroid.ventoy.VentoyVersionRelation
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -166,12 +170,33 @@ class MainActivityViewModel : ViewModel(), SettingChangeListener, IThemeViewMode
     }
 }
 
+enum class VentoyDriveState {
+    NotApplicable,
+    AwaitingPermission,
+    Scanning,
+    ReadyToInstall,
+    UpdateAvailable,
+    ReadyToRepair,
+    NewerVersion,
+    ExistingPartitions,
+    ScanFailed,
+}
+
 data class ConfirmOperationActivityState(
     override val dynamicColors: Boolean = false,
     override val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val openedImage: Uri? = null,
     val selectedDevice: UsbMassStorageDeviceDescriptor? = null,
     val hasUsbPermission: Boolean = false,
+    val operation: String = Intents.OPERATION_WRITE_IMAGE,
+    val forceInstall: Boolean = false,
+    val ventoyOptions: VentoyJobOptions = VentoyJobOptions(),
+    val ventoyDriveState: VentoyDriveState = VentoyDriveState.NotApplicable,
+    val installedVentoyVersion: String? = null,
+    val bundledVentoyVersion: String? = null,
+    val scannedDiskSizeBytes: Long = 0,
+    val reservedSpaceBytes: Long = 0,
+    val scanError: String? = null,
 ) : IThemeState {
     companion object {
         val Empty: ConfirmOperationActivityState
@@ -197,11 +222,24 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
         _state.update { state }
     }
 
-    fun init(openedImage: Uri?, selectedDevice: UsbMassStorageDeviceDescriptor?) = _state.update {
+    fun init(
+        openedImage: Uri?,
+        selectedDevice: UsbMassStorageDeviceDescriptor?,
+        operation: String = Intents.OPERATION_WRITE_IMAGE,
+        forceInstall: Boolean = false,
+    ) = _state.update {
         it.copy(
             openedImage = openedImage,
             selectedDevice = selectedDevice,
             hasUsbPermission = false,
+            operation = operation,
+            forceInstall = forceInstall,
+            ventoyOptions = VentoyJobOptions(forceInstall = forceInstall),
+            ventoyDriveState = if (Intents.isVentoyOperation(operation)) {
+                VentoyDriveState.AwaitingPermission
+            } else {
+                VentoyDriveState.NotApplicable
+            },
         )
     }
 
@@ -209,6 +247,83 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
         _state.update {
             it.copy(hasUsbPermission = permission)
         }
+    }
+
+    fun setVentoyScanning() {
+        _state.update { it.copy(ventoyDriveState = VentoyDriveState.Scanning, scanError = null) }
+    }
+
+    fun setVentoyScanResult(
+        diskInfo: VentoyDiskInfo?,
+        hasAnyPartition: Boolean,
+        diskSizeBytes: Long,
+        bundledVersion: String,
+    ) {
+        _state.update { state ->
+            if (state.forceInstall) {
+                return@update state.copy(
+                    operation = Intents.OPERATION_VENTOY_INSTALL,
+                    ventoyDriveState = VentoyDriveState.ReadyToInstall,
+                    installedVentoyVersion = diskInfo?.installedVersion,
+                    bundledVentoyVersion = bundledVersion,
+                    scannedDiskSizeBytes = diskSizeBytes,
+                    reservedSpaceBytes = diskInfo?.reservedSpaceBytes ?: 0,
+                    scanError = null,
+                )
+            }
+
+            if (diskInfo == null) {
+                return@update state.copy(
+                    operation = Intents.OPERATION_VENTOY_INSTALL,
+                    ventoyDriveState = if (hasAnyPartition) {
+                        VentoyDriveState.ExistingPartitions
+                    } else {
+                        VentoyDriveState.ReadyToInstall
+                    },
+                    bundledVentoyVersion = bundledVersion,
+                    scannedDiskSizeBytes = diskSizeBytes,
+                    scanError = null,
+                )
+            }
+
+            val relation = VentoyVersion.compare(diskInfo.installedVersion, bundledVersion)
+            state.copy(
+                operation = Intents.OPERATION_VENTOY_UPDATE,
+                ventoyDriveState = when (relation) {
+                    VentoyVersionRelation.Older -> VentoyDriveState.UpdateAvailable
+                    VentoyVersionRelation.Same, VentoyVersionRelation.Unknown ->
+                        VentoyDriveState.ReadyToRepair
+                    VentoyVersionRelation.Newer -> VentoyDriveState.NewerVersion
+                },
+                installedVentoyVersion = diskInfo.installedVersion,
+                bundledVentoyVersion = bundledVersion,
+                scannedDiskSizeBytes = diskSizeBytes,
+                reservedSpaceBytes = diskInfo.reservedSpaceBytes,
+                scanError = null,
+            )
+        }
+    }
+
+    fun setVentoyScanError(message: String?) {
+        _state.update {
+            it.copy(
+                ventoyDriveState = VentoyDriveState.ScanFailed,
+                scanError = message,
+            )
+        }
+    }
+
+    fun retryVentoyScan() {
+        _state.update {
+            it.copy(
+                ventoyDriveState = VentoyDriveState.AwaitingPermission,
+                scanError = null,
+            )
+        }
+    }
+
+    fun setVentoyOptions(options: VentoyJobOptions) {
+        _state.update { it.copy(ventoyOptions = options.copy(forceInstall = it.forceInstall)) }
     }
 }
 
@@ -228,6 +343,7 @@ data class ProgressActivityState(
     val isVerifying: Boolean = false,
     val operation: String = Intents.OPERATION_WRITE_IMAGE,
     val forceInstall: Boolean = false,
+    val ventoyOptions: VentoyJobOptions = VentoyJobOptions(),
     val sourceUri: Uri? = null,
     val destDevice: UsbMassStorageDeviceDescriptor? = null,
     val exception: VendroidException? = null,
@@ -289,6 +405,7 @@ class ProgressActivityViewModel : ViewModel(), SettingChangeListener, IThemeView
                         isVerifying = status.isVerifying,
                         operation = status.operation,
                         forceInstall = status.forceInstall,
+                        ventoyOptions = status.ventoyOptions,
                         percent = status.percent,
                         speed = status.speed,
                         processedBytes = status.processedBytes,
@@ -308,6 +425,7 @@ class ProgressActivityViewModel : ViewModel(), SettingChangeListener, IThemeView
                         exception = null,
                         operation = status.operation,
                         forceInstall = status.forceInstall,
+                        ventoyOptions = status.ventoyOptions,
                         sourceUri = sourceUri,
                         destDevice = status.destDevice,
                         totalBytes = status.totalBytes,
@@ -325,6 +443,7 @@ class ProgressActivityViewModel : ViewModel(), SettingChangeListener, IThemeView
                         exception = status.exception,
                         operation = status.operation,
                         forceInstall = status.forceInstall,
+                        ventoyOptions = status.ventoyOptions,
                         sourceUri = sourceUri,
                         destDevice = status.destDevice,
                         processedBytes = status.processedBytes,

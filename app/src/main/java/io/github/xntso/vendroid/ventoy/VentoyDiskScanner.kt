@@ -16,9 +16,12 @@ class VentoyDiskScanner {
         if (part2.sectorCount != VentoyDiskLayout.PARTITION2_SECTOR_COUNT) return null
         if (part2.startSector != part1.startSector + part1.sectorCount) return null
         if (part2.startSector % 8L != 0L) return null
+        if (part2.startSector + part2.sectorCount > device.sizeBytes / VentoyDiskLayout.SECTOR_SIZE) {
+            return null
+        }
 
         val installedVersion = runCatching {
-            Fat16Reader(device, part2.startSector).readText("/ventoy/version")
+            Fat16Reader(device, part2.startSector).readText("/ventoy/version")?.trim()
         }.getOrNull()
 
         return VentoyDiskInfo(
@@ -29,6 +32,8 @@ class VentoyDiskScanner {
             partition2EndSector = part2.startSector + part2.sectorCount - 1,
             installedVersion = installedVersion,
             supportedForUpgrade = true,
+            reservedSpaceBytes = device.sizeBytes -
+                (part2.startSector + part2.sectorCount) * VentoyDiskLayout.SECTOR_SIZE,
         )
     }
 
