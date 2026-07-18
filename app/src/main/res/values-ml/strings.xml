@@ -9,7 +9,6 @@
     <string name="notif_channel_job_result_name">ജോലിയുടെ ഫലം</string>
     <string name="notification_verify_progress_content">%2$s എന്നതിനെതിരെ %1$s</string>
     <string name="permission_denied_for_usb_device">%1$s എന്ന യുഎസ്ബി ഉപകരണത്തിന് അനുമതി നിരസിച്ചു</string>
-    <string name="whats_supported">എന്താണ് പിന്തുണയ്ക്കുന്നത്\?</string>
     <string name="style">ശൈലി</string>
     <string name="device_setting">ഉപകരണ ക്രമീകരണം</string>
     <string name="light">വെളിച്ചം</string>
@@ -23,15 +22,8 @@
     <string name="be_careful">ശ്രദ്ധാലുവായിരിക്കുക!</string>
     <string name="write_image">ചിത്രം എഴുതുക</string>
     <string name="lay_your_device_flat_no_accel">തുടരുന്നതിന് മുമ്പ് നിങ്ങളുടെ ഉപകരണം ഒരു മേശപ്പുറത്ത് കിടത്തുക.</string>
-    <string name="supported">പിന്തുണക്കുന്ന</string>
     <string name="lay_your_device_flat">നിങ്ങളുടെ ഉപകരണം മേശപ്പുറത്ത് വയ്ക്കുക, അതിൽ തൊടരുത്</string>
-    <string name="maybe_supported">പിന്തുണച്ചിരിക്കാം</string>
-    <string name="not_supported">പിന്തുണയ്ക്കുന്നില്ല</string>
-    <string name="devices">ഉപകരണങ്ങൾ</string>
-    <string name="any_thunderbolt_only_device">ഏതെങ്കിലും ഇടിമുഴക്കം-മാത്രമുള്ള ഉപകരണം</string>
     <string name="contributors">സംഭാവന ചെയ്യുന്നവർ</string>
-    <string name="support_the_project">സാമ്പത്തികമായി പിന്തുണയ്ക്കുക</string>
-    <string name="website">വെബ്സൈറ്റ്</string>
     <string name="writing_image">ചിത്രം എഴുതുന്നു</string>
     <string name="verifying_image">ചിത്രം പരിശോധിക്കുന്നു</string>
     <string name="sure">സമ്മതിച്ചു</string>
@@ -51,7 +43,6 @@
     <string name="an_unknown_error_occurred">ഒരു അജ്ഞാത പിശക് സംഭവിച്ചു: %1$s</string>
     <string name="the_image_is_is_larger_than_the_device">ചിത്രം (%1$s) ഉപകരണത്തേക്കാൾ വലുതാണ് (%2$s)</string>
     <string name="how_did_this_happen">ഇത് എങ്ങനെ സംഭവിച്ചു\?</string>
-    <string name="learn_what_it_means">അതിന്റെ അർത്ഥമെന്താണെന്ന് അറിയുക</string>
     <string name="image_written_successfully">ചിത്രം വിജയകരമായി എഴുതി!</string>
     <string name="to">ലേക്ക്</string>
     <string name="copying">പകർത്തുന്നു</string>
@@ -72,7 +63,6 @@
     <string name="confirm_operation">പ്രവർത്തനം സ്ഥിരീകരിക്കുക</string>
     <string name="image_to_write">എഴുതാനുള്ള ചിത്രം</string>
     <string name="skip">ഒഴിവാക്കുക</string>
-    <string name="supported_devices_and_images">പിന്തുണയ്ക്കുന്ന ഉപകരണങ്ങളും ചിത്രങ്ങളും</string>
     <string name="usb_device_reconnected_resuming">യുഎസ്ബി ഉപകരണം വീണ്ടും ബന്ധിപ്പിച്ചു, പുനരാരംഭിക്കുന്നു</string>
     <string name="the_usb_device_content_does_not_match_the_image">യുഎസ്ബി ഉപകരണത്തിന്റെ ഉള്ളടക്കം ചിത്രവുമായി പൊരുത്തപ്പെടുന്നില്ല</string>
 </resources>

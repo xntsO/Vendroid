@@ -14,7 +14,6 @@ import androidx.activity.viewModels
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,14 +33,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.HelpCenter
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.twotone.Check
-import androidx.compose.material.icons.twotone.Clear
 import androidx.compose.material.icons.twotone.Info
-import androidx.compose.material.icons.twotone.Policy
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
@@ -57,15 +51,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -76,24 +67,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
-import androidx.core.net.toUri
 import io.github.xntso.vendroid.AppSettings
-import io.github.xntso.vendroid.PRIVACY_URL
+import io.github.xntso.vendroid.BuildConfig
 import io.github.xntso.vendroid.R
 import io.github.xntso.vendroid.ThemeMode
 import io.github.xntso.vendroid.VENTOY_INSTALL_URI
@@ -106,9 +90,6 @@ import io.github.xntso.vendroid.plugins.telemetry.TelemetryLevel
 import io.github.xntso.vendroid.ui.composables.MainView
 import io.github.xntso.vendroid.ui.composables.ScreenSizeLayoutSelector
 import io.github.xntso.vendroid.ui.composables.appiumTag
-import io.github.xntso.vendroid.ui.theme.notSupportedRed
-import io.github.xntso.vendroid.ui.theme.partiallySupportedYellow
-import io.github.xntso.vendroid.ui.theme.supportedGreen
 import io.github.xntso.vendroid.utils.broadcastReceiver
 import io.github.xntso.vendroid.utils.ktexts.getFileName
 import io.github.xntso.vendroid.utils.ktexts.registerExportedReceiver
@@ -251,11 +232,6 @@ class MainActivity : ActivityBase() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        mViewModel.apply {
-            setTelemetry(Telemetry.enabled)
-            setTelemetryShown(!Telemetry.isStub)
-        }
-
         mSettings = AppSettings(this).apply {
             addListener(mViewModel)
             mViewModel.refreshSettings(this)
@@ -267,13 +243,7 @@ class MainActivity : ActivityBase() {
 
         setContent {
             val snackbarHostState = remember { SnackbarHostState() }
-            var telemetryDialogOpen by remember { mutableStateOf(false) }
             var forceInstallRequested by rememberSaveable { mutableStateOf(false) }
-
-            fun setTelemetry(enabled: Boolean) {
-                mViewModel.setTelemetry(enabled)
-                Telemetry.setEnabled(this.applicationContext, enabled)
-            }
 
 
             MainView(mViewModel, snackbarHost = { SnackbarHost(snackbarHostState) }) {
@@ -301,13 +271,6 @@ class MainActivity : ActivityBase() {
                     },
                     openAboutView = {
                         startActivity(Intent(this, AboutActivity::class.java))
-                    },
-                    toggleTelemetry = {
-                        if (mViewModel.state.value.telemetry) {
-                            telemetryDialogOpen = true
-                        } else {
-                            setTelemetry(true)
-                        }
                     }
                 )
                 val uiState by mViewModel.state.collectAsState()
@@ -342,28 +305,6 @@ class MainActivity : ActivityBase() {
                     )
                 }
 
-                if (telemetryDialogOpen) {
-                    TelemetryAlertDialog(
-                        onDismissRequest = { telemetryDialogOpen = false },
-                        onOptOut = { setTelemetry(false) },
-                        onCancel = { setTelemetry(true) }
-                    )
-                }
-
-                if (!Telemetry.isStub && mSettings.showTelemetryBanner) {
-                    mSettings.showTelemetryBanner = false
-                    LaunchedEffect(null) {
-                        val result = snackbarHostState.showSnackbar(
-                            getString(R.string.vendroid_uses_telemetry),
-                            actionLabel = getString(R.string.learn_more),
-                            withDismissAction = true,
-                            duration = SnackbarDuration.Short,
-                        )
-                        if (result == SnackbarResult.ActionPerformed) {
-                            telemetryDialogOpen = true
-                        }
-                    }
-                }
             }
         }
     }
@@ -497,22 +438,10 @@ fun StartView(
     onCTAClick: () -> Unit = {},
     onForceInstallClick: () -> Unit = {},
     openAboutView: () -> Unit = {},
-    toggleTelemetry: () -> Unit = {},
 ) {
     val uiState by viewModel.state.collectAsState()
     var menuOpen by remember { mutableStateOf(false) }
-    var whatCanIWriteOpen by remember { mutableStateOf(false) }
 
-    val systemInDarkMode = isSystemInDarkTheme()
-    val darkMode by remember {
-        derivedStateOf {
-            when (uiState.themeMode) {
-                ThemeMode.SYSTEM -> systemInDarkMode
-                ThemeMode.DARK -> true
-                else -> false
-            }
-        }
-    }
     val menuScrollState = rememberScrollState()
 
     StartViewLayout(
@@ -521,7 +450,7 @@ fun StartView(
             .fillMaxSize(),
         title = {
             Text(
-                text = "Vendroid",
+                text = "${stringResource(R.string.app_name)} v${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.titleLarge.copy(fontSize = 28.sp),
             )
         },
@@ -546,16 +475,8 @@ fun StartView(
             )
         },
         bottomButton = {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                OutlinedButton(onClick = onForceInstallClick) {
-                    Text(stringResource(R.string.force_install_ventoy))
-                }
-                TextButton(onClick = { whatCanIWriteOpen = true }) {
-                    Text(stringResource(R.string.whats_supported))
-                }
+            OutlinedButton(onClick = onForceInstallClick) {
+                Text(stringResource(R.string.force_install_ventoy))
             }
         },
         menuButton = {
@@ -618,47 +539,6 @@ fun StartView(
                         })
                 }
 
-                if (!Telemetry.isStub) {
-                    HorizontalDivider()
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        stringResource(R.string.telemetry),
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.padding(12.dp, 0.dp)
-                    )
-
-                    DropdownMenuItem(
-                        onClick = { toggleTelemetry() },
-                        text = { Text(stringResource(R.string.send_anonymous_data)) },
-                        leadingIcon = {
-                            Checkbox(
-                                modifier = Modifier.size(20.dp),
-                                checked = uiState.telemetry,
-                                onCheckedChange = { toggleTelemetry() }
-                            )
-                        }
-                    )
-
-                    val context = LocalContext.current
-                    DropdownMenuItem(
-                        onClick = {
-                            context.startActivity(
-                                Intent(
-                                    Intent.ACTION_VIEW,
-                                    PRIVACY_URL.toUri()
-                                )
-                            )
-                        },
-                        text = { Text(stringResource(R.string.privacy_policy)) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.TwoTone.Policy,
-                                contentDescription = stringResource(R.string.privacy_policy)
-                            )
-                        }
-                    )
-                }
-
                 HorizontalDivider()
 
                 DropdownMenuItem(
@@ -671,15 +551,7 @@ fun StartView(
                     })
             }
         },
-    ) {
-        if (whatCanIWriteOpen) {
-            WhatCanIWriteBottomSheet(
-                onDismissRequest = {
-                    whatCanIWriteOpen = false
-                }, darkTheme = darkMode
-            )
-        }
-    }
+    ) {}
 }
 
 @Composable
@@ -724,57 +596,6 @@ fun WindowsImageAlertDialog(
             Text(stringResource(R.string.cancel))
         }
     })
-
-@Composable
-fun TelemetryAlertDialog(
-    onDismissRequest: () -> Unit,
-    onOptOut: () -> Unit,
-    onCancel: () -> Unit = {},
-) = AlertDialog(onDismissRequest = onDismissRequest, title = {
-    Text(text = stringResource(R.string.we_need_your_help), textAlign = TextAlign.Center)
-}, text = {
-    val scrollState = rememberScrollState()
-    val privacyPolicy = stringResource(R.string.privacy_policy)
-    val annotatedString = buildAnnotatedString {
-        val text = stringResource(R.string.telemetry_rationale, privacyPolicy)
-        val startIndex = text.indexOf(privacyPolicy)
-        val endIndex = startIndex + privacyPolicy.length
-
-        append(text)
-
-        addStyle(
-            style = SpanStyle(
-                color = MaterialTheme.colorScheme.primary,
-                textDecoration = TextDecoration.Underline
-            ), start = startIndex, end = endIndex
-        )
-        addLink(LinkAnnotation.Url(PRIVACY_URL), startIndex, endIndex)
-    }
-    Text(
-        modifier = Modifier.verticalScroll(scrollState),
-        text = annotatedString,
-        style = MaterialTheme.typography.bodyMedium.copy(lineBreak = LineBreak.Paragraph),
-    )
-}, icon = {
-    Icon(
-        imageVector = ImageVector.vectorResource(id = R.drawable.ic_telemetry),
-        contentDescription = stringResource(R.string.telemetry_icon)
-    )
-}, confirmButton = {
-    TextButton(onClick = {
-        onOptOut()
-        onDismissRequest()
-    }) {
-        Text(stringResource(R.string.telemetry_opt_out))
-    }
-}, dismissButton = {
-    TextButton(onClick = {
-        onCancel()
-        onDismissRequest()
-    }) {
-        Text(stringResource(R.string.telemetry_keep_enabled))
-    }
-})
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -847,224 +668,6 @@ fun UsbDevicePickerBottomSheet(
 }
 
 
-enum class SupportStatus {
-    SUPPORTED, MAYBE_SUPPORTED, UNSUPPORTED,
-}
-
-@Composable
-fun ItemSupportEntry(
-    description: String,
-    supportStatus: SupportStatus,
-    darkTheme: Boolean = false,
-) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.Start),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = when (supportStatus) {
-                SupportStatus.SUPPORTED -> Icons.TwoTone.Check
-                SupportStatus.MAYBE_SUPPORTED -> Icons.AutoMirrored.Outlined.HelpCenter
-                SupportStatus.UNSUPPORTED -> Icons.TwoTone.Clear
-            }, contentDescription = when (supportStatus) {
-                SupportStatus.SUPPORTED -> stringResource(R.string.supported)
-                SupportStatus.MAYBE_SUPPORTED -> stringResource(R.string.maybe_supported)
-                SupportStatus.UNSUPPORTED -> stringResource(R.string.not_supported)
-            }, modifier = Modifier
-                .size(20.dp)
-                .padding(0.dp, 4.dp, 0.dp, 0.dp),
-            tint = when (supportStatus) {
-                SupportStatus.SUPPORTED -> supportedGreen(darkTheme)
-                SupportStatus.MAYBE_SUPPORTED -> partiallySupportedYellow(darkTheme)
-                SupportStatus.UNSUPPORTED -> notSupportedRed(darkTheme)
-            }
-        )
-        Text(
-            text = description, style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(top = 4.dp)
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun WhatCanIWriteBottomSheet(onDismissRequest: () -> Unit, darkTheme: Boolean = false) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
-    ModalBottomSheet(onDismissRequest = onDismissRequest, sheetState = sheetState) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(32.dp, 16.dp, 32.dp, 32.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.Top),
-        ) {
-            item {
-                Text(
-                    text = stringResource(R.string.supported_devices_and_images),
-                    style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .padding(bottom = 16.dp)
-                        .fillMaxWidth()
-                )
-            }
-            item {
-                Text(
-                    text = stringResource(R.string.devices),
-                    style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .padding(bottom = 8.dp, top = 8.dp)
-                        .fillMaxWidth()
-                )
-            }
-            item {
-                ItemSupportEntry(
-                    stringResource(R.string.usb_flash_drives), SupportStatus.SUPPORTED, darkTheme
-                )
-            }
-            item {
-                ItemSupportEntry(
-                    stringResource(R.string.memory_cards_using_a_usb_adapter),
-                    SupportStatus.SUPPORTED, darkTheme
-                )
-            }
-            item {
-                ItemSupportEntry(
-                    description = stringResource(R.string.usb_hard_drives_ssds_some_might_work),
-                    SupportStatus.MAYBE_SUPPORTED, darkTheme
-                )
-            }
-            item {
-                ItemSupportEntry(
-                    description = stringResource(
-                        R.string.usb_docks_and_hubs_might_have_power_issues
-                    ), SupportStatus.MAYBE_SUPPORTED, darkTheme
-                )
-            }
-            item {
-                ItemSupportEntry(
-                    stringResource(R.string.memory_cards_using_the_internal_slot),
-                    SupportStatus.UNSUPPORTED, darkTheme
-                )
-            }
-            item {
-                ItemSupportEntry(
-                    description = stringResource(R.string.optical_disk_drives),
-                    SupportStatus.UNSUPPORTED, darkTheme
-                )
-            }
-            item {
-                ItemSupportEntry(
-                    description = stringResource(R.string.floppy_disk_drives),
-                    SupportStatus.UNSUPPORTED, darkTheme
-                )
-            }
-            item {
-                ItemSupportEntry(
-                    description = stringResource(R.string.any_thunderbolt_only_device),
-                    SupportStatus.UNSUPPORTED, darkTheme
-                )
-            }
-            item {
-                ItemSupportEntry(
-                    description = stringResource(R.string.very_large_drives_2tb),
-                    SupportStatus.UNSUPPORTED, darkTheme
-                )
-            }
-            item {
-                Text(
-                    text = stringResource(R.string.disk_images),
-                    style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .padding(bottom = 8.dp, top = 32.dp)
-                        .fillMaxWidth()
-                )
-            }
-            item {
-                ItemSupportEntry(
-                    description = stringResource(R.string.microsoft_windows_isos_any_version),
-                    SupportStatus.UNSUPPORTED, darkTheme
-                )
-            }
-            item {
-                ItemSupportEntry(
-                    description = stringResource(R.string.community_windows_images),
-                    supportStatus = SupportStatus.MAYBE_SUPPORTED, darkTheme
-                )
-            }
-            item {
-                ItemSupportEntry(
-                    description = stringResource(R.string.apple_dmg_disk_images),
-                    SupportStatus.UNSUPPORTED, darkTheme
-                )
-            }
-            item {
-                ItemSupportEntry(
-                    description = stringResource(
-                        R.string.arch_linux_ubuntu_debian_fedora_pop_os_linux_mint_freebsd_etc
-                    ), SupportStatus.SUPPORTED, darkTheme
-                )
-            }
-            item {
-                ItemSupportEntry(
-                    description = stringResource(
-                        R.string.other_modern_gnu_linux_and_bsd_distributions_live_isos
-                    ), SupportStatus.SUPPORTED, darkTheme
-                )
-            }
-            item {
-                ItemSupportEntry(
-                    description = stringResource(R.string.raspberry_pi_sd_card_images_unzip_first),
-                    SupportStatus.SUPPORTED, darkTheme
-                )
-            }
-            item {
-                ItemSupportEntry(
-                    description = stringResource(
-                        R.string.any_other_image_that_works_with_balena_etcher_or_dd
-                    ), SupportStatus.SUPPORTED, darkTheme
-                )
-            }
-            item {
-                ItemSupportEntry(
-                    description = stringResource(R.string.older_gnu_linux_distributions_isos_2010),
-                    SupportStatus.MAYBE_SUPPORTED, darkTheme
-                )
-            }
-            item {
-                ItemSupportEntry(
-                    description = "Damn Small Linux", SupportStatus.UNSUPPORTED,
-                    darkTheme
-                )
-            }
-            item {
-                val annotatedString = buildAnnotatedString {
-                    val str = stringResource(R.string.support_for_dmg_images_was_removed, "GitHub")
-                    val startIndex = str.indexOf("GitHub")
-                    val endIndex = startIndex + "GitHub".length
-                    append(str)
-                    addStyle(
-                        style = SpanStyle(
-                            color = MaterialTheme.colorScheme.primary,
-                            textDecoration = TextDecoration.Underline
-                        ), start = startIndex, end = endIndex
-                    )
-                    addLink(
-                        LinkAnnotation.Url("https://github.com/Vendroid/Vendroid/releases/tag/dmg-support"),
-                        startIndex,
-                        endIndex
-                    )
-                }
-                Text(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 32.dp),
-                    text = annotatedString,
-                    style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onBackground)
-                )
-            }
-        }
-    }
-}
-
 @PreviewScreenSizes()
 @Composable
 fun StartViewPreview() {
@@ -1101,18 +704,6 @@ fun WindowsAlertDialogPreview() {
     MainView(viewModel) {
         WindowsImageAlertDialog(
             onDismissRequest = { }, onConfirm = { },
-            onCancel = { })
-    }
-}
-
-@PreviewScreenSizes()
-@Composable
-fun TelemetryAlertDialogPreview() {
-    val viewModel = remember { MainActivityViewModel() }
-
-    MainView(viewModel) {
-        TelemetryAlertDialog(
-            onDismissRequest = { }, onOptOut = { },
             onCancel = { })
     }
 }

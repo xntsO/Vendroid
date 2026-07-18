@@ -1,19 +1,6 @@
 package io.github.xntso.vendroid.ui.theme
 
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-
-@Composable
-fun supportedGreen(darkTheme: Boolean) = if (darkTheme) Color(0xFF87D98A)
-else Color(0xFF196D2B)
-
-@Composable
-fun partiallySupportedYellow(darkTheme: Boolean) = if (darkTheme) Color(0xFFE2B92C)
-else Color(0xFFA47F00)
-
-@Composable
-fun notSupportedRed(darkTheme: Boolean) = if (darkTheme) Color(0xFFFFB4AB)
-else Color(0xFFBA1A1A)
 
 val md_theme_light_primary = Color(0xFF6750A4)
 val md_theme_light_onPrimary = Color(0xFFFFFFFF)

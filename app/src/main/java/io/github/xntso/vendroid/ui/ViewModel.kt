@@ -89,8 +89,6 @@ data class MainActivityState(
     val showWindowsAlertForUri: Uri? = null,
     val openedImage: Uri? = null,
     val massStorageDevices: Set<UsbMassStorageDeviceDescriptor> = emptySet(),
-    val telemetry: Boolean = false,
-    val showTelemetry: Boolean = true,
 ) : IThemeState {
     companion object {
         val Empty: MainActivityState
@@ -150,18 +148,6 @@ class MainActivityViewModel : ViewModel(), SettingChangeListener, IThemeViewMode
             state.copy(
                 massStorageDevices = devices.flatMap { it.massStorageDevices }.toSet()
             )
-        }
-    }
-
-    fun setTelemetry(enabled: Boolean) {
-        _state.update {
-            it.copy(telemetry = enabled)
-        }
-    }
-
-    fun setTelemetryShown(shown: Boolean) {
-        _state.update {
-            it.copy(showTelemetry = shown)
         }
     }
 

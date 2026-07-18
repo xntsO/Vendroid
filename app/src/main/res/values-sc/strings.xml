@@ -19,7 +19,6 @@
     <string name="permission_denied_for_usb_device" comment="Displayed in a toast when the usb permission is denied">Permissu po su dispositivu USB %1$s negau</string>
     <string name="usb_device_was_unplugged" comment="Displayed in a toast when the USB device is unplugged">Dispositivu USB stacau</string>
     <string name="write_an_image" comment="Displayed in the home page main call-to-action button">Iscrii un\'imagine</string>
-    <string name="whats_supported" comment="Displayed in the homepage; opens a page that lists all the supported devices and formats">Ita est suportau?</string>
     <string name="style" comment="Title of the menu that allows selecting the app color scheme">Stili</string>
     <string name="device_setting" comment="Style menu option that selects the device default light/dark theme">Impostatzione globali</string>
     <string name="light" comment="Style menu option that selects the light theme">Craru</string>
@@ -47,33 +46,8 @@
     <string name="continue_" comment="Button displayed in the dialog that forces the user to lay the device flat on a table before continuing, when the device has no gravity sensor; when pressed the operation starts.">Sighi</string>
     <string name="lay_your_device_flat" comment="Title of the dialog that forces the user to lay the device flat on a table before continuing, when the device has a gravity sensor">Pone su dispositivi in una mesa e no \'ddu tochis</string>
     <string name="skip" comment="Button displayed in the dialog that forces the user to lay the device flat on a table before continuing, when the device has a gravity sensor; when pressed the flat check is skipped and the operation starts.">Sarta</string>
-    <string name="supported" comment="Description of a device or image type that is supported">Suportau</string>
-    <string name="maybe_supported" comment="Description of a device or image type that might be supported">Podet essere suportau</string>
-    <string name="not_supported" comment="Description of a device or image type that is not supported">Non suportau</string>
-    <string name="supported_devices_and_images" comment="Title of the page that lists all the supported devices and images">Dispositivos e imagines suportadas</string>
-    <string name="devices" comment="Title of the section that lists all the supported device types">Dispositivos</string>
-    <string name="usb_flash_drives" comment="Device type">Crais de memoria USB</string>
-    <string name="memory_cards_using_a_usb_adapter" comment="Device type">Ischedas de memoria, impreandu unu adatatore USB</string>
-    <string name="usb_hard_drives_ssds_some_might_work" comment="Device type">Hard disk / SSD USB (calincunus podet essere chi andint)</string>
-    <string name="usb_docks_and_hubs_might_have_power_issues" comment="Device type">Dock e hub USB (calincunus podent tennere problemas de alimentatzione)</string>
-    <string name="memory_cards_using_the_internal_slot" comment="Device type">Ischedas de memoria, impreandu su letore integrau</string>
-    <string name="optical_disk_drives" comment="Device type">Letores de discus oticus</string>
-    <string name="floppy_disk_drives" comment="Device type">Letores de discus floppy</string>
-    <string name="any_thunderbolt_only_device" comment="Device type">Totus is dispositivos chi suportant solu Thunderbolt</string>
-    <string name="very_large_drives_2tb" comment="Device type">Discos meda mannus (≥ 2 TB)</string>
-    <string name="disk_images" comment="Title of the section that lists all the supported image types">Imagines de discus</string>
-    <string name="microsoft_windows_isos_any_version" comment="Image type">ISOs de Microsoft Windows (totas is versiones)</string>
-    <string name="apple_dmg_disk_images" comment="Image type">Imagines de discu Apple DMG</string>
-    <string name="arch_linux_ubuntu_debian_fedora_pop_os_linux_mint_freebsd_etc" comment="Image type">Arch Linux, Ubuntu, Debian, Fedora, pop!_OS, Linux Mint, FreeBSD ecc.</string>
-    <string name="other_modern_gnu_linux_and_bsd_distributions_live_isos" comment="Image type">ISOs de ateras distributziones de GNU/Linux e BSD modernas</string>
-    <string name="raspberry_pi_sd_card_images_unzip_first" comment="Image type">Imagines SD card po Raspberry Pi (estraeddas de su zip!)</string>
-    <string name="any_other_image_that_works_with_balena_etcher_or_dd" comment="Image type">Totas is ateras imagines chi funtzionant cun Balena Etcher o dd</string>
-    <string name="older_gnu_linux_distributions_isos_2010" comment="Image type">ISOs de distributziones GNU/Linux becias (&lt; 2010)</string>
-    <string name="support_for_dmg_images_was_removed" comment="At the end of the supported devices and images page we state that DMGs are no longer supported; the parameter is replaced with the word &quot;GitHub&quot;">Su suportu po is imaginis DMG est stetiu pesau cumentzandu cun Vendroid 2.0. Versiones prus becias podent essere iscarrigadas de %1$s.</string>
     <string name="developed_by" comment="Displayed in the about page; parameters are: author name, the word &quot;contributors&quot; (translated separately), &quot;GitHub&quot;">Svilupau de %1$s e aterus %2$s.\nSu codixi sorgente s\'agatat in %3$s.\nDistribuiu cun licentzia GNU GPLv3.</string>
     <string name="contributors" comment="Part of the following sentence: &quot;Developed by Author Name and other contributors&quot;">bolontarius</string>
-    <string name="website" comment="Displayed in the about page links; keep it very short!">Situ web</string>
-    <string name="support_the_project" comment="Displayed in the about page links; keep it short!">Dona dinai</string>
     <string name="verifying_image" comment="Title of the progress page while an image is being verified">Verificandu s\'imagine</string>
     <string name="writing_image" comment="Title of the progress page while an image is being written">Iscriendu s\'imagine</string>
     <string name="please_avoid_using_your_device" comment="Subtitle of the progress page while an image is being written">Non imprees su dispositivu</string>
@@ -89,9 +63,6 @@
     <string name="image_written_successfully" comment="Title of the success page">Imagine iscrita beni!</string>
     <string name="write_a_review" comment="Displayed in a button on the success page">Iscrii una recentzione</string>
     <string name="star_on_github" comment="Displayed in a button on the success page">Dona una istella in GitHub</string>
-    <string name="got_an_unsupported_drive_notification" comment="Title of the card that teaches the user about any &quot;Issues with this drive&quot; notifications">Asi erriciu una notifica chi narat calincuna cosa cumente \"Dispositivu non suportau\"?</string>
-    <string name="it_s_safe_to_ignore" comment="Message of the card that teaches the user about any &quot;Issues with this drive&quot; notifications; the parameter will be replaced with the translation of &quot;Learn what it means&quot;">\'Dda podes lassai istai! Staca su dispositivu e impreaddu cumente depes. %1$s e cumente formatai candu asi finiu.</string>
-    <string name="learn_what_it_means" comment="Part of the message of the card that teaches the user about any &quot;Issues with this drive&quot; notifications; the full sentence is &quot;Learn what it means and see how to format your drive later&quot;">Bii ita bolet nai</string>
     <string name="there_was_an_error" comment="Title of the non-recoverable error page">\'Ddue tenet unu problema</string>
     <string name="error">Errori</string>
     <string name="start_over" comment="Button in the error page that, when pressed, restarts the app">Torra a cumentzai</string>
@@ -119,18 +90,7 @@
     <string name="no_image_uri_provided" comment="Error message (shown in a toast) when the operation confirmation screen is opened without a source file; the app redirects back to the home page">Nisciunu URI imagine donau</string>
     <string name="no_destination_device_selected" comment="Error message (shown in a toast) when the operation confirmation screen is opened without a destination device; the app redirects back to the home page">Nisciunu dispositivu de destinatzione sceberau</string>
     <string name="service_timeout_message" comment="Error message displayed when the background write service does not send any progress updates for a suspiciously long time. In this case, the app assumes the service got stuck and prompts the user to try again.">Su traballu de iscritura pari chi siat blocau. Prova un\'atra bia.</string>
-    <string name="community_windows_images" comment="&quot;You're on your own&quot; can be translated with something similar to &quot;unsupported&quot; or &quot;be careful!&quot; if it makes more sense in the target language">Imagines de Windows fatas po Vendroid de sa comunidadi (castia bene: podent tennere virus!)</string>
     <string name="worker_null_device_error" comment="Error message displayed when users get a mysterious NullPointerException while starting a new write. The original translation tries to give the user a general idea of the issue without being too technical.">Unu tentativu de iscritura est partiu però calincuna informatzione no\' est erribada. Po favore, prova un\'atra bia.</string>
     <string name="please_report_fatal_issue" comment="Displayed in the fatal error screen, prompting the users to report the issue on GitHub along with the steps to reproduce it">Ci podes, naranosì de custu problema in GitHub, narandunosì totu su ci as fatu chi a portau a custu errore.</string>
     <string name="view_github_issues" comment="Displayed in the fatal error screen, in a small button. When pressed, the app opens the GitHub issues page. Since the button is small, please keep this short. You can replace it with &quot;GitHub issues&quot; if &quot;View GitHub issues&quot; is too long in your language.">Problemas in GitHub</string>
-    <string name="telemetry" comment="Displayed in the menu if the current app build may send telemetry (Google Play builds)">Telemetria</string>
-    <string name="privacy_policy" comment="Displayed in the app menu, as well as in other links to the privacy policy">Informativa po sa privacy</string>
-    <string name="telemetry_rationale" comment="Displayed in builds with telemetry enabled (Google Play) when the user tries to opt-out of telemetry to try to convince them not to. '%1$s' is replaced with a link to the privacy policy; the `privacy_policy` string is used.">Vendroid rispetat sa privacy tua e inviat pagu pagu informatziones po agiudai a arresolviri is problemas.\n\nFai parti de sa nostra comunidadi open-source: teni sa telemetria alluta e agiudanosì a migliorai Vendroid po totus!\n\nPuru ci non arregolleus informatziones chi podent identificai una persona, noso creeusu in sa trasparentzia e ti boleus narriri ca is nomenes de is files de imagine chi aberis e is identificativus de is dispositivus USB funti arregoltus anonimamente po agiudai a cumprendere is causas de is problemas cun hardware specificu. Ci no\' \'ddue tenent datus sensibilis in is nomenes de is files tuus o is identificativus de is dispositivus USB tuus non funti sensibilis, no\' \'ddue tenet problemas a no si mandai custus datus. (%1$s)</string>
-    <string name="we_need_your_help" comment="Title of the dialog that asks the user to enable telemetry">Teneus bisongiu de s\'agiudu tuu!</string>
-    <string name="telemetry_icon" comment="Description of the telemetry icon for accessibility purposes">Icona po sa telemetria</string>
-    <string name="telemetry_opt_out" comment="Button to opt-out of telemetry; it can be translated as &quot;Disable telemetry&quot; if it fits better in the target language">Studa sa telemetria</string>
-    <string name="telemetry_keep_enabled" comment="Button to opt-in to telemetry; it can be translated as &quot;Enable telemetry&quot; if it fits better in the target language">Tenedda alluta</string>
-    <string name="vendroid_uses_telemetry" comment="Displayed in the main app screen on first launch in a toast/snackbar. It should be short and concise.">Vendroid mandat unu pagu de telemetria.</string>
-    <string name="learn_more" comment="Displayed in the main app screen on first launch as a snackbar action button. It should be short and concise.">Prus informatziones</string>
-    <string name="send_anonymous_data" comment="Displayed in the main app menu; controls whether the app sends anonymous telemetry info.">Invia datus anonimus</string>
 </resources>

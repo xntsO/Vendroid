@@ -1,66 +1,44 @@
-# Project Instructions: Vendroid
+# Project instructions: Vendroid
 
-This repository hosts **Vendroid**, an Android application for writing OS images to USB drives.
+Vendroid is a no-root Android application for installing and managing Ventoy on external USB drives.
 
-## Project Structure
-- `app/` – Android app module
-  - `src/main/` – Kotlin sources and Compose UI
-  - `src/foss/` – F-Droid flavor overrides
-  - `src/gplay/` – Google Play flavor overrides (telemetry, in-app review)
-  - `src/test/` – Unit tests
-- `appium-tests/` – End-to-end tests written in Python with Appium.
-- `misc/` – Helper scripts and `mock-google-services.json` used for GPlay builds
-- `fastlane/` – Play Store text and images
-- Top-level `build.gradle.kts` and `settings.gradle.kts` define the Gradle build.
+## Repository structure
 
-## Development Workflow & Conventions
+- `app/src/main/` – Kotlin, Compose UI, USB storage, and Ventoy implementation.
+- `app/src/foss/` – the only product-flavor override.
+- `app/src/test/` – unit tests.
+- `appium-tests/` – Python/Appium end-to-end tests, including QEMU USB tests.
+- `fastlane/` – Android store metadata inherited from the project history.
+- `.github/workflows/` – authoritative build and verification automation.
 
-### 1. Linear History (No Merge Commits)
-We use a **rebase-only workflow**. Your branch must be rebased onto the latest `main` branch.
-- **Do:** Use `git rebase main`.
-- **Don't:** Use `git merge main`.
+There is no GPlay flavor, Sentry build, donation site, or Vendroid website. Do not add links or instructions for those services unless the project owner explicitly enables them.
 
-### 2. Atomic & Concise Commits
-- **One Thing Per Commit:** Each commit should perform one logical task.
-- **Separate Cleanup from Logic:** Do not lump stylistic/formatting/cleanup changes into functional commits.
-- **Commit Messages:** Be descriptive. Use [Conventional Commits](https://www.conventionalcommits.org/) format (e.g., `feat(ui): add progress bar`).
+## Development conventions
 
-### 3. Build and Unit Test
-- The first build and test run may take up to **10 minutes**.
-- Run the build as a background process (`is_background: true`) and log to a file for long runs.
-- Do not use `--scan` when invoking Gradle.
+- Keep history linear and rebase onto `main`; do not merge `main` into a branch.
+- Keep commits atomic and use Conventional Commit messages.
+- Separate cleanup from functional changes.
+- Preserve unrelated working-tree changes.
+- Keep Ventoy version changes synchronized between the Gradle payload configuration and GitHub Actions.
+- Increment `versionCode` for every distributed APK. `versionName` is the user-visible release version.
 
-#### FOSS variant
-1. Ensure `ETCHDROID_ENABLE_SENTRY` is **unset** or empty.
-2. Build: `./gradlew assembleFossDebug`
-3. Test: `./gradlew testFossDebugUnitTest`
+## Verification
 
-#### GPlay variant
-1. Set `ETCHDROID_ENABLE_SENTRY=true`.
-2. Prepare: `cp misc/mock-google-services.json app/google-services.json`
-3. Build: `./gradlew assembleGplayDebug`
-4. Test: `./gradlew testGplayDebugUnitTest`
+Do not run Gradle builds, lint, unit tests, or Appium/QEMU tests on this workstation. GitHub Actions is the authoritative verification environment and runs:
 
-### 4. End-to-End (Appium) Tests
-Agents should run Appium tests unless instructed otherwise.
-- Requirements: Android SDK, `uv`, `7z`, `qemu-img`, `node`/`npm` installed.
-- **Install Appium**:
-  ```bash
-  cd appium-tests
-  npm ci
-  ```
-- Location: `appium-tests/`
+- FOSS debug and optimized builds.
+- FOSS unit tests.
+- Android lint.
+- Appium tests in Bliss OS/QEMU.
+- Signed release APK metadata and signature checks.
 
-#### Running Bliss OS VM locally:
-1. Prepare the VM files: `./appium-tests/scripts/prepare-vm.sh` (downloads ISO, extracts files, creates USB image in `.appium-vm/`).
-2. Run the VM (in a separate terminal): `./appium-tests/scripts/run-vm.sh` (shows GTK UI, serial console on stdio, ADB on 5556).
-3. Wait for the VM to boot: `./appium-tests/scripts/wait-vm-startup.sh`
-4. Build and install the app: `./gradlew installFossDebug`
-5. Run the tests: `uv run pytest -sv` (inside `appium-tests/`)
+## Release signing
 
-- Run only generic tests (excluding QEMU): `uv run pytest -m "not qemu" -sv`
-- *Note: QEMU tests require a specific setup (see `appium-tests/README.md`). If the environment supports KVM/QEMU, they should be run.*
-- **Proxy gotcha:** if `HTTP_PROXY`/`HTTPS_PROXY` are set in the environment, selenium/urllib3 route the localhost Appium connection through the proxy and fail with `SSL: CERTIFICATE_VERIFY_FAILED`. Exclude localhost when running: `NO_PROXY=127.0.0.1,localhost,127.0.0.10 no_proxy=127.0.0.1,localhost,127.0.0.10 uv run pytest -sv`.
+Release credentials must never be committed. GitHub Actions expects these secrets:
 
-### 5. Linting
-Run `./gradlew lint` before submitting changes.
+- `VENDROID_KEYSTORE_BASE64`
+- `VENDROID_KEYSTORE_PASSWORD`
+- `VENDROID_KEY_ALIAS`
+- `VENDROID_KEY_PASSWORD`
+
+Gradle receives the decoded keystore path through `VENDROID_KEYSTORE_PATH`. Use the same signing key for every release so Android can update existing installations.

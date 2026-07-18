@@ -15,7 +15,7 @@
     <string name="notification_verify_progress_title">校验镜像中...…</string>
     <string name="about">关于</string>
     <string name="is_this_a_windows_iso">这是 Windows ISO 镜像吗？</string>
-    <string name="a_regular_windows_iso_won_t_work">常见的 Windows ISO 镜像不能被 Etchdroid 使用，除非它是为与 Etchdroid、Etcher或 dd 使用专门准备的。</string>
+    <string name="a_regular_windows_iso_won_t_work">常见的 Windows ISO 镜像不能被 Vendroid 使用，除非它是为与 Vendroid、Etcher 或 dd 使用专门准备的。</string>
     <string name="select_a_usb_drive">选择一个 USB 驱动器</string>
     <string name="connect_a_usb_drive">连接 USB 驱动器</string>
     <string name="looking_for_usb_drives">寻找 USB 驱动器</string>
@@ -38,13 +38,10 @@
     <string name="destination_usb_device">目标 USB 设备</string>
     <string name="unknown_device">未知设备</string>
     <string name="permission_granted">权限已授予</string>
-    <string name="whats_supported">此工具支持什么？</string>
     <string name="action_required">需要进行操作</string>
     <string name="device_setting">系统默认</string>
     <string name="continue_">继续</string>
-    <string name="usb_flash_drives">U盘</string>
     <string name="write_image">写入镜像</string>
-    <string name="supported_devices_and_images">支持的设备和图像</string>
     <string name="skip">跳过</string>
     <string name="be_careful">请当心！</string>
     <string name="lay_your_device_flat_no_accel">继续操作之前，请将设备平放在桌子上。</string>
@@ -52,22 +49,6 @@
     <string name="writing_the_image_will_erase">写入映像将擦除所选驱动器上的所有数据</string>
     <string name="notification_write_no_notifications_text">启用进程通知 • 正在写入%1$s到%2$s</string>
     <string name="notification_verify_progress_content">%1$s 比对 %2$s</string>
-    <string name="supported">支持</string>
-    <string name="not_supported">未适配</string>
-    <string name="devices">设备</string>
-    <string name="usb_docks_and_hubs_might_have_power_issues">USB连接器和集线器（可能存在供电问题）</string>
-    <string name="memory_cards_using_the_internal_slot">储存卡，使用内部插槽</string>
-    <string name="optical_disk_drives">光盘驱动器</string>
-    <string name="any_thunderbolt_only_device">任何只支持雷电接口的设备</string>
-    <string name="microsoft_windows_isos_any_version">微软Windows ISO（任何版本）</string>
-    <string name="apple_dmg_disk_images">Apple DMG 磁盘镜像</string>
-    <string name="arch_linux_ubuntu_debian_fedora_pop_os_linux_mint_freebsd_etc">Arch Linux、Ubuntu、Debian、Fedora、pop!_OS、Linux Mint、FreeBSD等。</string>
-    <string name="other_modern_gnu_linux_and_bsd_distributions_live_isos">其他现代GNU/Linux和BSD发行版的即时ISO文件</string>
-    <string name="raspberry_pi_sd_card_images_unzip_first">树莓派 SD 卡镜像（请先解压缩！）</string>
-    <string name="older_gnu_linux_distributions_isos_2010">旧的 GNU/Linux 发行版 ISO镜像（&lt; 2010年）</string>
-    <string name="any_other_image_that_works_with_balena_etcher_or_dd">任何其他与Balena Etcher或dd兼容的映像</string>
-    <string name="support_for_dmg_images_was_removed">Vendroid 2.0 取消了对 DMG 镜像的支持。旧版本可从 %1$s 下载。</string>
-    <string name="website">网站</string>
     <string name="verifying_image">验证镜像</string>
     <string name="no_thanks">不，谢谢</string>
     <string name="sure">好的</string>
@@ -76,8 +57,6 @@
     <string name="skip_verification">跳过验证</string>
     <string name="image_written_successfully">镜像写入成功！</string>
     <string name="against">比对</string>
-    <string name="it_s_safe_to_ignore">可以忽略不计！拔下硬盘并正常使用即可。%1$s 并查看稍后如何格式化硬盘。</string>
-    <string name="learn_what_it_means">了解其含义</string>
     <string name="there_was_an_error">出现错误</string>
     <string name="error">错误</string>
     <string name="start_over">重新开始</string>
@@ -93,11 +72,6 @@
     <string name="could_not_open_the_source_file">无法打开源文件</string>
     <string name="plug_in_the_same_usb">您的USB设备电流超标，请断开后重新连接！</string>
     <string name="usb_device_reconnected_resuming">USB设备已重新连接，正在恢复写入</string>
-    <string name="maybe_supported">也许支持</string>
-    <string name="memory_cards_using_a_usb_adapter">储存卡，使用USB适配器</string>
-    <string name="usb_hard_drives_ssds_some_might_work">USB硬盘/固态硬盘（部分适用）</string>
-    <string name="floppy_disk_drives">软盘驱动器</string>
-    <string name="disk_images">磁盘镜像</string>
     <string name="developed_by">由 %1$s 和其他 %2$s 开发。
 \n源代码可在 %3$s 上获取。
 \n采用 GNU GPLv3 许可证授权。</string>
@@ -107,15 +81,12 @@
     <string name="would_you_like_to_be_notified">您希望在完成后收到通知吗？只有进度更新，没有垃圾邮件或广告。</string>
     <string name="to">到</string>
     <string name="getting_ready">准备就绪…</string>
-    <string name="got_an_unsupported_drive_notification">收到 \"此驱动器有问题 \"通知？</string>
-    <string name="support_the_project">赞助</string>
     <string name="title_activity_confirm_operation">确认操作</string>
     <string name="no_destination_device_selected">未选择目标设备</string>
     <string name="no_image_uri_provided">未提供镜像URL</string>
     <string name="write_another_image">再写入一个镜像</string>
     <string name="star_on_github">在GitHub上加Star</string>
     <string name="service_timeout_message">写入过程似乎陷入了困境。请再试一次。</string>
-    <string name="community_windows_images">为 Vendroid 制作的社区内置 Windows 镜像（您只能靠自己了：它们可能含有病毒！）』</string>
     <string name="to_recover_unplug">要恢复，请拔掉 USB驱动器，将其重新插入并授予再次访问它的权限。</string>
     <string name="the_usb_device_content_does_not_match_the_image">USB设备内容与镜像不匹配</string>
     <string name="missing_permission_to_access_the_usb_device">USB设备缺少访问权限</string>
@@ -127,15 +98,4 @@
     <string name="worker_null_device_error">启动了写入尝试，但某些信息在此过程中丢失了。请重试。</string>
     <string name="please_report_fatal_issue">如果可以，请在 GitHub 上报告此问题，描述导致此错误的步骤。</string>
     <string name="view_github_issues">查看 GitHub Issues</string>
-    <string name="we_need_your_help">我们需要你的帮助！</string>
-    <string name="telemetry_opt_out">退出</string>
-    <string name="telemetry">遥测</string>
-    <string name="telemetry_keep_enabled">保持开启</string>
-    <string name="privacy_policy">隐私政策</string>
-    <string name="telemetry_icon">遥测图标</string>
-    <string name="telemetry_rationale">Vendroid 重视你的隐私，只使用最低限度的遥测来调查应用问题。.\n\n成为我们开源社区的一部分 — 保持遥测开启，帮助 Vendroid 变得更好！\n\n虽然我们不收集任何个人识别信息，但我们希望你知道如果启用遥测，那么应用会匿名收集你打开的映像文件名和 USB 设备 ID 帮助诊断特定硬件的问题。除非你的映像文件名或高度机密，不然分享这些数据是安全的。 (%1$s)</string>
-    <string name="vendroid_uses_telemetry" comment="Displayed in the main app screen on first launch in a toast/snackbar. It should be short and concise.">Vendroid 发送遥测信息。</string>
-    <string name="learn_more" comment="Displayed in the main app screen on first launch as a snackbar action button. It should be short and concise.">了解更多</string>
-    <string name="send_anonymous_data" comment="Displayed in the main app menu; controls whether the app sends anonymous telemetry info.">发送匿名信息</string>
-    <string name="very_large_drives_2tb" comment="Device type">非常大的驱动器（≥ 2 TB）</string>
 </resources>

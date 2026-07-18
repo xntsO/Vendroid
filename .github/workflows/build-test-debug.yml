@@ -2,9 +2,9 @@ name: Build and test
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -15,43 +15,35 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # If changed, also update the variables in appium-tests/scripts/prepare-vm.sh
-  BLISSOS_FILE: 'Bliss-v16.9.7-x86_64-OFFICIAL-foss-20241011.iso'
-  BLISSOS_URL: 'https://deac-riga.dl.sourceforge.net/project/blissos-x86/Official/BlissOS16/FOSS/Generic/'
+  BLISSOS_FILE: Bliss-v16.9.7-x86_64-OFFICIAL-foss-20241011.iso
+  BLISSOS_URL: https://deac-riga.dl.sourceforge.net/project/blissos-x86/Official/BlissOS16/FOSS/Generic/
   VENTOY_VERSION: '1.1.16'
+  VENDROID_VERSION: '0.1'
+  VENDROID_VERSION_CODE: '27'
   VM_DIR: /appium-vm
 
 jobs:
-  build:
-    name: Build ${{ matrix.variant }}
-    # The standard Ubuntu runner is x86-64, matching Google's Linux AAPT2 binary.
+  verify:
+    name: Build, unit tests, and lint
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
-
-    strategy:
-      matrix:
-        variant:
-          - foss
-      fail-fast: false
-
+    timeout-minutes: 30
     env:
-      JAVA_TOOL_OPTIONS: "-Xmx4g"
+      JAVA_TOOL_OPTIONS: -Xmx4g
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Set up JDK
+      - name: Set up Java 17
         uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
 
-      - name: Setup Gradle
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: wrapper
-          cache-read-only: false
           add-job-summary: on-failure
           cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
@@ -65,204 +57,92 @@ jobs:
             --output ".vendroid-cache/ventoy-${VENTOY_VERSION}-linux.tar.gz" \
             "https://github.com/ventoy/Ventoy/releases/download/v${VENTOY_VERSION}/ventoy-${VENTOY_VERSION}-linux.tar.gz"
 
-      - name: Build ${{ matrix.variant }}
-        run: ./gradlew assemble${VARIANT^}Debug assemble${VARIANT^}Optimized
-        env:
-          VARIANT: ${{ matrix.variant }}
+      - name: Build and verify
+        run: ./gradlew assembleFossDebug assembleFossOptimized testFossDebugUnitTest lint
 
-      - name: Upload built debug APK
+      - name: Upload APK for end-to-end tests
         uses: actions/upload-artifact@v5
         with:
-          name: app-${{ matrix.variant }}-debug
-          path: app/build/outputs/apk/${{ matrix.variant }}/debug/app-${{ matrix.variant }}-debug.apk
+          name: vendroid-e2e-apk
+          path: app/build/outputs/apk/foss/optimized/app-foss-optimized.apk
+          retention-days: 3
 
-      - name: Upload built optimized APK
+      - name: Upload verification reports after failure
+        if: failure()
         uses: actions/upload-artifact@v5
         with:
-          name: app-${{ matrix.variant }}-optimized
-          path: app/build/outputs/apk/${{ matrix.variant }}/optimized/app-${{ matrix.variant }}-optimized.apk
-
-  unit-tests:
-    name: Unit tests for ${{ matrix.variant }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-
-    strategy:
-      matrix:
-        variant:
-          - foss
-      fail-fast: false
-
-    env:
-      JAVA_TOOL_OPTIONS: "-Xmx4g"
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Set up JDK
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-        with:
-          gradle-version: wrapper
-          cache-read-only: false
-          add-job-summary: on-failure
-          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
-
-      - name: Download Ventoy payload
-        run: |
-          mkdir -p .vendroid-cache
-          curl --fail --location --retry 3 \
-            --output ".vendroid-cache/ventoy-${VENTOY_VERSION}-linux.tar.gz" \
-            "https://github.com/ventoy/Ventoy/releases/download/v${VENTOY_VERSION}/ventoy-${VENTOY_VERSION}-linux.tar.gz"
-
-      - name: Run unit tests for ${{ matrix.variant }}
-        run: ./gradlew test${VARIANT^}DebugUnitTest
-        env:
-          VARIANT: ${{ matrix.variant }}
-
-      - name: Publish test report
-        uses: mikepenz/action-junit-report@v5
-        if: (success() || failure()) && github.event.pull_request.head.repo.full_name == github.repository
-        with:
-          check_name: Unit test report for ${{ matrix.variant }}
-          detailed_summary: true
-          report_paths: 'app/build/test-results/*/TEST-*.xml'
-          require_tests: true
-
-  lint:
-    name: Android lint
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-
-    env:
-      JAVA_TOOL_OPTIONS: "-Xmx4g"
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Set up JDK
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v5
-        with:
-          gradle-version: wrapper
-          cache-read-only: false
-          add-job-summary: on-failure
-          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
-
-      - name: Download Ventoy payload
-        run: |
-          mkdir -p .vendroid-cache
-          curl --fail --location --retry 3 \
-            --output ".vendroid-cache/ventoy-${VENTOY_VERSION}-linux.tar.gz" \
-            "https://github.com/ventoy/Ventoy/releases/download/v${VENTOY_VERSION}/ventoy-${VENTOY_VERSION}-linux.tar.gz"
-
-      - name: Run Android lint
-        run: ./gradlew lint
-
-      - name: Upload lint report
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: android-lint-report
-          path: app/build/reports/lint-results-*
+          name: android-verification-reports
+          path: |
+            app/build/reports/
+            app/build/test-results/
           if-no-files-found: ignore
+          retention-days: 7
 
   qemu-tests:
-    name: End-to-end tests for ${{ matrix.variant }}
+    name: Appium tests in QEMU
+    needs: verify
     runs-on: ubuntu-24.04
     timeout-minutes: 60
-    needs: build
-    strategy:
-      matrix:
-        variant:
-          - foss
-      fail-fast: false
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Download APK
+      - name: Download test APK
         uses: actions/download-artifact@v5
         with:
-          name: app-${{ matrix.variant }}-optimized
+          name: vendroid-e2e-apk
           path: apk
 
       - name: Install QEMU
         uses: etchdroid/qemu-kvm-action/setup@v1
 
-      - name: Install uv
+      - name: Set up uv
         uses: astral-sh/setup-uv@v5
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
 
-      - name: Install Node
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          check-latest: true
-          cache: 'npm'
+          cache: npm
           cache-dependency-path: appium-tests/package-lock.json
 
-      - name: Install Appium
+      - name: Install Appium and prepare directories
         run: |
           cd appium-tests
           npm ci
-          sudo mkdir "$VM_DIR"
+          sudo mkdir -p "$VM_DIR"
           sudo chown "$USER" "$VM_DIR"
+          mkdir -p ../vm-outputs/logcat
 
-      - name: Restore BlissOS image from cache
+      - name: Restore Bliss OS cache
+        id: bliss-cache
         uses: actions/cache/restore@v4
         with:
-          key: ${{ env.BLISSOS_FILE }}
-          restore-keys: ${{ env.BLISSOS_FILE }}
+          key: blissos-${{ env.BLISSOS_FILE }}
           path: ${{ env.VM_DIR }}
 
-      - name: Prepare BlissOS VM
-        id: prepare-vm
+      - name: Prepare Bliss OS
         run: |
           ./appium-tests/scripts/prepare-vm.sh
-          # Save cache space by removing the ISO, we only need the extracted contents for QEMU
-          rm -f "${{ env.VM_DIR }}/${{ env.BLISSOS_FILE }}"
+          rm -f "${VM_DIR}/${BLISSOS_FILE}"
 
-      - name: Store BlissOS to cache
+      - name: Save pristine Bliss OS cache
+        if: steps.bliss-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
-        if: steps.prepare-vm.outputs.cached == 0
         with:
-          key: ${{ env.BLISSOS_FILE }}
+          key: blissos-${{ env.BLISSOS_FILE }}
           path: ${{ env.VM_DIR }}
 
-      - name: Create virtual USB drive image
-        run: mkdir -p vm-outputs
-
-      - name: Run QEMU
-        id: run-qemu
+      - name: Run QEMU and Appium tests
         uses: etchdroid/qemu-kvm-action@v1
         with:
-          video-record: true
           kernel: ${{ env.VM_DIR }}/kernel
           initrd: ${{ env.VM_DIR }}/initrd.img
-          cmdline: 'root=/dev/ram0 androidboot.selinux=permissive console=ttyS0 FFMPEG_CODEC=1 FFMPEG_PREFER_C2=1'
-          video-output: vm-outputs/recording.mkv
+          cmdline: root=/dev/ram0 androidboot.selinux=permissive console=ttyS0 FFMPEG_CODEC=1 FFMPEG_PREFER_C2=1
           flags: |
             -chardev
             stdio,id=char0,logfile=vm-outputs/serial.log,signal=off
@@ -293,58 +173,93 @@ jobs:
             unix:/tmp/qmp.sock,server=on,wait=off
             -monitor
             unix:/tmp/qemu-monitor.sock,server=on,wait=off
-
           run: |
             cd appium-tests
-            export LOGCAT_DIR="$PWD/../vm-outputs/logcat/"
-            mkdir -p "$LOGCAT_DIR"
+            export LOGCAT_DIR="$PWD/../vm-outputs/logcat"
             ./scripts/wait-vm-startup.sh
             adb install -r ../apk/*.apk
+            adb install -r ../apk/*.apk
+            adb shell dumpsys package io.github.xntso.vendroid | tee ../vm-outputs/package.txt
+            grep -q "versionName=${VENDROID_VERSION}" ../vm-outputs/package.txt
             adb logcat -d > "$LOGCAT_DIR/0_before.log" 2>&1
-            uv run pytest -sv --tb=native --junit-xml=../junit.xml
+            uv run pytest -sv --tb=native --junit-xml=../vm-outputs/junit.xml
 
-      - name: Publish test report
-        uses: mikepenz/action-junit-report@v5
-        if: (success() || failure()) && github.event.pull_request.head.repo.full_name == github.repository
-        with:
-          check_name: End-to-end test report for ${{ matrix.variant }}
-          detailed_summary: true
-          report_paths: junit.xml
-          require_tests: true
-
-      - name: Upload VM outputs
-        if: always()
+      - name: Upload QEMU diagnostics after failure
+        if: failure()
         uses: actions/upload-artifact@v5
         with:
-          name: vm-outputs-${{ matrix.variant }}
+          name: qemu-diagnostics
           path: vm-outputs/
+          if-no-files-found: ignore
+          retention-days: 7
 
-  quality-gate:
-    name: Required quality gate
-    if: always()
-    needs:
-      - build
-      - unit-tests
-      - lint
-      - qemu-tests
+  signed-apk:
+    name: Signed Vendroid APK
+    if: github.event_name != 'pull_request'
+    needs: qemu-tests
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 25
+    env:
+      JAVA_TOOL_OPTIONS: -Xmx4g
+      VENDROID_KEYSTORE_BASE64: ${{ secrets.VENDROID_KEYSTORE_BASE64 }}
+      VENDROID_KEYSTORE_PASSWORD: ${{ secrets.VENDROID_KEYSTORE_PASSWORD }}
+      VENDROID_KEY_ALIAS: ${{ secrets.VENDROID_KEY_ALIAS }}
+      VENDROID_KEY_PASSWORD: ${{ secrets.VENDROID_KEY_PASSWORD }}
 
     steps:
-      - name: Verify all required jobs passed
-        env:
-          BUILD_RESULT: ${{ needs.build.result }}
-          UNIT_TEST_RESULT: ${{ needs.unit-tests.result }}
-          LINT_RESULT: ${{ needs.lint.result }}
-          QEMU_TEST_RESULT: ${{ needs.qemu-tests.result }}
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: wrapper
+          add-job-summary: on-failure
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Require release-signing secrets
         run: |
-          if [[ "$BUILD_RESULT" != "success" ||
-                "$UNIT_TEST_RESULT" != "success" ||
-                "$LINT_RESULT" != "success" ||
-                "$QEMU_TEST_RESULT" != "success" ]]; then
-            echo "Build: $BUILD_RESULT"
-            echo "Unit tests: $UNIT_TEST_RESULT"
-            echo "Lint: $LINT_RESULT"
-            echo "QEMU tests: $QEMU_TEST_RESULT"
-            exit 1
-          fi
+          test -n "$VENDROID_KEYSTORE_BASE64" || { echo "Missing VENDROID_KEYSTORE_BASE64"; exit 1; }
+          test -n "$VENDROID_KEYSTORE_PASSWORD" || { echo "Missing VENDROID_KEYSTORE_PASSWORD"; exit 1; }
+          test -n "$VENDROID_KEY_ALIAS" || { echo "Missing VENDROID_KEY_ALIAS"; exit 1; }
+          test -n "$VENDROID_KEY_PASSWORD" || { echo "Missing VENDROID_KEY_PASSWORD"; exit 1; }
+
+      - name: Prepare release inputs
+        run: |
+          mkdir -p .vendroid-cache
+          curl --fail --location --retry 3 \
+            --output ".vendroid-cache/ventoy-${VENTOY_VERSION}-linux.tar.gz" \
+            "https://github.com/ventoy/Ventoy/releases/download/v${VENTOY_VERSION}/ventoy-${VENTOY_VERSION}-linux.tar.gz"
+          printf '%s' "$VENDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/vendroid-release.jks"
+          echo "VENDROID_KEYSTORE_PATH=$RUNNER_TEMP/vendroid-release.jks" >> "$GITHUB_ENV"
+
+      - name: Build signed release APK
+        run: ./gradlew assembleFossRelease
+
+      - name: Verify and name release APK
+        run: |
+          apk="app/build/outputs/apk/foss/release/app-foss-release.apk"
+          output="app/build/outputs/apk/foss/release/vendroid-v${VENDROID_VERSION}.apk"
+          aapt="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          "$apksigner" verify --verbose --print-certs "$apk"
+          "$aapt" dump badging "$apk" | tee apk-metadata.txt
+          grep -q "versionCode='${VENDROID_VERSION_CODE}'" apk-metadata.txt
+          grep -q "versionName='${VENDROID_VERSION}'" apk-metadata.txt
+          cp "$apk" "$output"
+
+      - name: Upload signed APK
+        uses: actions/upload-artifact@v5
+        with:
+          name: vendroid-v${{ env.VENDROID_VERSION }}
+          path: app/build/outputs/apk/foss/release/vendroid-v${{ env.VENDROID_VERSION }}.apk
+          if-no-files-found: error

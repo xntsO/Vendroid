@@ -19,7 +19,6 @@
     <string name="permission_denied_for_usb_device" comment="Displayed in a toast when the usb permission is denied">การอนุญาตสำหรับอุปกรณ์ USB %1$s ถูกปฏิเสธ</string>
     <string name="usb_device_was_unplugged" comment="Displayed in a toast when the USB device is unplugged">อุปกรณ์ USB ถูกถอด</string>
     <string name="write_an_image" comment="Displayed in the home page main call-to-action button">เขียนไฟล์</string>
-    <string name="whats_supported" comment="Displayed in the homepage; opens a page that lists all the supported devices and formats">รองรับอะไรบ้าง?</string>
     <string name="style" comment="Title of the menu that allows selecting the app color scheme">สไตล์</string>
     <string name="device_setting" comment="Style menu option that selects the device default light/dark theme">ตั้งค่าอุปกรณ์</string>
     <string name="light" comment="Style menu option that selects the light theme">สว่าง</string>
@@ -47,32 +46,8 @@
     <string name="continue_" comment="Button displayed in the dialog that forces the user to lay the device flat on a table before continuing, when the device has no gravity sensor; when pressed the operation starts.">ดำเนินการต่อ</string>
     <string name="lay_your_device_flat" comment="Title of the dialog that forces the user to lay the device flat on a table before continuing, when the device has a gravity sensor">วางอุปกรณ์ลงบนโต๊ะและอย่าเพิ่งทำอะไร</string>
     <string name="skip" comment="Button displayed in the dialog that forces the user to lay the device flat on a table before continuing, when the device has a gravity sensor; when pressed the flat check is skipped and the operation starts.">ข้าม</string>
-    <string name="supported" comment="Description of a device or image type that is supported">รองรับ</string>
-    <string name="maybe_supported" comment="Description of a device or image type that might be supported">อาจจะได้รับการสนับสนุน</string>
-    <string name="not_supported" comment="Description of a device or image type that is not supported">ไม่รองรับ</string>
-    <string name="supported_devices_and_images" comment="Title of the page that lists all the supported devices and images">อุปกรณ์และไฟล์ที่รองรับ</string>
-    <string name="devices" comment="Title of the section that lists all the supported device types">อุปกรณ์</string>
-    <string name="usb_flash_drives" comment="Device type">USB แฟลชไดรฟ์</string>
-    <string name="memory_cards_using_a_usb_adapter" comment="Device type">การ์ดหน่วยความจำใช้ตัวแปลง USB</string>
-    <string name="usb_hard_drives_ssds_some_might_work" comment="Device type">ฮาร์ดไดรฟ์ USB / SSD (บางอันอาจใช้งานได้)</string>
-    <string name="usb_docks_and_hubs_might_have_power_issues" comment="Device type">แท่นชาร์จหรือฮับ USB (อาจมีปัญหาเรื่องไฟฟ้า)</string>
-    <string name="memory_cards_using_the_internal_slot" comment="Device type">การ์ดหน่วยความจำใช้ช่องเสียบภายใน</string>
-    <string name="optical_disk_drives" comment="Device type">ไดรฟ์ดิสก์แบบออปติคัล</string>
-    <string name="floppy_disk_drives" comment="Device type">ฟลอปปี้ดิสก์</string>
-    <string name="any_thunderbolt_only_device" comment="Device type">อุปกรณ์ที่ใช้ Thunderbolt เท่านั้น</string>
-    <string name="disk_images" comment="Title of the section that lists all the supported image types">อิมเมจไฟล์</string>
-    <string name="microsoft_windows_isos_any_version" comment="Image type">ISO ของ Microsoft Windows (เวอร์ชันใดก็ได้)</string>
-    <string name="apple_dmg_disk_images" comment="Image type">อิมเมจดิสก์ Apple DMG</string>
-    <string name="arch_linux_ubuntu_debian_fedora_pop_os_linux_mint_freebsd_etc" comment="Image type">Arch Linux, Ubuntu, Debian, Fedora, pop!_OS, Linux Mint, FreeBSD และอื่นๆ</string>
-    <string name="other_modern_gnu_linux_and_bsd_distributions_live_isos" comment="Image type">ISO LIVE ของ Linux หรือ BSD รุ่นอื่นๆ ที่ทันสมัย</string>
-    <string name="raspberry_pi_sd_card_images_unzip_first" comment="Image type">SD Card Raspberry Pi (แตกไฟล์ก่อน!)</string>
-    <string name="any_other_image_that_works_with_balena_etcher_or_dd" comment="Image type">ไฟล์อื่น ๆ ที่ใช้ได้กับ Balena Etcher หรือ dd</string>
-    <string name="older_gnu_linux_distributions_isos_2010" comment="Image type">ISO GNU/Linux รุ่นเก่า (&lt; 2010)</string>
-    <string name="support_for_dmg_images_was_removed" comment="At the end of the supported devices and images page we state that DMGs are no longer supported; the parameter is replaced with the word &quot;GitHub&quot;">ไฟล์ DMG ถูกลบออกใน Vendroid 2.0 สามารถดาวน์โหลดเวอร์ชันเก่าได้จาก %1$s</string>
     <string name="developed_by" comment="Displayed in the about page; parameters are: author name, the word &quot;contributors&quot; (translated separately), &quot;GitHub&quot;">พัฒนาโดย %1$s และ %2$s \nซอร์สโค้ดพร้อมใช้งานบน %3$s\nได้รับอนุญาตภายใต้ใบอนุญาต GNU GPLv3</string>
     <string name="contributors" comment="Part of the following sentence: &quot;Developed by Author Name and other contributors&quot;">ผู้สนับสนุน</string>
-    <string name="website" comment="Displayed in the about page links; keep it very short!">เว็บไซต์</string>
-    <string name="support_the_project" comment="Displayed in the about page links; keep it short!">สนับสนุนค่าใช้จ่าย</string>
     <string name="verifying_image" comment="Title of the progress page while an image is being verified">ตรวจสอบไฟล์</string>
     <string name="writing_image" comment="Title of the progress page while an image is being written">เขียนไฟล์</string>
     <string name="please_avoid_using_your_device" comment="Subtitle of the progress page while an image is being written">โปรดอย่าเพิ่งใช้อุปกรณ์ของคุณ</string>
@@ -88,9 +63,6 @@
     <string name="image_written_successfully" comment="Title of the success page">เขียนไฟล์สำเร็จแล้ว!</string>
     <string name="write_a_review" comment="Displayed in a button on the success page">เขียนบทวิจารณ์</string>
     <string name="star_on_github" comment="Displayed in a button on the success page">ดาวบน GitHub</string>
-    <string name="got_an_unsupported_drive_notification" comment="Title of the card that teaches the user about any &quot;Issues with this drive&quot; notifications">ได้รับการแจ้งเตือน \"มีปัญหาเกี่ยวกับไดรฟ์นี้\" หรือไม่?</string>
-    <string name="it_s_safe_to_ignore" comment="Message of the card that teaches the user about any &quot;Issues with this drive&quot; notifications; the parameter will be replaced with the translation of &quot;Learn what it means&quot;">ไม่ต้องสนใจก็ได้! แค่ถอดปลั๊กไดรฟ์แล้วใช้งานตามปกติ %1$s แล้วดูวิธีฟอร์แมตไดรฟ์ในภายหลัง</string>
-    <string name="learn_what_it_means" comment="Part of the message of the card that teaches the user about any &quot;Issues with this drive&quot; notifications; the full sentence is &quot;Learn what it means and see how to format your drive later&quot;">เรียนรู้ว่ามันคืออะไร</string>
     <string name="there_was_an_error" comment="Title of the non-recoverable error page">มีข้อผิดพลาดเกิดขึ้น</string>
     <string name="error">ผิดพลาด</string>
     <string name="start_over" comment="Button in the error page that, when pressed, restarts the app">เริ่มใหม่</string>
@@ -117,18 +89,7 @@
     <string name="no_image_uri_provided" comment="Error message (shown in a toast) when the operation confirmation screen is opened without a source file; the app redirects back to the home page">ไม่มีการระบุ URI ไฟล์</string>
     <string name="no_destination_device_selected" comment="Error message (shown in a toast) when the operation confirmation screen is opened without a destination device; the app redirects back to the home page">ไม่ได้เลือกอุปกรณ์ปลายทาง</string>
     <string name="service_timeout_message" comment="Error message displayed when the background write service does not send any progress updates for a suspiciously long time. In this case, the app assumes the service got stuck and prompts the user to try again.">ดูเหมือนว่าการเขียนไฟล์จะมีปัญหา โปรดลองอีกครั้ง</string>
-    <string name="community_windows_images" comment="&quot;You're on your own&quot; can be translated with something similar to &quot;unsupported&quot; or &quot;be careful!&quot; if it makes more sense in the target language">ไฟล์ Windows ที่สร้างโดยชุมชน, สร้างขึ้นสำหรับ Vendroid (คุณต้องทำด้วยตัวเอง: อาจมีไวรัสได้!)</string>
     <string name="worker_null_device_error" comment="Error message displayed when users get a mysterious NullPointerException while starting a new write. The original translation tries to give the user a general idea of the issue without being too technical.">เริ่มเขียนแล้ว แต่น่าเสียดายที่ข้อมูลบางส่วนสูญหายไประหว่างทาง โปรดลองอีกครั้ง</string>
     <string name="please_report_fatal_issue" comment="Displayed in the fatal error screen, prompting the users to report the issue on GitHub along with the steps to reproduce it">หากทำได้ โปรดรายงานปัญหานี้บน GitHub พร้อมขั้นตอนที่นำไปสู่ข้อผิดพลาดนี้</string>
     <string name="view_github_issues" comment="Displayed in the fatal error screen, in a small button. When pressed, the app opens the GitHub issues page. Since the button is small, please keep this short. You can replace it with &quot;GitHub issues&quot; if &quot;View GitHub issues&quot; is too long in your language.">ดูปัญหาของบน GitHub</string>
-    <string name="telemetry" comment="Displayed in the menu if the current app build may send telemetry (Google Play builds)">แสดงในเมนูแอปที่สร้างในปัจจุบัน</string>
-    <string name="privacy_policy" comment="Displayed in the app menu, as well as in other links to the privacy policy">นโยบายความเป็นส่วนตัว</string>
-    <string name="telemetry_rationale" comment="Displayed in builds with telemetry enabled (Google Play) when the user tries to opt-out of telemetry to try to convince them not to. '%1$s' is replaced with a link to the privacy policy; the `privacy_policy` string is used.">Vendroid ให้ความสำคัญกับความเป็นส่วนตัวของคุณ และใช้ข้อมูลเพียงเล็กน้อยเพื่อตรวจสอบปัญหาของแอป\n\nร่วมเป็นส่วนหนึ่งของชุมชนโอเพนซอร์สของเรา เปิดใช้งานส่งข้อมูลอย่างต่อเนื่อง จะช่วยพัฒนา Vendroid ให้ดียิ่งขึ้นสำหรับทุกคน! แม้ว่าเราจะไม่เก็บข้อมูลใดๆ ที่ระบุตัวตน\n\nเราเชื่อมั่นในความโปร่งใส และต้องการให้คุณทราบว่าชื่อไฟล์ที่เปิดและรหัสอุปกรณ์ USB จะถูกเก็บรวบรวมแบบไม่ระบุตัวตน เพื่อช่วยวินิจฉัยปัญหาของฮาร์ดแวร์โดยเฉพาะ เว้นแต่ชื่อไฟล์หรือรหัสอุปกรณ์ของคุณจะมีความละเอียดมาก การแบ่งปันข้อมูลนี้จึงปลอดภัย (%1$s)</string>
-    <string name="we_need_your_help" comment="Title of the dialog that asks the user to enable telemetry">เราต้องการความช่วยเหลือจากคุณ!</string>
-    <string name="telemetry_icon" comment="Description of the telemetry icon for accessibility purposes">ไอคอนระยะ</string>
-    <string name="telemetry_opt_out" comment="Button to opt-out of telemetry; it can be translated as &quot;Disable telemetry&quot; if it fits better in the target language">ยกเลิกการเลือก</string>
-    <string name="telemetry_keep_enabled" comment="Button to opt-in to telemetry; it can be translated as &quot;Enable telemetry&quot; if it fits better in the target language">เปิดใช้งานต่อไป</string>
-    <string name="vendroid_uses_telemetry" comment="Displayed in the main app screen on first launch in a toast/snackbar. It should be short and concise.">Vendroid จะส่งข้อมูลระยะไกล</string>
-    <string name="learn_more" comment="Displayed in the main app screen on first launch as a snackbar action button. It should be short and concise.">เรียนรู้เพิ่มเติม</string>
-    <string name="send_anonymous_data" comment="Displayed in the main app menu; controls whether the app sends anonymous telemetry info.">ส่งข้อมูลแบบไม่ระบุตัวตน</string>
 </resources>

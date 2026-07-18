@@ -11,7 +11,6 @@
     <string name="permission_denied_for_usb_device">Engedély megtagadva a(z) %1$s USB eszköznek</string>
     <string name="usb_device_was_unplugged">USB eszköz eltávolítva</string>
     <string name="write_an_image">Egy lemezkép írása</string>
-    <string name="whats_supported">Mi támogatott?</string>
     <string name="device_setting">Eszközbeállítás</string>
     <string name="cancel">Vissza</string>
     <string name="write_finished">Írás befejezve</string>
@@ -34,43 +33,19 @@
     <string name="writing_the_image_will_erase">A lemezkép írása az összes adatot törlölni fogja a céleszközről</string>
     <string name="write_image">Lemezkép írás indítása</string>
     <string name="lay_your_device_flat_no_accel">Folytatás előtt helyzze az eszközt lapos felületre.</string>
-    <string name="maybe_supported">Talán támogatott</string>
-    <string name="supported_devices_and_images">Támogatott eszközök és lemezképek</string>
-    <string name="usb_flash_drives">USB pendrive eszközök</string>
-    <string name="memory_cards_using_a_usb_adapter">Memóriakártyák, USB adapterrel csatlakoztatva</string>
-    <string name="usb_hard_drives_ssds_some_might_work">USB merevlemezek / SSDk (néhány működhet)</string>
-    <string name="usb_docks_and_hubs_might_have_power_issues">USB dokkolók és hubok (áramellátási problémák léphetnek fel)</string>
-    <string name="optical_disk_drives">Optikai lemezmeghajtók</string>
-    <string name="floppy_disk_drives">Floppy lemezmeghajtók</string>
-    <string name="any_thunderbolt_only_device">Thunderbolt-only eszköz, akármilyen</string>
-    <string name="disk_images">Lemezképek</string>
-    <string name="microsoft_windows_isos_any_version">Microsoft Windows ISOk (bármely verzió)</string>
-    <string name="memory_cards_using_the_internal_slot">Memóriakártyák, közvetlenül csatlakoztatva</string>
-    <string name="other_modern_gnu_linux_and_bsd_distributions_live_isos">Egyéb modern GNU/Linux és BSD disztribúciók live ISOi</string>
-    <string name="raspberry_pi_sd_card_images_unzip_first">Raspberry Pi SD kártya lemezképek (először ki kell csomagolni!)</string>
-    <string name="older_gnu_linux_distributions_isos_2010">Régebbi GNU/Linux disztribúciók ISOi (&lt;2010)</string>
     <string name="developed_by">Fejlesztve %1$s és %2$s által.
 \nA forráskód elérhető itt %3$s.
 \nA GNU GPLv3 alatt licencelve.</string>
     <string name="confirm_operation">Megerősítés</string>
     <string name="lay_your_device_flat">Helyezze az eszközt lapos felületre és ne nyúljon hozzá</string>
-    <string name="apple_dmg_disk_images">Apple DMG lemezképek</string>
-    <string name="arch_linux_ubuntu_debian_fedora_pop_os_linux_mint_freebsd_etc">Arch Linux, Ubuntu, Debian, Fedora, pop!_OS, Linux Mint, FreeBSD stb...</string>
-    <string name="any_other_image_that_works_with_balena_etcher_or_dd">Egyéb lemezképek, amelyek működnek Balena Etcherrel és dd-vel</string>
-    <string name="support_for_dmg_images_was_removed">A DMG lemezképek támogatása az Vendroid 2.0-ban megszűnt. Régebbi verziók innen tölthetők le %1$s.</string>
     <string name="about">Rólunk</string>
     <string name="unknown_device">Ismeretlen eszköz</string>
     <string name="grant_access">Hozzáférés engedélyezése</string>
     <string name="continue_">Folytatás</string>
     <string name="skip">Kihagyás</string>
-    <string name="not_supported">Nem támogatott</string>
-    <string name="devices">Eszközök</string>
     <string name="contributors">közreműködők</string>
     <string name="dark">Sötét</string>
     <string name="permission_granted">Engedély megadva</string>
-    <string name="supported">Támogatott</string>
-    <string name="website">Weboldal</string>
-    <string name="support_the_project">Támogatás</string>
     <string name="verifying_image">Lemezkép ellenőrzése</string>
     <string name="writing_image">Lemezkép írása</string>
     <string name="please_avoid_using_your_device">Kérjük ne használja az eszközt</string>
@@ -82,9 +57,6 @@
     <string name="no_thanks">Köszönöm, nem</string>
     <string name="verifying">A(z)</string>
     <string name="write_a_review">Vélemény írása</string>
-    <string name="got_an_unsupported_drive_notification">\"Problémák az USB eszközzel\" értesítést kapott?</string>
-    <string name="it_s_safe_to_ignore">Hagyja figyelmen kívül! Csak húzza ki az eszközt és használja. %1$s és nézze meg, hogy formázhatja az eszközt később.</string>
-    <string name="learn_what_it_means">Tudja meg mit jelent</string>
     <string name="there_was_an_error">Hiba történt</string>
     <string name="error">Hiba</string>
     <string name="start_over">Újrakezdés</string>
@@ -117,20 +89,9 @@
     <string name="i_did_not_unplug_it">Nem húztam ki!</string>
     <string name="how_did_this_happen">Hogy történt ez?</string>
     <string name="the_usb_device_content_does_not_match_the_image">Az USB eszköz tartalma nem egyezik meg a lemezképével</string>
-    <string name="community_windows_images">Nem hivatalos Windows lemezképek, kifejezetten Vendroidhoz készítve (Figyelem: Vírusokat tartalmazhatnak!)</string>
     <string name="plug_in_the_same_usb">Ugyanazt az USB eszközt csatlakoztassa!</string>
     <string name="try_again">Próbálja újra</string>
     <string name="worker_null_device_error" comment="Error message displayed when users get a mysterious NullPointerException while starting a new write. The original translation tries to give the user a general idea of the issue without being too technical.">Az írási kísérlet elindult, de sajnos néhány információ elveszett út közben. Kérjük, próbálja meg újra.</string>
     <string name="please_report_fatal_issue" comment="Displayed in the fatal error screen, prompting the users to report the issue on GitHub along with the steps to reproduce it">Kérjük, jelentse ezt a problémát a GitHubon, és mellékelje azokat a lépéseket, amelyek ehhez a hibához vezettek.</string>
-    <string name="we_need_your_help" comment="Title of the dialog that asks the user to enable telemetry">Segítsen nekünk!</string>
-    <string name="telemetry_icon" comment="Description of the telemetry icon for accessibility purposes">Telemetria ikon</string>
-    <string name="telemetry_opt_out" comment="Button to opt-out of telemetry; it can be translated as &quot;Disable telemetry&quot; if it fits better in the target language">Elutasít</string>
-    <string name="telemetry_keep_enabled" comment="Button to opt-in to telemetry; it can be translated as &quot;Enable telemetry&quot; if it fits better in the target language">Telemtria engedélyezése</string>
-    <string name="vendroid_uses_telemetry" comment="Displayed in the main app screen on first launch in a toast/snackbar. It should be short and concise.">Az Vendroid telemetriát használ.</string>
-    <string name="send_anonymous_data" comment="Displayed in the main app menu; controls whether the app sends anonymous telemetry info.">Névtelen adatok küldése</string>
-    <string name="telemetry_rationale" comment="Displayed in builds with telemetry enabled (Google Play) when the user tries to opt-out of telemetry to try to convince them not to. '%1$s' is replaced with a link to the privacy policy; the `privacy_policy` string is used.">Az Vendroid tiszteletben tartja az Ön adatvédelmét, és csak minimális telemetriát használ az alkalmazás problémáinak kivizsgálására.\n\nLegyen részese nyílt forráskódú közösségünknek – hagyja bekapcsolva a telemetriát, és segítse az Vendroid fejlesztését mindenki számára!\n\nHabár semmilyen személyazonosításra alkalmas információt nem gyűjtünk, hiszünk az átláthatóságban, és szeretnénk, ha tudná, hogy a megnyitott képfájlneveket és az USB-eszközök azonosítóit névtelenül gyűjtjük, ez segít a konkrét hardverekkel kapcsolatos problémák diagnosztizálásában. Hacsak a képfájlnevek vagy az eszközazonosítók nem rendkívül érzékenyek, megoszthajta ezeket az adatokat. (%1$s)</string>
     <string name="view_github_issues" comment="Displayed in the fatal error screen, in a small button. When pressed, the app opens the GitHub issues page. Since the button is small, please keep this short. You can replace it with &quot;GitHub issues&quot; if &quot;View GitHub issues&quot; is too long in your language.">GitHub problémák</string>
-    <string name="telemetry" comment="Displayed in the menu if the current app build may send telemetry (Google Play builds)">Telemetria</string>
-    <string name="privacy_policy" comment="Displayed in the app menu, as well as in other links to the privacy policy">Adatvédelmi irányelvek</string>
-    <string name="learn_more" comment="Displayed in the main app screen on first launch as a snackbar action button. It should be short and concise.">Tudjon meg többet</string>
 </resources>

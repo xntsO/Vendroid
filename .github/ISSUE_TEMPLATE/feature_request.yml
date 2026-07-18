@@ -1,43 +1,36 @@
-name: Feature Request
-description: Suggest an idea for EtchDroid
+name: Feature request
+description: Suggest an improvement for Vendroid
 title: "[Feature]: "
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        ## Before suggesting a feature...
-        Please note that **EtchDroid is a raw image writer.** To keep the app stable and rootless, some features are explicitly **out of scope** and will not be implemented, ever:
-        
-        * **Windows ISOs (unmodified):** Windows ISOs are not "hybrid" and won't boot if written raw to USB. EtchDroid will not include a Windows ISO converter ([#5](https://github.com/etchdroid/etchdroid/issues/5)).
-        * **macOS / DMG Support:** Creating macOS installers or writing DMG files is unsupported and not planned ([#6](https://github.com/etchdroid/etchdroid/issues/6)).
-        * **Internal SD Card Slot:** Android prevents writing to the internal SD slot at a block level without root. Any feature that requires root will never be added ([#39](https://github.com/etchdroid/etchdroid/issues/39)).
-        * **Multi-boot (Ventoy-style):** EtchDroid writes only one image without modifications. Multi-boot requires modifying the images and is outside the project's scope ([#281](https://github.com/etchdroid/etchdroid/issues/281)).
+        Vendroid currently focuses on installing and managing Ventoy on external USB drives without root. Internal SD slots and phone-as-USB gadget mode are outside the current Android-access model.
 
   - type: checkboxes
-    id: scope_check
+    id: checks
     attributes:
-      label: Scope Acknowledgment
+      label: Preliminary checks
       options:
-        - label: I confirm my request is NOT about Windows ISOs, macOS/DMG, Internal SD cards, or Multi-boot support.
+        - label: I searched existing Vendroid issues and did not find this request.
           required: true
-        - label: I have searched existing issues to see if this has already been requested.
+        - label: This request is related to Vendroid's external USB/Ventoy workflow.
           required: true
 
   - type: textarea
-    id: description
+    id: problem
     attributes:
-      label: Describe the feature
-      description: A clear and concise description of what you want to happen.
-      placeholder: I would like to see...
+      label: Problem to solve
+      description: Describe the user problem rather than only the proposed interface.
     validations:
       required: true
 
   - type: textarea
-    id: use_case
+    id: proposal
     attributes:
-      label: Why is this feature needed?
-      description: Explain the problem this feature would solve or the scenario where it's useful.
+      label: Proposed solution
+      description: Explain how the feature should behave.
     validations:
       required: true
 
@@ -45,4 +38,4 @@ body:
     id: alternatives
     attributes:
       label: Alternatives considered
-      description: Any other ways you've tried to achieve this.
+      description: Describe any workarounds or other designs you considered.

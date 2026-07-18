@@ -82,12 +82,8 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.DpSize
@@ -968,16 +964,6 @@ fun SuccessView(operation: String = Intents.OPERATION_WRITE_IMAGE) {
                     )
                 }
             }
-            OutlinedButton(onClick = {
-                activity?.startActivity(
-                    Intent(
-                        Intent.ACTION_VIEW,
-                        "https://vendroid.app/donate/".toUri()
-                    )
-                )
-            }) {
-                Text(stringResource(R.string.support_the_project))
-            }
             val context = LocalContext.current
             OutlinedButton(onClick = {
                 context.startActivity(Intent(context, MainActivity::class.java).apply {
@@ -994,50 +980,7 @@ fun SuccessView(operation: String = Intents.OPERATION_WRITE_IMAGE) {
                 )
             }
         },
-        bottomCard = {
-            Card(modifier = Modifier.padding(16.dp)) {
-                Column(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.got_an_unsupported_drive_notification),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-
-                    val annotatedString = buildAnnotatedString {
-                        val learnMoreStr = stringResource(R.string.learn_what_it_means)
-                        val str = stringResource(R.string.it_s_safe_to_ignore, learnMoreStr)
-                        val startIndex = str.indexOf(learnMoreStr)
-                        val endIndex = startIndex + learnMoreStr.length
-                        append(str)
-                        addStyle(
-                            style = SpanStyle(
-                                color = MaterialTheme.colorScheme.primary,
-                                textDecoration = TextDecoration.Underline
-                            ), start = startIndex, end = endIndex
-                        )
-                        addLink(
-                            LinkAnnotation.Url("https://vendroid.app/broken_usb/"),
-                            startIndex,
-                            endIndex
-                        )
-                    }
-                    Text(
-                        modifier = Modifier.fillMaxWidth(),
-                        text = annotatedString,
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    )
-                }
-            }
-        },
+        bottomCard = {},
     )
 }
 
