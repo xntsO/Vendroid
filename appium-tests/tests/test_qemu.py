@@ -1,6 +1,7 @@
 import base64
 import os
 import tempfile
+import struct
 from pathlib import Path
 from time import sleep
 from typing import Generator
@@ -9,6 +10,7 @@ import appium.webdriver
 import pytest
 
 from vendroid import actions as app
+from vendroid import package_name
 from vendroid.config import Config
 from vendroid.fixtures import appium_service, driver, qemu
 from vendroid.qemu import QEMUController
@@ -131,6 +133,33 @@ def verify_written_image(payload: bytes, raw_blockdev: Path):
         assert written_data == payload, "Written data does not match expected data"
 
 
+def verify_ventoy_options(raw_blockdev: Path, label: str, reserved_mib: int, cluster_size: int):
+    with open(raw_blockdev, "rb") as disk:
+        mbr = disk.read(512)
+        partition1_start, = struct.unpack_from("<I", mbr, 446 + 8)
+        partition2_start, partition2_size = struct.unpack_from("<II", mbr, 462 + 8)
+        actual_reserved = raw_blockdev.stat().st_size - (partition2_start + partition2_size) * 512
+        assert actual_reserved >= reserved_mib * 1024 * 1024
+
+        disk.seek(partition1_start * 512)
+        boot_sector = disk.read(512)
+        cluster_heap_offset, = struct.unpack_from("<I", boot_sector, 88)
+        root_cluster, = struct.unpack_from("<I", boot_sector, 96)
+        actual_cluster_size = 1 << (boot_sector[108] + boot_sector[109])
+        assert actual_cluster_size == cluster_size
+
+        root_offset = (
+            partition1_start * 512
+            + cluster_heap_offset * 512
+            + (root_cluster - 2) * actual_cluster_size
+        )
+        disk.seek(root_offset)
+        root = disk.read(actual_cluster_size)
+        label_length = root[1]
+        actual_label = root[2:2 + label_length * 2].decode("utf-16le")
+        assert actual_label == label
+
+
 @pytest.mark.qemu
 def test_unplug_xhci(driver: appium.webdriver.Remote, qemu: QEMUController):
     with device_temp_sparse_file(driver, "vendroid_test_unplug_xhci_", ".iso", "1000M") as image:
@@ -143,6 +172,40 @@ def test_unplug_xhci(driver: appium.webdriver.Remote, qemu: QEMUController):
         app.get_skip_verify_button(driver)
         unplug_and_reconnect_usb(driver, qemu)
         app.wait_for_success(driver)
+
+
+@pytest.mark.qemu
+def test_ventoy_install_options_and_repair(
+    driver: appium.webdriver.Remote,
+    raw_usb_drive: tuple[str, Path],
+):
+    _, raw_disk_image_path = raw_usb_drive
+
+    app.tap_install_ventoy(driver)
+    app.select_first_usb_device_if_multiple(driver)
+    app.grant_usb_permission(driver)
+    app.open_ventoy_advanced_options(driver)
+    app.configure_ventoy_options(driver, "TOOLS", 1, "64 KiB")
+    app.confirm_write_image(driver)
+    app.skip_lay_flat_sheet(driver)
+    app.wait_for_success(driver, timeout=180)
+
+    sleep(1)
+    verify_ventoy_options(raw_disk_image_path, "TOOLS", 1, 64 * 1024)
+
+    driver.terminate_app(package_name)
+    driver.activate_app(package_name)
+    app.tap_install_ventoy(driver)
+    app.select_first_usb_device_if_multiple(driver)
+    app.grant_usb_permission(driver)
+    repair_button = wait_for_element(driver, '//*[@resource-id="writeImageButton"]', timeout=30)
+    assert repair_button.text == "Repair"
+    repair_button.click()
+    app.skip_lay_flat_sheet(driver)
+    app.wait_for_success(driver, timeout=180)
+
+    sleep(1)
+    verify_ventoy_options(raw_disk_image_path, "TOOLS", 1, 64 * 1024)
 
 
 @pytest.mark.qemu

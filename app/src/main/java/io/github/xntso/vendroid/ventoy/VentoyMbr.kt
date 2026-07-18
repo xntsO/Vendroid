@@ -16,6 +16,7 @@ internal object VentoyMbr {
         random: SecureRandom,
         preservedVentoyUuid: ByteArray? = null,
         preservedDiskSignature: ByteArray? = null,
+        preservedExtraPartitionEntries: ByteArray? = null,
     ): ByteArray {
         require(bootImage.size >= VentoyDiskLayout.SECTOR_SIZE) {
             "boot.img must contain at least one 512-byte sector"
@@ -45,9 +46,14 @@ internal object VentoyMbr {
             startSector = plan.partition2StartSector,
             sectorCount = plan.partition2SectorCount,
         )
-        for (index in 2..3) {
-            val offset = VentoyDiskLayout.MBR_PARTITION_TABLE_OFFSET + index * 16
-            mbr.fill(0, offset, offset + 16)
+        val extraPartitionsOffset = VentoyDiskLayout.MBR_PARTITION_TABLE_OFFSET + 2 * 16
+        if (preservedExtraPartitionEntries == null) {
+            mbr.fill(0, extraPartitionsOffset, extraPartitionsOffset + 2 * 16)
+        } else {
+            require(preservedExtraPartitionEntries.size == 2 * 16) {
+                "Preserved MBR partition entries must be exactly 32 bytes"
+            }
+            preservedExtraPartitionEntries.copyInto(mbr, extraPartitionsOffset)
         }
 
         mbr[VentoyDiskLayout.MBR_BOOT_SIGNATURE_OFFSET] = 0x55

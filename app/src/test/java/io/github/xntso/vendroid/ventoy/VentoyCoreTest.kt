@@ -49,6 +49,35 @@ class VentoyLayoutTest {
             VentoyDiskLayout.plan(16L * 1024 * 1024, 512, "1.1.16")
         }
     }
+
+    @Test
+    fun `reserves aligned space at the end of the disk`() {
+        val diskSize = 8L * 1024 * 1024 * 1024
+        val requested = 2L * 1024 * 1024 * 1024
+        val plan = VentoyDiskLayout.plan(
+            diskSizeBytes = diskSize,
+            blockSize = 512,
+            payloadVersion = "1.1.16",
+            reservedSpaceBytes = requested,
+        )
+
+        val actualReserved = diskSize - (plan.partition2EndSector + 1) * 512
+        assertTrue(actualReserved >= requested)
+        assertTrue(actualReserved < requested + 4096)
+        assertEquals(0, plan.partition2StartSector % 8)
+    }
+
+    @Test
+    fun `rejects reserved space that leaves no data partition`() {
+        assertThrows<IllegalArgumentException> {
+            VentoyDiskLayout.plan(
+                diskSizeBytes = 64L * 1024 * 1024,
+                blockSize = 512,
+                payloadVersion = "1.1.16",
+                reservedSpaceBytes = 40L * 1024 * 1024,
+            )
+        }
+    }
 }
 
 class VentoyMbrTest {
@@ -156,6 +185,33 @@ class ExFatFormatterTest {
         assertEquals(0x81, root[32].toInt() and 0xff)
         assertEquals(0x82, root[64].toInt() and 0xff)
     }
+
+    @Test
+    fun `uses an explicitly selected cluster size`() {
+        val device = memoryDevice(64L * 1024 * 1024)
+        val plan = VentoyDiskLayout.plan(device.sizeBytes, device.blockSize, "1.1.16")
+
+        val info = ExFatFormatter().format(
+            device = device,
+            partitionStartSector = plan.partition1StartSector,
+            partitionSectorCount = plan.partition1SectorCount,
+            clusterSize = VentoyClusterSize.KiB64,
+        )
+
+        val bootSector = device.readBytes(plan.partition1StartSector * 512, 512)
+        assertEquals(64 * 1024, info.clusterSizeBytes)
+        assertEquals(7, bootSector[109].toInt())
+    }
+}
+
+class VentoyVersionTest {
+    @Test
+    fun `compares numeric Ventoy versions`() {
+        assertEquals(VentoyVersionRelation.Older, VentoyVersion.compare("1.1.9", "1.1.16"))
+        assertEquals(VentoyVersionRelation.Same, VentoyVersion.compare("v1.1.16", "1.1.16"))
+        assertEquals(VentoyVersionRelation.Newer, VentoyVersion.compare("1.2.0", "1.1.16"))
+        assertEquals(VentoyVersionRelation.Unknown, VentoyVersion.compare("dev", "1.1.16"))
+    }
 }
 
 class VentoyInstallerTest {
@@ -186,11 +242,40 @@ class VentoyInstallerTest {
         val markerOffset = plan.partition1StartSector * 512 + 4L * 1024 * 1024
         val marker = "keep-me".encodeToByteArray()
         device.write(markerOffset, marker)
+        val identity = device.readBytes(VentoyDiskLayout.VENTOY_UUID_OFFSET.toLong(), 60)
 
         val info = installer.upgrade(device)
 
         assertTrue(info.supportedForUpgrade)
         assertArrayEquals(marker, device.readBytes(markerOffset, marker.size))
+        assertArrayEquals(
+            identity.copyOfRange(0, 16),
+            device.readBytes(VentoyDiskLayout.VENTOY_UUID_OFFSET.toLong(), 16),
+        )
+        assertArrayEquals(
+            identity.copyOfRange(56, 60),
+            device.readBytes(VentoyDiskLayout.DISK_SIGNATURE_OFFSET.toLong(), 4),
+        )
+    }
+
+    @Test
+    fun `upgrade preserves extra MBR partitions in reserved space`() {
+        val device = memoryDevice(64L * 1024 * 1024)
+        val installer = VentoyInstaller(syntheticPayload())
+        installer.install(
+            device,
+            VentoyInstallOptions(
+                forceInstall = true,
+                reservedSpaceBytes = 8L * 1024 * 1024,
+            ),
+        )
+        val extraEntriesOffset = VentoyDiskLayout.MBR_PARTITION_TABLE_OFFSET + 2 * 16
+        val extraEntries = ByteArray(32) { (it + 1).toByte() }
+        device.write(extraEntriesOffset.toLong(), extraEntries)
+
+        installer.upgrade(device)
+
+        assertArrayEquals(extraEntries, device.readBytes(extraEntriesOffset.toLong(), 32))
     }
 }
 

@@ -4,12 +4,32 @@ enum class VentoyPartitionStyle {
     Mbr,
 }
 
+enum class VentoyClusterSize(val bytes: Int?) {
+    Automatic(null),
+    KiB32(32 * 1024),
+    KiB64(64 * 1024),
+    KiB128(128 * 1024),
+    KiB256(256 * 1024),
+}
+
 data class VentoyInstallOptions(
     val forceInstall: Boolean = false,
     val label: String = "Ventoy",
     val partitionStyle: VentoyPartitionStyle = VentoyPartitionStyle.Mbr,
     val secureBoot: Boolean = true,
-)
+    val reservedSpaceBytes: Long = 0,
+    val clusterSize: VentoyClusterSize = VentoyClusterSize.Automatic,
+) {
+    fun validate() {
+        require(label.length in 1..11) {
+            "exFAT volume label must be 1..11 UTF-16 code units"
+        }
+        require(reservedSpaceBytes >= 0) { "Reserved space cannot be negative." }
+        require(reservedSpaceBytes % VentoyDiskLayout.SECTOR_SIZE == 0L) {
+            "Reserved space must be aligned to 512-byte sectors."
+        }
+    }
+}
 
 data class VentoyInstallPlan(
     val diskSizeBytes: Long,
@@ -50,6 +70,7 @@ data class VentoyDiskInfo(
     val partition2EndSector: Long,
     val installedVersion: String?,
     val supportedForUpgrade: Boolean,
+    val reservedSpaceBytes: Long,
 )
 
 internal object VentoyDiskLayout {
@@ -65,7 +86,12 @@ internal object VentoyDiskLayout {
     const val PARTITION1_TYPE = 0x07
     const val PARTITION2_TYPE = 0xEF
 
-    fun plan(diskSizeBytes: Long, blockSize: Int, payloadVersion: String): VentoyInstallPlan {
+    fun plan(
+        diskSizeBytes: Long,
+        blockSize: Int,
+        payloadVersion: String,
+        reservedSpaceBytes: Long = 0,
+    ): VentoyInstallPlan {
         require(blockSize == SECTOR_SIZE) {
             "Vendroid only supports 512-byte logical USB blocks in this version."
         }
@@ -75,9 +101,13 @@ internal object VentoyDiskLayout {
         require(diskSizeBytes <= MAX_MBR_DISK_BYTES) {
             "MBR Ventoy install is limited to disks up to 2 TiB."
         }
+        require(reservedSpaceBytes >= 0 && reservedSpaceBytes % SECTOR_SIZE == 0L) {
+            "Reserved space must be non-negative and aligned to 512-byte sectors."
+        }
 
         val totalSectors = diskSizeBytes / SECTOR_SIZE
-        var partition2Start = totalSectors - PARTITION2_SECTOR_COUNT
+        val requestedReservedSectors = reservedSpaceBytes / SECTOR_SIZE
+        var partition2Start = totalSectors - requestedReservedSectors - PARTITION2_SECTOR_COUNT
         partition2Start -= partition2Start % 8L
         val partition1End = partition2Start - 1
         val partition1Sectors = partition1End - PARTITION1_START_SECTOR + 1

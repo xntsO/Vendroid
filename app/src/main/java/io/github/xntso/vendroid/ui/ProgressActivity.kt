@@ -108,6 +108,7 @@ import com.airbnb.lottie.compose.rememberLottieDynamicProperty
 import io.github.xntso.vendroid.AppSettings
 import io.github.xntso.vendroid.Intents
 import io.github.xntso.vendroid.R
+import io.github.xntso.vendroid.VentoyJobOptions
 import io.github.xntso.vendroid.getStartJobIntent
 import io.github.xntso.vendroid.massstorage.VendroidUsbMassStorageDevice.Companion.isMassStorageDevice
 import io.github.xntso.vendroid.massstorage.UsbMassStorageDeviceDescriptor
@@ -270,7 +271,7 @@ class ProgressActivity : ActivityBase() {
                         BackHandler { finish() }
                         TelemetryTraced("success_screen") {
                             SuccessView(
-                                isVentoyInstall = appState.operation == Intents.OPERATION_VENTOY_INSTALL,
+                                operation = appState.operation,
                             )
                         }
                     }
@@ -441,10 +442,15 @@ fun JobInProgressView(
                     else
                         "write_progress_title"
                 ),
-                text = if (uiState.isVerifying) stringResource(
-                    R.string.verifying_image
-                ) else stringResource(
-                    R.string.writing_image
+                text = stringResource(
+                    when {
+                        uiState.operation == Intents.OPERATION_VENTOY_UPDATE ->
+                            R.string.update_ventoy_title
+                        uiState.operation == Intents.OPERATION_VENTOY_INSTALL ->
+                            R.string.install_ventoy
+                        uiState.isVerifying -> R.string.verifying_image
+                        else -> R.string.writing_image
+                    },
                 ),
                 style = MaterialTheme.typography.titleLarge.copy(fontSize = 28.sp),
                 textAlign = TextAlign.Center
@@ -666,12 +672,20 @@ fun JobInProgressView(
                 modifier = Modifier.padding(horizontal = 32.dp)
             ) {
                 val context = LocalContext.current
-                if (uiState.operation == Intents.OPERATION_VENTOY_INSTALL) {
+                if (Intents.isVentoyOperation(uiState.operation)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Center,
                     ) {
-                        Text(text = stringResource(R.string.installing_ventoy))
+                        Text(
+                            text = stringResource(
+                                if (uiState.operation == Intents.OPERATION_VENTOY_UPDATE) {
+                                    R.string.updating_ventoy
+                                } else {
+                                    R.string.installing_ventoy
+                                },
+                            ),
+                        )
                         Text(
                             text = " ${uiState.destDevice?.name}",
                             fontWeight = FontWeight.Bold,
@@ -778,6 +792,7 @@ fun JobInProgressView(
             uiState.processedBytes,
             uiState.operation,
             uiState.forceInstall,
+            uiState.ventoyOptions,
         )
         ReconnectUsbDriveDialog(exception = uiState.exception as RecoverableException)
     }
@@ -888,15 +903,20 @@ fun SuccessViewLayout(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SuccessView(isVentoyInstall: Boolean = false) {
+fun SuccessView(operation: String = Intents.OPERATION_WRITE_IMAGE) {
+    val isVentoyOperation = Intents.isVentoyOperation(operation)
+    val isVentoyUpdate = operation == Intents.OPERATION_VENTOY_UPDATE
     SuccessViewLayout(
         modifier = Modifier.fillMaxSize(),
         title = {
             Text(
                 modifier = Modifier.appiumTag("success_write_title"),
                 text = stringResource(
-                    if (isVentoyInstall) R.string.ventoy_installed_successfully
-                    else R.string.image_written_successfully,
+                    when {
+                        isVentoyUpdate -> R.string.ventoy_updated_successfully
+                        isVentoyOperation -> R.string.ventoy_installed_successfully
+                        else -> R.string.image_written_successfully
+                    },
                 ),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.titleLarge.copy(fontSize = 28.sp),
@@ -968,7 +988,7 @@ fun SuccessView(isVentoyInstall: Boolean = false) {
             }) {
                 Text(
                     stringResource(
-                        if (isVentoyInstall) R.string.install_ventoy_another_drive
+                        if (isVentoyOperation) R.string.install_ventoy_another_drive
                         else R.string.write_another_image,
                     )
                 )
@@ -1209,6 +1229,7 @@ fun AutoJobRestarter(
     resumeOffset: Long,
     operation: String,
     forceInstall: Boolean,
+    ventoyOptions: VentoyJobOptions,
 ) {
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -1281,6 +1302,7 @@ fun AutoJobRestarter(
                             WorkerService::class.java,
                             operation = operation,
                             forceInstall = forceInstall,
+                            ventoyOptions = ventoyOptions,
                         )
                         Log.d(TAG, "Starting service with intent: $serviceIntent")
                         activity.startForegroundServiceCompat(serviceIntent)

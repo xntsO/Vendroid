@@ -23,8 +23,36 @@
     <string name="install_ventoy" comment="Displayed in the home page main call-to-action button">Install Ventoy</string>
     <string name="force_install_ventoy" comment="Displayed as a secondary destructive install action">Force install</string>
     <string name="installing_ventoy">Installing Ventoy on</string>
+    <string name="updating_ventoy">Updating Ventoy on</string>
     <string name="ventoy_installed_successfully">Ventoy installed successfully</string>
+    <string name="ventoy_updated_successfully">Ventoy updated successfully</string>
     <string name="install_ventoy_another_drive">Install Ventoy on another drive</string>
+    <string name="update_ventoy">Update</string>
+    <string name="update_ventoy_title">Update Ventoy</string>
+    <string name="repair_ventoy">Repair</string>
+    <string name="advanced_options">Advanced options</string>
+    <string name="volume_label">Volume label</string>
+    <string name="exfat_label_limit">1–11 characters</string>
+    <string name="cluster_size">Cluster size</string>
+    <string name="automatic">Automatic</string>
+    <string name="reserve_space">Reserve space at the end</string>
+    <string name="reserve_space_description">Leave unallocated space after the Ventoy partitions.</string>
+    <string name="maximum_reserved_space">Maximum: %1$d %2$s</string>
+    <string name="reserved_space">Reserved space</string>
+    <string name="partitions_aligned_4k">✓ Partitions are always aligned to 4 KiB boundaries.</string>
+    <string name="apply">Apply</string>
+    <string name="unknown_version">unknown</string>
+    <string name="grant_access_to_check_ventoy">Grant USB access to check for an existing Ventoy installation.</string>
+    <string name="checking_ventoy_installation">Checking the USB drive…</string>
+    <string name="ready_to_install_ventoy_version">Ready to install Ventoy %1$s</string>
+    <string name="ventoy_update_available">Ventoy %1$s installed · %2$s available</string>
+    <string name="ventoy_ready_to_repair">Ventoy %1$s is installed and can be repaired.</string>
+    <string name="ventoy_newer_than_bundled">This drive has Ventoy %1$s, newer than Vendroid’s %2$s. Downgrade is blocked.</string>
+    <string name="existing_partitions_use_force_install">This drive already has partitions. Return and choose Force install to erase it.</string>
+    <string name="could_not_check_ventoy">Could not inspect this USB drive.</string>
+    <string name="files_will_be_preserved">Your files will be preserved</string>
+    <string name="updating_ventoy_preserves_files">Only Ventoy boot components will be refreshed. Keep the drive connected and back up irreplaceable files first.</string>
+    <string name="ventoy_options_summary">exFAT · Label: %1$s · Cluster: %2$s · Reserved: %3$s</string>
     <string name="percent_complete">%1$d%% complete</string>
     <string name="whats_supported" comment="Displayed in the homepage; opens a page that lists all the supported devices and formats">What\'s supported?</string>
     <string name="style" comment="Title of the menu that allows selecting the app color scheme">Style</string>
