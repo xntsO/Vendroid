@@ -1,74 +1,82 @@
-name: Bug Report
-description: Report a bug to help improve EtchDroid
+name: Bug report
+description: Report a reproducible problem in Vendroid
 title: "[Bug]: "
-labels: [ "bug", "triage" ]
+labels: ["bug", "triage"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this bug report! 
-        Please ensure you have checked the [Open Issues](https://github.com/EtchDroid/EtchDroid/issues) first.
-        Note that most issues are temporary and go away after a phone reboot or flipping the USB drive. Only submit an issue after having made a few attempts.
+        Thanks for helping improve Vendroid. Search existing issues first, then retry after reconnecting the USB drive and restarting the phone.
 
   - type: checkboxes
     id: checks
     attributes:
-      label: Preliminary Checks
+      label: Preliminary checks
       options:
-        - label: I have searched the existing issues and didn't find my problem.
+        - label: I searched existing Vendroid issues and did not find this problem.
+          required: true
+        - label: I retried after reconnecting the USB drive and restarting Android.
           required: true
 
   - type: input
     id: version
     attributes:
-      label: App Version Info
-      description: Copy this from the "About" page (e.g., `eu.depau.etchdroid v1.2.3+45, gplay+release`)
-      placeholder: eu.depau.etchdroid v1.2.3+45, gplay+release
+      label: Vendroid version
+      description: Copy the full value from the About screen.
+      placeholder: io.github.xntso.vendroid v0.1+27, foss+release
     validations:
       required: true
 
   - type: dropdown
     id: source
     attributes:
-      label: Installation Source
-      description: Where did you download EtchDroid?
+      label: Installation source
       options:
-        - Google Play Store
-        - F-Droid
-        - GitHub Releases / Obtainium
+        - GitHub Actions artifact
+        - GitHub Release
         - Self-compiled
-        - Other (please specify)
+        - Other
     validations:
       required: true
 
   - type: input
-    id: source_other
-    attributes:
-      label: 'If "Other", please specify:'
-      placeholder: e.g. AppGallery, direct APK from a friend, etc.
-
-  - type: input
     id: device
     attributes:
-      label: Device Brand and Model
-      placeholder: e.g. Samsung Galaxy S23, Google Pixel 8
+      label: Android device
+      placeholder: Samsung Galaxy S23, Android 15
+    validations:
+      required: true
+
+  - type: input
+    id: usb_device
+    attributes:
+      label: USB drive or adapter
+      placeholder: Brand, model, capacity, and adapter/hub if applicable
     validations:
       required: true
 
   - type: textarea
     id: steps
     attributes:
-      label: Steps to Reproduce
-      description: Describe exactly what you did before the error occurred.
+      label: Steps to reproduce
       placeholder: |
-        1. Open EtchDroid
-        2. Select ISO file...
-        3. Plug in USB drive...
+        1. Open Vendroid.
+        2. Connect the USB drive.
+        3. Choose Install Ventoy.
+        4. Observe the error.
+    validations:
+      required: true
+
+  - type: textarea
+    id: result
+    attributes:
+      label: Actual and expected result
+      description: Include the exact error message and explain what you expected.
     validations:
       required: true
 
   - type: textarea
     id: logs
     attributes:
-      label: Additional Context / Logs
-      description: Any error messages or behavior details you noticed.
+      label: Logs or additional context
+      description: Attach relevant screenshots or logs after removing private information.

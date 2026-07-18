@@ -1,46 +1,38 @@
 # Vendroid
 
-Vendroid is a no-root Android app for installing Ventoy onto external USB drives and managing boot image files when Android exposes the Ventoy data partition through the Storage Access Framework.
+Vendroid is a no-root Android app for installing Ventoy on external USB drives and managing boot image files from Android.
 
-This repository currently adapts EtchDroid's Kotlin/Compose Android app and USB mass-storage layer, with Vendroid-specific Ventoy installer code under `app/src/main/java/io/github/xntso/vendroid/ventoy`.
+## Features
 
-## Scope
+- Install, repair, and update an MBR Ventoy layout on a USB drive.
+- Manage supported boot image files through Android's Storage Access Framework.
+- Bundle and verify a pinned official Ventoy payload.
+- Work directly with USB mass-storage devices without root access.
 
-- External USB Ventoy installer and manager.
-- MBR-only MVP layout.
-- exFAT data partition.
-- 512-byte logical USB block devices only.
-- Disks over 2 TiB are rejected.
-- Secure Boot is enabled by default.
-- Phone-as-USB, root gadget mode, persistence plugins, and advanced theme/plugin editing are out of scope for this phase.
+## Current limitations
 
-## Ventoy Payload
+- External USB drives only; Android does not expose internal SD card slots as writable block devices.
+- MBR layout and 512-byte logical sectors only.
+- Drives larger than 2 TiB are rejected.
+- The data partition uses exFAT.
+- Secure Boot support is enabled by default.
+- Phone-as-USB mode, persistence plugins, and advanced Ventoy theme/plugin editing are not included yet.
 
-The app bundles a pinned Ventoy payload, currently `1.1.16`.
+## Build
 
-Download the official Linux release archive and run:
+Vendroid currently has one `foss` product flavor. It requires Java 17 and the Android SDK.
+
+The app bundles Ventoy `1.1.16`. Download the official Linux archive before building:
 
 ```sh
 mkdir -p .vendroid-cache
 curl -fL -o .vendroid-cache/ventoy-1.1.16-linux.tar.gz \
   https://github.com/ventoy/Ventoy/releases/download/v1.1.16/ventoy-1.1.16-linux.tar.gz
-./gradlew :app:prepareVentoyPayload
+./gradlew assembleFossDebug
 ```
 
-The Gradle task imports:
+Builds, unit tests, lint, and Appium/QEMU tests run in GitHub Actions. Signed release APKs require the repository signing secrets described in `AGENTS.md`.
 
-- `boot/boot.img`
-- `boot/core.img.xz`
-- `ventoy/ventoy.disk.img.xz`
-- `ventoy/version`
-- `payload.manifest` with file sizes and SHA-256 hashes
+## Upstream and license
 
-## Build
-
-Vendroid keeps EtchDroid's Android stack: Kotlin, Compose, min SDK 23, target SDK 36, package `io.github.xntso.vendroid`.
-
-```sh
-./gradlew :app:assembleFossDebug
-```
-
-On ARM64 Linux hosts, Android Gradle Plugin's Maven-provided `aapt2` binary may be x86-64-only. In that case Kotlin compilation can pass, but resource processing, APK assembly, and unit-test tasks that process resources require an ARM64-compatible `aapt2` or x86-64 emulation.
+Vendroid uses components and prior work from [Ventoy](https://github.com/ventoy/Ventoy) and [EtchDroid](https://github.com/EtchDroid/EtchDroid). Vendroid's source code is distributed under the [GNU GPLv3](LICENSE). Third-party components retain their respective licenses.
