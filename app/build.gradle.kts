@@ -13,6 +13,16 @@ val ventoyPayloadArchive = providers.gradleProperty("ventoyPayloadArchive")
             .absolutePath
     )
 val generatedVentoyPayloadAssets = layout.buildDirectory.dir("generated/ventoyPayload/assets")
+val releaseKeystorePath = providers.environmentVariable("VENDROID_KEYSTORE_PATH").orNull
+val releaseKeystorePassword = providers.environmentVariable("VENDROID_KEYSTORE_PASSWORD").orNull
+val releaseKeyAlias = providers.environmentVariable("VENDROID_KEY_ALIAS").orNull
+val releaseKeyPassword = providers.environmentVariable("VENDROID_KEY_PASSWORD").orNull
+val releaseSigningConfigured = listOf(
+    releaseKeystorePath,
+    releaseKeystorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword,
+).all { !it.isNullOrBlank() }
 
 plugins {
     alias(libs.plugins.android.application)
@@ -33,17 +43,30 @@ android {
         applicationId = "io.github.xntso.vendroid"
         minSdk = sdkMin
         targetSdk = sdkTarget
-        versionCode = 26
-        versionName = "2.1"
+        versionCode = 27
+        versionName = "0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+    }
+    signingConfigs {
+        if (releaseSigningConfigured) {
+            create("release") {
+                storeFile = file(releaseKeystorePath!!)
+                storePassword = releaseKeystorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
         }
     }
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

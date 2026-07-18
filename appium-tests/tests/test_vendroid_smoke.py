@@ -8,3 +8,4 @@ used(appium_service)
 
 def test_home_shows_install_ventoy_action(driver: appium.webdriver.Remote):
     wait_for_element(driver, '//*[@resource-id="installVentoyCTA"]', timeout=15)
+    wait_for_element(driver, '//*[@text="Vendroid v0.1"]', timeout=15)
