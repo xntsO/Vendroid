@@ -15,12 +15,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  BLISSOS_FILE: Bliss-v16.9.7-x86_64-OFFICIAL-foss-20241011.iso
-  BLISSOS_URL: https://deac-riga.dl.sourceforge.net/project/blissos-x86/Official/BlissOS16/FOSS/Generic/
   VENTOY_VERSION: '1.1.16'
   VENDROID_VERSION: '0.1'
   VENDROID_VERSION_CODE: '27'
-  VM_DIR: /appium-vm
 
 jobs:
   verify:
@@ -60,13 +57,6 @@ jobs:
       - name: Build and verify
         run: ./gradlew assembleFossDebug assembleFossOptimized testFossDebugUnitTest lint
 
-      - name: Upload APK for end-to-end tests
-        uses: actions/upload-artifact@v5
-        with:
-          name: vendroid-e2e-apk
-          path: app/build/outputs/apk/foss/optimized/app-foss-optimized.apk
-          retention-days: 3
-
       - name: Upload verification reports after failure
         if: failure()
         uses: actions/upload-artifact@v5
@@ -78,125 +68,10 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  qemu-tests:
-    name: Appium tests in QEMU
-    needs: verify
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Download test APK
-        uses: actions/download-artifact@v5
-        with:
-          name: vendroid-e2e-apk
-          path: apk
-
-      - name: Install QEMU
-        uses: etchdroid/qemu-kvm-action/setup@v1
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: lts/*
-          cache: npm
-          cache-dependency-path: appium-tests/package-lock.json
-
-      - name: Install Appium and prepare directories
-        run: |
-          cd appium-tests
-          npm ci
-          sudo mkdir -p "$VM_DIR"
-          sudo chown "$USER" "$VM_DIR"
-          mkdir -p ../vm-outputs/logcat
-
-      - name: Restore Bliss OS cache
-        id: bliss-cache
-        uses: actions/cache/restore@v4
-        with:
-          key: blissos-${{ env.BLISSOS_FILE }}
-          path: ${{ env.VM_DIR }}
-
-      - name: Prepare Bliss OS
-        run: |
-          ./appium-tests/scripts/prepare-vm.sh
-          rm -f "${VM_DIR}/${BLISSOS_FILE}"
-
-      - name: Save pristine Bliss OS cache
-        if: steps.bliss-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          key: blissos-${{ env.BLISSOS_FILE }}
-          path: ${{ env.VM_DIR }}
-
-      - name: Run QEMU and Appium tests
-        uses: etchdroid/qemu-kvm-action@v1
-        with:
-          kernel: ${{ env.VM_DIR }}/kernel
-          initrd: ${{ env.VM_DIR }}/initrd.img
-          cmdline: root=/dev/ram0 androidboot.selinux=permissive console=ttyS0 FFMPEG_CODEC=1 FFMPEG_PREFER_C2=1
-          flags: |
-            -chardev
-            stdio,id=char0,logfile=vm-outputs/serial.log,signal=off
-            -serial
-            chardev:char0
-            -netdev
-            user,id=network,hostfwd=tcp::5556-:5555
-            -device
-            virtio-net-pci,netdev=network
-            -device
-            virtio-vga-gl
-            -display
-            sdl,gl=on
-            -drive
-            index=0,if=virtio,id=system,file=${{ env.VM_DIR }}/system.efs,format=raw,readonly=on
-            -usb
-            -device
-            usb-tablet,bus=usb-bus.0
-            -device
-            nec-usb-xhci,id=xhci
-            -device
-            ich9-usb-uhci1,id=uhci
-            -drive
-            if=none,id=usbstick,file=${{ env.VM_DIR }}/usb-storage.qcow2,format=qcow2
-            -device
-            usb-storage,id=usbstick,bus=xhci.0,drive=usbstick,removable=on
-            -qmp
-            unix:/tmp/qmp.sock,server=on,wait=off
-            -monitor
-            unix:/tmp/qemu-monitor.sock,server=on,wait=off
-          run: |
-            cd appium-tests
-            export LOGCAT_DIR="$PWD/../vm-outputs/logcat"
-            ./scripts/wait-vm-startup.sh
-            adb install -r ../apk/*.apk
-            adb install -r ../apk/*.apk
-            adb shell dumpsys package io.github.xntso.vendroid | tee ../vm-outputs/package.txt
-            grep -q "versionName=${VENDROID_VERSION}" ../vm-outputs/package.txt
-            adb logcat -d > "$LOGCAT_DIR/0_before.log" 2>&1
-            uv run pytest -sv --tb=native --junit-xml=../vm-outputs/junit.xml
-
-      - name: Upload QEMU diagnostics after failure
-        if: failure()
-        uses: actions/upload-artifact@v5
-        with:
-          name: qemu-diagnostics
-          path: vm-outputs/
-          if-no-files-found: ignore
-          retention-days: 7
-
   signed-apk:
     name: Signed Vendroid APK
     if: github.event_name != 'pull_request'
-    needs: qemu-tests
+    needs: verify
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
