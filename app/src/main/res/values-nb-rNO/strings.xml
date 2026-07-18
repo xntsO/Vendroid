@@ -19,7 +19,6 @@
     <string name="permission_denied_for_usb_device" comment="Displayed in a toast when the usb permission is denied">Ingen tillatelse for USB-enhet %1$s</string>
     <string name="usb_device_was_unplugged" comment="Displayed in a toast when the USB device is unplugged">USB-enheten ble koblet fra</string>
     <string name="write_an_image" comment="Displayed in the home page main call-to-action button">Skriv et bilde</string>
-    <string name="whats_supported" comment="Displayed in the homepage; opens a page that lists all the supported devices and formats">Hva støttes?</string>
     <string name="style" comment="Title of the menu that allows selecting the app color scheme">Stil</string>
     <string name="device_setting" comment="Style menu option that selects the device default light/dark theme">Innstilling av enhet</string>
     <string name="light" comment="Style menu option that selects the light theme">Lys</string>
@@ -47,13 +46,4 @@
     <string name="continue_" comment="Button displayed in the dialog that forces the user to lay the device flat on a table before continuing, when the device has no gravity sensor; when pressed the operation starts.">Fortsette</string>
     <string name="lay_your_device_flat" comment="Title of the dialog that forces the user to lay the device flat on a table before continuing, when the device has a gravity sensor">Legg enheten flatt på et bord og ikke berør den</string>
     <string name="skip" comment="Button displayed in the dialog that forces the user to lay the device flat on a table before continuing, when the device has a gravity sensor; when pressed the flat check is skipped and the operation starts.">Hoppe over</string>
-    <string name="supported" comment="Description of a device or image type that is supported">Støttes</string>
-    <string name="maybe_supported" comment="Description of a device or image type that might be supported">Kanskje støttet</string>
-    <string name="not_supported" comment="Description of a device or image type that is not supported">Støttes ikke</string>
-    <string name="supported_devices_and_images" comment="Title of the page that lists all the supported devices and images">Støttede enheter og bilder</string>
-    <string name="devices" comment="Title of the section that lists all the supported device types">Enheter</string>
-    <string name="usb_flash_drives" comment="Device type">USB-flash-stasjoner</string>
-    <string name="usb_hard_drives_ssds_some_might_work" comment="Device type">USB-harddisker / SSD-er (noen kan fungere)</string>
-    <string name="usb_docks_and_hubs_might_have_power_issues" comment="Device type">USB-dokkingstasjoner og huber (kan ha strømproblemer)</string>
-    <string name="memory_cards_using_the_internal_slot" comment="Device type">Minnekort, ved hjelp av det interne sporet</string>
 </resources>

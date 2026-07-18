@@ -42,10 +42,8 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import io.github.xntso.vendroid.AppSettings
 import io.github.xntso.vendroid.BuildConfig
-import io.github.xntso.vendroid.PRIVACY_URL
 import io.github.xntso.vendroid.R
 import io.github.xntso.vendroid.plugins.reviews.WriteReviewHelper
-import io.github.xntso.vendroid.plugins.telemetry.Telemetry
 import io.github.xntso.vendroid.ui.composables.MainView
 import io.github.xntso.vendroid.ui.composables.ScreenSizeLayoutSelector
 import io.github.xntso.vendroid.utils.ktexts.activity
@@ -235,7 +233,7 @@ fun AboutView() {
                     val absoluteStart = length - upstreamLine.length + etchDroidStart
                     addStyle(linkStyle, absoluteStart, absoluteStart + etchDroid.length)
                     addLink(
-                        LinkAnnotation.Url("https://etchdroid.app"),
+                        LinkAnnotation.Url("https://github.com/EtchDroid/EtchDroid"),
                         absoluteStart,
                         absoluteStart + etchDroid.length,
                     )
@@ -243,18 +241,6 @@ fun AboutView() {
                 append("\n")
                 append(stringResource(R.string.gpl_license_notice))
 
-                if (!Telemetry.isStub) {
-                    val privacyPolicyStr = stringResource(R.string.privacy_policy)
-                    append("\n$privacyPolicyStr")
-                    val privacyPolicyStart = length - privacyPolicyStr.length
-                    val privacyPolicyEnd = privacyPolicyStart + privacyPolicyStr.length
-                    addStyle(linkStyle, privacyPolicyStart, privacyPolicyEnd)
-                    addLink(
-                        LinkAnnotation.Url(PRIVACY_URL),
-                        privacyPolicyStart,
-                        privacyPolicyEnd
-                    )
-                }
             }
 
             Text(
@@ -293,18 +279,6 @@ fun AboutView() {
                 }
             ) {
                 Text("Ventoy")
-            }
-            OutlinedButton(
-                onClick = {
-                    activity?.startActivity(
-                        Intent(
-                            Intent.ACTION_VIEW,
-                            "https://etchdroid.app".toUri()
-                        )
-                    )
-                }
-            ) {
-                Text("EtchDroid")
             }
             val reviewHelper = remember { activity?.let { WriteReviewHelper(it) } }
             if (reviewHelper != null) {

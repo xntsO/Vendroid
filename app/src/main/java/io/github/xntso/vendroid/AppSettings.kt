@@ -28,5 +28,4 @@ class AppSettings(context: Context, val tileId: Int? = null) : SettingsChangeNot
     var themeMode: ThemeMode by settings.delegate("theme_mode", ThemeMode.SYSTEM)
     var dynamicColors: Boolean by settings.delegate("dynamic_colors", false)
     var showNotificationsBanner: Boolean by settings.delegate("show_notifications_banner", true)
-    var showTelemetryBanner: Boolean by settings.delegate("show_telemetry_banner", true)
 }

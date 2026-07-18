@@ -2,18 +2,11 @@
 <resources>
     <string name="write_an_image" comment="Displayed in the home page main call-to-action button">Write an படம்</string>
     <string name="write_image" comment="Confirmation button; when pressed, the operation starts">படத்தை எழுதுங்கள்</string>
-    <string name="supported_devices_and_images" comment="Title of the page that lists all the supported devices and images">உதவி சாதனங்கள் மற்றும் படங்கள்</string>
-    <string name="devices" comment="Title of the section that lists all the supported device types">கருவிகள்</string>
-    <string name="usb_flash_drives" comment="Device type">யூ.எச்.பி ஃபிளாச் இயக்கிகள்</string>
-    <string name="disk_images" comment="Title of the section that lists all the supported image types">வட்டு படங்கள்</string>
-    <string name="support_the_project" comment="Displayed in the about page links; keep it short!">பொருள் ரீதியாக ஆதரிக்கவும்</string>
     <string name="verifying_image" comment="Title of the progress page while an image is being verified">படத்தை சரிபார்க்கிறது</string>
     <string name="writing_image" comment="Title of the progress page while an image is being written">படம் எழுதுதல்</string>
     <string name="please_avoid_using_your_device" comment="Subtitle of the progress page while an image is being written">உங்கள் சாதனத்தைப் பயன்படுத்துவதைத் தவிர்க்கவும்</string>
     <string name="the_usb_device_content_does_not_match_the_image" comment="Error message displayed when the verification failed">யூ.எச்.பி சாதன உள்ளடக்கம் படத்துடன் பொருந்தவில்லை</string>
     <string name="worker_null_device_error" comment="Error message displayed when users get a mysterious NullPointerException while starting a new write. The original translation tries to give the user a general idea of the issue without being too technical.">ஒரு எழுதும் முயற்சி தொடங்கப்பட்டது, ஆனால் துரதிர்ச்டவசமாக சில தகவல்கள் வழியில் தொலைந்துவிட்டன. மீண்டும் முயற்சிக்கவும்.</string>
-    <string name="telemetry_icon" comment="Description of the telemetry icon for accessibility purposes">டெலிமெட்ரி படவுரு</string>
-    <string name="send_anonymous_data" comment="Displayed in the main app menu; controls whether the app sends anonymous telemetry info.">பெயரிலி தரவை அனுப்பவும்</string>
     <string name="cancel" comment="Cancel string, used all over the place">ரத்துசெய்</string>
     <string name="write_finished" comment="Notification title when the write operation is successful">எழுதப்பட்டது</string>
     <string name="success_notif_content_text" comment=" Notification title when the write operation is successful. Parameters: filename, device name">%1$s வெற்றிகரமாக %2$s க்கு எழுதப்பட்டது</string>
@@ -32,7 +25,6 @@
     <string name="notification_verify_progress_content" comment=" Notification content: &quot;{device name} against {file name}&quot;, used when the user has granted the notification permission; The notification title will be: &quot;Verifying image…&quot; and this string will show up right below it.">%2$s க்கு எதிராக %1$s</string>
     <string name="unknown_filename" comment="Placeholder file name">தெரியவில்லை கோப்பு பெயர்</string>
     <string name="permission_denied_for_usb_device" comment="Displayed in a toast when the usb permission is denied">Permission denied க்கு USB device %1$s</string>
-    <string name="whats_supported" comment="Displayed in the homepage; opens a page that lists all the supported devices and formats">என்ன ஆதரவு?</string>
     <string name="style" comment="Title of the menu that allows selecting the app color scheme">சூல் தண்டு</string>
     <string name="device_setting" comment="Style menu option that selects the device default light/dark theme">சாதன அமைப்பு</string>
     <string name="light" comment="Style menu option that selects the light theme">ஒளி</string>
@@ -59,26 +51,7 @@
     <string name="continue_" comment="Button displayed in the dialog that forces the user to lay the device flat on a table before continuing, when the device has no gravity sensor; when pressed the operation starts.">தொடரவும்</string>
     <string name="lay_your_device_flat" comment="Title of the dialog that forces the user to lay the device flat on a table before continuing, when the device has a gravity sensor">உங்கள் சாதனத்தை ஒரு அட்டவணையில் தட்டையாக வைத்து அதைத் தொட வேண்டாம்</string>
     <string name="skip" comment="Button displayed in the dialog that forces the user to lay the device flat on a table before continuing, when the device has a gravity sensor; when pressed the flat check is skipped and the operation starts.">தவிர்</string>
-    <string name="supported" comment="Description of a device or image type that is supported">ஆதரிக்கப்பட்டது</string>
-    <string name="maybe_supported" comment="Description of a device or image type that might be supported">ஒருவேளை ஆதரிக்கலாம்</string>
-    <string name="not_supported" comment="Description of a device or image type that is not supported">ஆதரிக்கப்படவில்லை</string>
-    <string name="memory_cards_using_a_usb_adapter" comment="Device type">நினைவக கார்டுகள், யூ.எச்.பி அடாப்டரைப் பயன்படுத்தி</string>
-    <string name="usb_docks_and_hubs_might_have_power_issues" comment="Device type">யூ.எச்.பி கப்பல்துறைகள் மற்றும் மையங்கள் (அவர்களுக்கு ஆற்றல் சிக்கல்கள் இருக்கலாம்)</string>
-    <string name="memory_cards_using_the_internal_slot" comment="Device type">நினைவக கார்டுகள், உள் ச்லாட்டைப் பயன்படுத்தி</string>
-    <string name="optical_disk_drives" comment="Device type">ஆப்டிகல் வட்டு இயக்கிகள்</string>
-    <string name="floppy_disk_drives" comment="Device type">நெகிழ் வட்டு இயக்கிகள்</string>
-    <string name="any_thunderbolt_only_device" comment="Device type">எந்த தண்டர்போல்ட்-மட்டும் சாதனம்</string>
-    <string name="usb_hard_drives_ssds_some_might_work" comment="Device type">யூ.எச்.பி ஆர்ட் டிரைவ்கள் / எச்.எச்.டி.எச் (சில வேலை செய்யலாம்)</string>
-    <string name="arch_linux_ubuntu_debian_fedora_pop_os_linux_mint_freebsd_etc" comment="Image type">ஆர்ச் லினக்ச், உபுண்டு, டெபியன், ஃபெடோரா, பாப்! _ஓஎச், லினக்ச் புதினா, ஃப்ரீ.பி.எச்.டி போன்றவை.</string>
-    <string name="other_modern_gnu_linux_and_bsd_distributions_live_isos" comment="Image type">பிற நவீன குனு/லினக்ச் மற்றும் பி.எச்.டி விநியோகங்களின் நேரடி ஐ.எச்.ஓ.எச்</string>
-    <string name="raspberry_pi_sd_card_images_unzip_first" comment="Image type">ராச்பெர்ரி பை எச்டி அட்டை படங்கள் (முதலில் unzip!)</string>
-    <string name="microsoft_windows_isos_any_version" comment="Image type">மைக்ரோசாப்ட் சாளரங்கள் ஐஎச்ஓஎச் (எந்த பதிப்பும்)</string>
-    <string name="apple_dmg_disk_images" comment="Image type">ஆப்பிள் டி.எம்.சி வட்டு படங்கள்</string>
-    <string name="any_other_image_that_works_with_balena_etcher_or_dd" comment="Image type">பலேனா எட்சர் அல்லது டிடி உடன் வேலை செய்யும் எந்தொரு படம்</string>
-    <string name="older_gnu_linux_distributions_isos_2010" comment="Image type">பழைய குனு/லினக்ச் விநியோகங்கள் \'ஐசோச் (&lt;2010)</string>
-    <string name="support_for_dmg_images_was_removed" comment="At the end of the supported devices and images page we state that DMGs are no longer supported; the parameter is replaced with the word &quot;GitHub&quot;">டி.எம்.சி படங்களுக்கான உதவி எட்ச்ராய்டு 2.0 இல் அகற்றப்பட்டது. பழைய பதிப்புகளை %1$s இலிருந்து பதிவிறக்கம் செய்யலாம்.</string>
     <string name="developed_by" comment="Displayed in the about page; parameters are: author name, the word &quot;contributors&quot; (translated separately), &quot;GitHub&quot;">%1$s மற்றும் பிற %2$s ஆல் உருவாக்கப்பட்டது.\n மூலக் குறியீடு %3$s இல் கிடைக்கிறது.\n குனு சி.பி.எல்.வி 3 உரிமத்தின் கீழ் உரிமம் பெற்றது.</string>
-    <string name="website" comment="Displayed in the about page links; keep it very short!">வலைத்தளம்</string>
     <string name="would_you_like_to_be_notified" comment="Displayed in a card in the progress page; keep it concise, there's not much space">முடிந்ததும் அறிவிக்க விரும்புகிறீர்களா? முன்னேற்ற புதுப்பிப்புகள் மட்டுமே, ச்பேம் அல்லது விளம்பரங்கள் இல்லை.</string>
     <string name="contributors" comment="Part of the following sentence: &quot;Developed by Author Name and other contributors&quot;">பங்களிப்பாளர்கள்</string>
     <string name="no_thanks" comment="Button to reject receiving notifications">இல்லை, நன்றி</string>
@@ -91,10 +64,7 @@
     <string name="skip_verification" comment="Displayed on a button that, when pressed, skips the verification of the written image">சரிபார்ப்பைத் தவிர்க்கவும்</string>
     <string name="image_written_successfully" comment="Title of the success page">படம் வெற்றிகரமாக எழுதப்பட்டது!</string>
     <string name="write_a_review" comment="Displayed in a button on the success page">மதிப்பாய்வு எழுதுங்கள்</string>
-    <string name="got_an_unsupported_drive_notification" comment="Title of the card that teaches the user about any &quot;Issues with this drive&quot; notifications">\"இந்த இயக்ககத்தில் சிக்கல்கள்\" அறிவிப்பு கிடைத்ததா?</string>
     <string name="star_on_github" comment="Displayed in a button on the success page">கிட்அப்பில் விண்மீன்</string>
-    <string name="it_s_safe_to_ignore" comment="Message of the card that teaches the user about any &quot;Issues with this drive&quot; notifications; the parameter will be replaced with the translation of &quot;Learn what it means&quot;">புறக்கணிப்பது பாதுகாப்பானது! உங்கள் இயக்ககத்தை அவிழ்த்து சாதாரணமாகப் பயன்படுத்துங்கள். %1$s மற்றும் பின்னர் உங்கள் இயக்ககத்தை எவ்வாறு வடிவமைப்பது என்று பாருங்கள்.</string>
-    <string name="learn_what_it_means" comment="Part of the message of the card that teaches the user about any &quot;Issues with this drive&quot; notifications; the full sentence is &quot;Learn what it means and see how to format your drive later&quot;">அதன் பொருள் என்ன என்பதை அறிக</string>
     <string name="there_was_an_error" comment="Title of the non-recoverable error page">பிழை இருந்தது</string>
     <string name="error">பிழை</string>
     <string name="start_over" comment="Button in the error page that, when pressed, restarts the app">தொடக்க</string>
@@ -120,17 +90,7 @@
     <string name="no_image_uri_provided" comment="Error message (shown in a toast) when the operation confirmation screen is opened without a source file; the app redirects back to the home page">யூரி எந்த படமும் வழங்கப்படவில்லை</string>
     <string name="no_destination_device_selected" comment="Error message (shown in a toast) when the operation confirmation screen is opened without a destination device; the app redirects back to the home page">இலக்கு சாதனம் தேர்ந்தெடுக்கப்படவில்லை</string>
     <string name="service_timeout_message" comment="Error message displayed when the background write service does not send any progress updates for a suspiciously long time. In this case, the app assumes the service got stuck and prompts the user to try again.">எழுதும் செயல்முறை சிக்கியதாக தெரிகிறது. மீண்டும் முயற்சிக்கவும்.</string>
-    <string name="community_windows_images" comment="&quot;You're on your own&quot; can be translated with something similar to &quot;unsupported&quot; or &quot;be careful!&quot; if it makes more sense in the target language">சமூகத்தால் கட்டப்பட்ட சாளரங்கள் படங்கள், எட்ச்ராய்டுக்காக தயாரிக்கப்படுகின்றன (நீங்கள் சொந்தமாக இருக்கிறீர்கள்: அவற்றில் வைரச்கள் இருக்கலாம்!)</string>
     <string name="please_report_fatal_issue" comment="Displayed in the fatal error screen, prompting the users to report the issue on GitHub along with the steps to reproduce it">உங்களால் முடிந்தால், இந்த பிழைக்கு வழிவகுத்த படிகளுடன் இந்த சிக்கலை கிதுபில் புகாரளிக்கவும்.</string>
     <string name="view_github_issues" comment="Displayed in the fatal error screen, in a small button. When pressed, the app opens the GitHub issues page. Since the button is small, please keep this short. You can replace it with &quot;GitHub issues&quot; if &quot;View GitHub issues&quot; is too long in your language.">அறிவிலிமையம் சிக்கல்களைக் காண்க</string>
-    <string name="telemetry" comment="Displayed in the menu if the current app build may send telemetry (Google Play builds)">டெலிமெட்ரி</string>
-    <string name="privacy_policy" comment="Displayed in the app menu, as well as in other links to the privacy policy">தனியுரிமைக் கொள்கை</string>
-    <string name="telemetry_rationale" comment="Displayed in builds with telemetry enabled (Google Play) when the user tries to opt-out of telemetry to try to convince them not to. '%1$s' is replaced with a link to the privacy policy; the `privacy_policy` string is used.">எட்ச்ராய்டு உங்கள் தனியுரிமையை மதிப்பிடுகிறது மற்றும் பயன்பாட்டு சிக்கல்களை விசாரிக்க குறைந்தபட்ச டெலிமெட்ரி மட்டுமே பயன்படுத்துகிறது.\n\n எங்கள் திறந்த மூல சமூகத்தின் ஒரு பகுதியாக இருங்கள்-கீப் டெலிமெட்ரி இயக்கப்பட்டது மற்றும் அனைவருக்கும் எட்ச்ராய்டை மேம்படுத்த உதவுகிறது!\n\n தனிப்பட்ட முறையில் அடையாளம் காணும் எந்த தகவலையும் நாங்கள் சேகரிக்கவில்லை என்றாலும், வெளிப்படைத்தன்மையை நாங்கள் நம்புகிறோம், குறிப்பிட்ட வன்பொருளுடன் சிக்கல்களைக் கண்டறிய உதவுவதற்காக திறந்த படக் கோப்பு பெயர்கள் மற்றும் யூ.எச்.பி சாதன ஐடிகள் அநாமதேயமாக சேகரிக்கப்படுகின்றன என்பதை நீங்கள் அறிந்து கொள்ள விரும்புகிறோம். உங்கள் பட கோப்பு பெயர்கள் அல்லது சாதன ஐடிகள் மிகவும் உணர்திறன் கொண்டவை எனில், இந்தத் தரவைப் பகிர்வது பாதுகாப்பானது. (%1$s)</string>
-    <string name="we_need_your_help" comment="Title of the dialog that asks the user to enable telemetry">எங்களுக்கு உங்கள் உதவி தேவை!</string>
-    <string name="telemetry_opt_out" comment="Button to opt-out of telemetry; it can be translated as &quot;Disable telemetry&quot; if it fits better in the target language">விலகல்</string>
-    <string name="telemetry_keep_enabled" comment="Button to opt-in to telemetry; it can be translated as &quot;Enable telemetry&quot; if it fits better in the target language">இயக்கப்பட்டிருங்கள்</string>
-    <string name="vendroid_uses_telemetry" comment="Displayed in the main app screen on first launch in a toast/snackbar. It should be short and concise.">எட்ச்ராய்டு டெலிமெட்ரி தகவலை அனுப்புகிறது.</string>
-    <string name="learn_more" comment="Displayed in the main app screen on first launch as a snackbar action button. It should be short and concise.">மேலும் அறிக</string>
-    <string name="very_large_drives_2tb" comment="Device type">மிகப் பெரிய இயக்கிகள் (≥ 2 TB)</string>
     <string name="the_usb_drive_is_too_large" comment="Error message">USB இயக்கி மிகவும் பெரியது மற்றும் Vendroid அதை ஆதரிக்காது.</string>
 </resources>

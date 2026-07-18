@@ -54,7 +54,6 @@
     <string name="updating_ventoy_preserves_files">Only Ventoy boot components will be refreshed. Keep the drive connected and back up irreplaceable files first.</string>
     <string name="ventoy_options_summary">exFAT · Label: %1$s · Cluster: %2$s · Reserved: %3$s</string>
     <string name="percent_complete">%1$d%% complete</string>
-    <string name="whats_supported" comment="Displayed in the homepage; opens a page that lists all the supported devices and formats">What\'s supported?</string>
     <string name="style" comment="Title of the menu that allows selecting the app color scheme">Style</string>
     <string name="device_setting" comment="Style menu option that selects the device default light/dark theme">Device setting</string>
     <string name="light" comment="Style menu option that selects the light theme">Light</string>
@@ -82,29 +81,6 @@
     <string name="continue_" comment="Button displayed in the dialog that forces the user to lay the device flat on a table before continuing, when the device has no gravity sensor; when pressed the operation starts.">Continue</string>
     <string name="lay_your_device_flat" comment="Title of the dialog that forces the user to lay the device flat on a table before continuing, when the device has a gravity sensor">Lay your device flat on a table and don\'t touch it</string>
     <string name="skip" comment="Button displayed in the dialog that forces the user to lay the device flat on a table before continuing, when the device has a gravity sensor; when pressed the flat check is skipped and the operation starts.">Skip</string>
-    <string name="supported" comment="Description of a device or image type that is supported">Supported</string>
-    <string name="maybe_supported" comment="Description of a device or image type that might be supported">Maybe supported</string>
-    <string name="not_supported" comment="Description of a device or image type that is not supported">Not supported</string>
-    <string name="supported_devices_and_images" comment="Title of the page that lists all the supported devices and images">Supported devices and images</string>
-    <string name="devices" comment="Title of the section that lists all the supported device types">Devices</string>
-    <string name="usb_flash_drives" comment="Device type">USB flash drives</string>
-    <string name="memory_cards_using_a_usb_adapter" comment="Device type">Memory cards, using a USB adapter</string>
-    <string name="usb_hard_drives_ssds_some_might_work" comment="Device type">USB hard drives / SSDs (some might work)</string>
-    <string name="usb_docks_and_hubs_might_have_power_issues" comment="Device type">USB docks and hubs (they might have power issues)</string>
-    <string name="memory_cards_using_the_internal_slot" comment="Device type">Memory cards, using the internal slot</string>
-    <string name="optical_disk_drives" comment="Device type">Optical disk drives</string>
-    <string name="floppy_disk_drives" comment="Device type">Floppy disk drives</string>
-    <string name="any_thunderbolt_only_device" comment="Device type">Any Thunderbolt-only device</string>
-    <string name="very_large_drives_2tb" comment="Device type">Very large drives (≥ 2 TB)</string>
-    <string name="disk_images" comment="Title of the section that lists all the supported image types">Disk images</string>
-    <string name="microsoft_windows_isos_any_version" comment="Image type">Microsoft Windows ISOs (any version)</string>
-    <string name="apple_dmg_disk_images" comment="Image type">Apple DMG disk images</string>
-    <string name="arch_linux_ubuntu_debian_fedora_pop_os_linux_mint_freebsd_etc" comment="Image type">Arch Linux, Ubuntu, Debian, Fedora, pop!_OS, Linux Mint, FreeBSD etc.</string>
-    <string name="other_modern_gnu_linux_and_bsd_distributions_live_isos" comment="Image type">Other modern GNU/Linux and BSD distributions\' live ISOs</string>
-    <string name="raspberry_pi_sd_card_images_unzip_first" comment="Image type">Raspberry Pi SD card images (unzip first!)</string>
-    <string name="any_other_image_that_works_with_balena_etcher_or_dd" comment="Image type">Any other image that works with Balena Etcher or dd</string>
-    <string name="older_gnu_linux_distributions_isos_2010" comment="Image type">Older GNU/Linux distributions\' ISOs (&lt; 2010)</string>
-    <string name="support_for_dmg_images_was_removed" comment="At the end of the supported devices and images page we state that DMGs are no longer supported; the parameter is replaced with the word &quot;GitHub&quot;">Support for DMG images was removed in Vendroid 2.0. Older versions can be downloaded from %1$s.</string>
     <string name="developed_by" comment="Displayed in the about page; parameters are: author name, the word &quot;contributors&quot; (translated separately), &quot;GitHub&quot;">Developed by %1$s and other %2$s.\nSource code available on %3$s.\nLicensed under the GNU GPLv3 license.</string>
     <string name="about_project_summary">Vendroid is an open-source Android app for installing Ventoy on USB drives and managing boot image files.</string>
     <string name="developer_name" translatable="false">Faisal Sumayli</string>
@@ -114,8 +90,6 @@
     <string name="gpl_license_notice">Licensed under the GNU GPLv3 license.</string>
     <string name="project_on_github">Project on GitHub</string>
     <string name="contributors" comment="Part of the following sentence: &quot;Developed by Author Name and other contributors&quot;">contributors</string>
-    <string name="website" comment="Displayed in the about page links; keep it very short!">Website</string>
-    <string name="support_the_project" comment="Displayed in the about page links; keep it short!">Support financially</string>
     <string name="verifying_image" comment="Title of the progress page while an image is being verified">Verifying image</string>
     <string name="writing_image" comment="Title of the progress page while an image is being written">Writing image</string>
     <string name="please_avoid_using_your_device" comment="Subtitle of the progress page while an image is being written">Please avoid using your device</string>
@@ -132,9 +106,6 @@
     <string name="ventoy_installer_name" translatable="false">Ventoy installer</string>
     <string name="write_a_review" comment="Displayed in a button on the success page">Write a review</string>
     <string name="star_on_github" comment="Displayed in a button on the success page">Star on GitHub</string>
-    <string name="got_an_unsupported_drive_notification" comment="Title of the card that teaches the user about any &quot;Issues with this drive&quot; notifications">Got an \"Issues with this drive\" notification?</string>
-    <string name="it_s_safe_to_ignore" comment="Message of the card that teaches the user about any &quot;Issues with this drive&quot; notifications; the parameter will be replaced with the translation of &quot;Learn what it means&quot;">It\'s safe to ignore! Just unplug your drive and use it normally. %1$s and see how to format your drive later.</string>
-    <string name="learn_what_it_means" comment="Part of the message of the card that teaches the user about any &quot;Issues with this drive&quot; notifications; the full sentence is &quot;Learn what it means and see how to format your drive later&quot;">Learn what it means</string>
     <string name="there_was_an_error" comment="Title of the non-recoverable error page">There was an error</string>
     <string name="error">Error</string>
     <string name="start_over" comment="Button in the error page that, when pressed, restarts the app">Start over</string>
@@ -162,18 +133,7 @@
     <string name="no_image_uri_provided" comment="Error message (shown in a toast) when the operation confirmation screen is opened without a source file; the app redirects back to the home page">No image URI provided</string>
     <string name="no_destination_device_selected" comment="Error message (shown in a toast) when the operation confirmation screen is opened without a destination device; the app redirects back to the home page">No destination device selected</string>
     <string name="service_timeout_message" comment="Error message displayed when the background write service does not send any progress updates for a suspiciously long time. In this case, the app assumes the service got stuck and prompts the user to try again.">The writing process seems to have gotten stuck. Please try again.</string>
-    <string name="community_windows_images" comment="&quot;You're on your own&quot; can be translated with something similar to &quot;unsupported&quot; or &quot;be careful!&quot; if it makes more sense in the target language">Community-built Windows images, made for Vendroid (you\'re on your own: they might contain viruses!)</string>
     <string name="worker_null_device_error" comment="Error message displayed when users get a mysterious NullPointerException while starting a new write. The original translation tries to give the user a general idea of the issue without being too technical.">A write attempt was started but unfortunately some info got lost along the way. Please try again.</string>
     <string name="please_report_fatal_issue" comment="Displayed in the fatal error screen, prompting the users to report the issue on GitHub along with the steps to reproduce it">If you can, please report this issue on GitHub along with the steps that led to this error.</string>
     <string name="view_github_issues" comment="Displayed in the fatal error screen, in a small button. When pressed, the app opens the GitHub issues page. Since the button is small, please keep this short. You can replace it with &quot;GitHub issues&quot; if &quot;View GitHub issues&quot; is too long in your language.">View GitHub issues</string>
-    <string name="telemetry" comment="Displayed in the menu if the current app build may send telemetry (Google Play builds)">Telemetry</string>
-    <string name="privacy_policy" comment="Displayed in the app menu, as well as in other links to the privacy policy">Privacy policy</string>
-    <string name="telemetry_rationale" comment="Displayed in builds with telemetry enabled (Google Play) when the user tries to opt-out of telemetry to try to convince them not to. '%1$s' is replaced with a link to the privacy policy; the `privacy_policy` string is used.">Vendroid values your privacy and only uses minimal telemetry to investigate app issues.\n\nBe a part of our open-source community—keep telemetry enabled and help improve Vendroid for everyone!\n\nWhile we don\'t collect any personally-identifying information, we believe in transparency and want you to know that opened image file names and USB device IDs are collected anonymously to help diagnose issues with specific hardware. Unless your image file names or device IDs are highly sensitive, it\'s safe to share this data. (%1$s)</string>
-    <string name="we_need_your_help" comment="Title of the dialog that asks the user to enable telemetry">We need your help!</string>
-    <string name="telemetry_icon" comment="Description of the telemetry icon for accessibility purposes">Telemetry icon</string>
-    <string name="telemetry_opt_out" comment="Button to opt-out of telemetry; it can be translated as &quot;Disable telemetry&quot; if it fits better in the target language">Opt-out</string>
-    <string name="telemetry_keep_enabled" comment="Button to opt-in to telemetry; it can be translated as &quot;Enable telemetry&quot; if it fits better in the target language">Keep enabled</string>
-    <string name="vendroid_uses_telemetry" comment="Displayed in the main app screen on first launch in a toast/snackbar. It should be short and concise.">Vendroid sends telemetry info.</string>
-    <string name="learn_more" comment="Displayed in the main app screen on first launch as a snackbar action button. It should be short and concise.">Learn more</string>
-    <string name="send_anonymous_data" comment="Displayed in the main app menu; controls whether the app sends anonymous telemetry info.">Send anonymous data</string>
 </resources>

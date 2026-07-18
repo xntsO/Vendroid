@@ -15,7 +15,6 @@
     <string name="notification_verify_progress_title" comment=" Notification title used for long-running job status">ਚਿੱਤਰ ਦੀ ਪੁਸ਼ਟੀ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ…</string>
     <string name="notification_write_no_notifications_text" comment=" Notification content for long-running job status, used when the user has not granted the notification permission. The first parameter will be replaced with the source file name, the second one with the USB stick name">ਤਰੱਕੀ ਲਈ ਸੂਚਨਾਵਾਂ ਚਾਲੂ ਕਰੋ • %1$s ਨੂੰ %2$s ਵਿੱਚ ਲਿਖਿਆ ਜਾ ਰਿਹਾ ਹੈ</string>
     <string name="write_an_image" comment="Displayed in the home page main call-to-action button">ਇੱਕ ਚਿੱਤਰ ਲਿਖੋ</string>
-    <string name="whats_supported" comment="Displayed in the homepage; opens a page that lists all the supported devices and formats">ਕੀ ਸਮਰਥਿਤ ਹੈ?</string>
     <string name="style" comment="Title of the menu that allows selecting the app color scheme">ਸ਼ੈਲੀ</string>
     <string name="device_setting" comment="Style menu option that selects the device default light/dark theme">ਡਿਵਾਈਸ ਸੈਟਿੰਗ</string>
     <string name="light" comment="Style menu option that selects the light theme">ਚਾਨਣ</string>

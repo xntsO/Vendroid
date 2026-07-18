@@ -15,14 +15,8 @@
     <string name="a_regular_windows_iso_won_t_work">File ISO Windows thông thường không thể được sử dụng với Vendroid, trừ khi nó đã đuợc sửa để dùng với Vendroid, Etcher hoặc dd.</string>
     <string name="grant_access">Cấp quyền</string>
     <string name="lay_your_device_flat">Đặt thiết bị lên bề mặt phẳng và không chạm vào thiết bị</string>
-    <string name="devices">Các thiết bị</string>
-    <string name="usb_docks_and_hubs_might_have_power_issues">Dock và Hub USB (có thể gặp vấn đề với nguồn điện)</string>
-    <string name="arch_linux_ubuntu_debian_fedora_pop_os_linux_mint_freebsd_etc">Arch Linux, Ubuntu, Debian, Fedora, pop!_OS, Linux Mint, FreeBSD, v.v.</string>
-    <string name="support_for_dmg_images_was_removed">File ảnh DMG đã ngừng hỗ trợ từ Vendroid 2.0. Các phiên bản cũ hơn có thể tải từ %1$s.</string>
     <string name="writing_image">Đang ghi file ảnh</string>
     <string name="sure">Có</string>
-    <string name="got_an_unsupported_drive_notification">Bạn có nhận được thông báo \"Có sự cố với ổ đĩa này\" không?</string>
-    <string name="it_s_safe_to_ignore">Có thể bỏ qua thông báo này. Bạn có thể rút thiết bị và sử dụng như bình thường. %1$s và xem cách để định dạng lại ổ.</string>
     <string name="error">Lỗi</string>
     <string name="try_again">Thử lại</string>
     <string name="how_did_this_happen">Tại sao lỗi này xảy ra?</string>
@@ -47,7 +41,6 @@
     <string name="permission_denied_for_usb_device">Không có quyền cho thiết bị USB %1$s</string>
     <string name="usb_device_was_unplugged">Thiết bị USB đã bị tháo</string>
     <string name="write_an_image">Ghi một file ảnh</string>
-    <string name="whats_supported">Kiểu file nào được hỗ trợ?</string>
     <string name="style">Kiểu giao diện</string>
     <string name="device_setting">Theo thiết bị</string>
     <string name="light">Sáng</string>
@@ -69,29 +62,10 @@
     <string name="lay_your_device_flat_no_accel">Đặt thiết bị lên bề mặt phẳng trước khi tiếp tục.</string>
     <string name="continue_">Tiếp tục</string>
     <string name="skip">Bỏ qua</string>
-    <string name="supported">Được hỗ trợ</string>
-    <string name="maybe_supported">Có thể được hỗ trợ</string>
-    <string name="not_supported">Không hỗ trợ</string>
-    <string name="supported_devices_and_images">Các thiết bị và file ảnh được hỗ trợ</string>
-    <string name="usb_flash_drives">Ổ đĩa USB</string>
-    <string name="memory_cards_using_a_usb_adapter">Thẻ nhớ qua adapter USB</string>
-    <string name="usb_hard_drives_ssds_some_might_work">Ổ cứng / SSD rời USB (một vài thiết bị có thể hoạt động)</string>
-    <string name="memory_cards_using_the_internal_slot">Thẻ nhớ dùng khe cắm tích hợp</string>
-    <string name="optical_disk_drives">Đĩa quang</string>
-    <string name="floppy_disk_drives">Đĩa mềm</string>
-    <string name="any_thunderbolt_only_device">Bất kì thiết bị nào chỉ có Thunderbolt</string>
-    <string name="disk_images">File ảnh đĩa</string>
-    <string name="microsoft_windows_isos_any_version">File ISO của Microsoft Windows (bất kỳ phiên bản nào)</string>
-    <string name="apple_dmg_disk_images">File ảnh đĩa DMG của Apple</string>
-    <string name="other_modern_gnu_linux_and_bsd_distributions_live_isos">Các bản phân phối GNU/Linux và BSD mới</string>
-    <string name="raspberry_pi_sd_card_images_unzip_first">File ảnh thẻ SD cho Raspberry Pi (yêu cầu giải nén trước!)</string>
-    <string name="any_other_image_that_works_with_balena_etcher_or_dd">Bất kỳ file ảnh nào dùng cho Balena Etcher hoặc dd</string>
-    <string name="older_gnu_linux_distributions_isos_2010">File ISO của bản phân phối GNU/Linux cũ (&lt;2010)</string>
     <string name="developed_by">Phát triển bới %1$s và %2$s.
 \nMã nguồn tại %3$s.
 \nPhân phối dưới bản quyền GNU GPLv3.</string>
     <string name="contributors">những người đóng góp khác</string>
-    <string name="website">Trang web</string>
     <string name="verifying_image">Đang xác minh file ảnh</string>
     <string name="please_avoid_using_your_device">Vui lòng hạn chế sử dụng thiết bị</string>
     <string name="would_you_like_to_be_notified">Bạn có muốn nhận thông báo khi hoàn tất không? Chỉ có thông báo tiến độ, không có spam hoặc quảng cáo.</string>
@@ -105,7 +79,6 @@
     <string name="image_written_successfully">File ảnh được ghi thành công!</string>
     <string name="write_a_review">Viết đánh giá</string>
     <string name="star_on_github">Tặng sao trên GitHub</string>
-    <string name="learn_what_it_means">Xem giải thích nội dung thông báo</string>
     <string name="there_was_an_error">Có lỗi đã xảy ra</string>
     <string name="start_over">Bắt đầu lại</string>
     <string name="i_did_not_unplug_it">Tôi không rút thiết bị!</string>
@@ -113,24 +86,12 @@
     <string name="the_usb_drive_was_unplugged">Thiết bị USB đã bị rút</string>
     <string name="the_usb_drive_stopped_responding">Thiết bị USB không phản hồi</string>
     <string name="the_usb_device_content_does_not_match_the_image">Nội dung của thiết bị USB không trùng với file ảnh</string>
-    <string name="support_the_project">Quyên góp</string>
     <string name="write_another_image">Ghi file ảnh khác</string>
     <string name="title_activity_confirm_operation">Xác nhận</string>
     <string name="no_image_uri_provided">URI đến file ảnh không được cung cấp</string>
     <string name="no_destination_device_selected">Không có thiết bị đích được chọn</string>
     <string name="service_timeout_message">Quá trình ghi có thể đã bị lỗi. Vui lòng thử lại.</string>
-    <string name="community_windows_images">File ảnh Windows được xây dựng bởi cộng đồng cho Vendroid (cẩn thận: chúng có thể chứa virus!)</string>
     <string name="worker_null_device_error" comment="Error message displayed when users get a mysterious NullPointerException while starting a new write. The original translation tries to give the user a general idea of the issue without being too technical.">Những thông tin không may bị mất trong quá trình bắt đầu ghi chép, Vui lòng thử lại.</string>
-    <string name="telemetry_rationale" comment="Displayed in builds with telemetry enabled (Google Play) when the user tries to opt-out of telemetry to try to convince them not to. '%1$s' is replaced with a link to the privacy policy; the `privacy_policy` string is used.">Vendroid luôn coi trọng sự riêng tư của bạn và chỉ đo thông tin từ xa tối thiểu nhất để điều tra vấn đề về ứng dụng.\n\nHãy là một phần cộng đồng mã nguồn mở của chúng tôi—cho phép đo thông tin từ xa và giúp hoàn thiện Vendroid cho mọi người!\n\nTrong khi chúng tôi không thu hoạch bất kì thông tin cá nhân, chúng tôi luôn tin tưởng vào sự minh bạch và cho bạn biết rằng file ảnh được mở và các mã số thiết bị USB đều thu thập ẩn danh để giúp chuẩn đoán những vấn đề về các phần cứng. Trừ khi file ảnh và các mã số thiết bị của bạn có nhạy cảm rất cao, vẫn có thể chia sẻ thông tin một cách an toàn. (­%1$s)</string>
     <string name="please_report_fatal_issue" comment="Displayed in the fatal error screen, prompting the users to report the issue on GitHub along with the steps to reproduce it">Bạn có thể báo cáo vấn đề này lên GitHub kèm theo bước đã gây ra lỗi nếu có thể.</string>
-    <string name="privacy_policy" comment="Displayed in the app menu, as well as in other links to the privacy policy">Chính sách bảo mật</string>
-    <string name="telemetry_keep_enabled" comment="Button to opt-in to telemetry; it can be translated as &quot;Enable telemetry&quot; if it fits better in the target language">Giữ trạng thái bật</string>
-    <string name="learn_more" comment="Displayed in the main app screen on first launch as a snackbar action button. It should be short and concise.">Tìm hiểu thêm</string>
-    <string name="send_anonymous_data" comment="Displayed in the main app menu; controls whether the app sends anonymous telemetry info.">Gửi thông tin ẩn danh</string>
-    <string name="vendroid_uses_telemetry" comment="Displayed in the main app screen on first launch in a toast/snackbar. It should be short and concise.">Vendroid gửi thông tin từ xa.</string>
     <string name="view_github_issues" comment="Displayed in the fatal error screen, in a small button. When pressed, the app opens the GitHub issues page. Since the button is small, please keep this short. You can replace it with &quot;GitHub issues&quot; if &quot;View GitHub issues&quot; is too long in your language.">Xem vấn đề trên GitHub</string>
-    <string name="we_need_your_help" comment="Title of the dialog that asks the user to enable telemetry">Chúng tôi cần sự giúp đỡ của bạn!</string>
-    <string name="telemetry_icon" comment="Description of the telemetry icon for accessibility purposes">Biểu tượng dữ liệu đo từ xa</string>
-    <string name="telemetry_opt_out" comment="Button to opt-out of telemetry; it can be translated as &quot;Disable telemetry&quot; if it fits better in the target language">Từ chối</string>
-    <string name="telemetry" comment="Displayed in the menu if the current app build may send telemetry (Google Play builds)">Dữ liệu đo từ xa</string>
 </resources>

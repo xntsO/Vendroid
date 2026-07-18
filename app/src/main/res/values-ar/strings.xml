@@ -4,7 +4,6 @@
     <string name="write_finished">انتهت الكتابة</string>
     <string name="unknown_filename">اسم ملف غير معروف</string>
     <string name="success_notif_content_text">%1$s تمت كتابته بنجاح إلى %2$s</string>
-    <string name="it_s_safe_to_ignore">من الآمن تجاهلها! فقط افصل محرك الأقراص الخاص بك واستخدمه بشكل طبيعي. %1$s وشاهد كيفية تهيئة محرك الأقراص لاحقًا.</string>
     <string name="there_was_an_error">هناك خطأ ما</string>
     <string name="start_over">ابدأ من جديد</string>
     <string name="error">خطأ</string>
@@ -16,7 +15,6 @@
     <string name="missing_permission_to_access_the_usb_device">إذن مفقود للوصول إلى جهاز USB</string>
     <string name="the_image_is_is_larger_than_the_device">الصورة (%1$s) أكبر من الجهاز (%2$s)</string>
     <string name="the_usb_drive_is_too_large">محرك أقراص USB كبير جداً ولا يدعمه Vendroid.</string>
-    <string name="community_windows_images">صور Windows التي أنشأها المجتمع، والمصممة لـ Vendroid (على مسؤوليتك: قد تحتوي على فيروسات!)</string>
     <string name="notif_channel_job_progress_desc" comment="Notification channel description">تستخدم لإظهار تقدم الوظيفة الحالية</string>
     <string name="notif_channel_job_result_name">نتيجة المهمة</string>
     <string name="notification_write_progress_title">يكتب الصورة …</string>
@@ -25,18 +23,12 @@
     <string name="notification_write_progress_content">%1$s إلى %2$s</string>
     <string name="notification_verify_progress_content">%1$s ضد %2$s</string>
     <string name="permission_denied_for_usb_device">رُفض الإذن لجهاز USB %1$s</string>
-    <string name="whats_supported">ما المدعوم؟</string>
     <string name="style">نمط</string>
     <string name="light">فاتح</string>
     <string name="device_setting">إعدادات الجهاز</string>
     <string name="grant_access">امنح حق الوصول</string>
     <string name="writing_the_image_will_erase">ستؤدي كتابة الصورة إلى محو جميع البيانات الموجودة على محرك الأقراص المحدد</string>
-    <string name="any_thunderbolt_only_device">أي جهاز يعمل بنظام Thunderbolt فقط</string>
-    <string name="very_large_drives_2tb">محركات أقراص كبيرة جداً (≥ 2 تيرابايت)</string>
     <string name="lay_your_device_flat">ضع جهازك بشكل مسطح على طاولة ولا تلمسه</string>
-    <string name="disk_images">صور القرص</string>
-    <string name="any_other_image_that_works_with_balena_etcher_or_dd">أي صورة أخرى تعمل مع Balena Etcher أو dd</string>
-    <string name="support_for_dmg_images_was_removed">تمت إزالة دعم صور DMG في Vendroid 2.0. يمكن تنزيل الإصدارات الأقدم من %1$s.</string>
     <string name="please_avoid_using_your_device">يُرجى تجنب استخدام جهازك</string>
     <string name="would_you_like_to_be_notified">هل ترغب في أن يتم إعلامك عند الانتهاء؟ تقدم التحديثات فقط، لا ازعاج أو إعلانات.</string>
     <string name="write_failed">فشلت الكتابة</string>
@@ -67,28 +59,10 @@
     <string name="lay_your_device_flat_no_accel">ضع جهازك بشكل مسطح على طاولة قبل المتابعة.</string>
     <string name="continue_">استمر</string>
     <string name="skip">تخطي</string>
-    <string name="supported">مدعوم</string>
-    <string name="maybe_supported">ربما يكون مدعوما</string>
-    <string name="not_supported">خاصية غير مدعومة</string>
-    <string name="supported_devices_and_images">الأجهزة والصور المدعومة</string>
-    <string name="devices">الأجهزة</string>
-    <string name="usb_flash_drives">وحدة تخزين USB</string>
-    <string name="memory_cards_using_a_usb_adapter">بطاقات الذاكرة، باستخدام محول USB</string>
-    <string name="usb_hard_drives_ssds_some_might_work">محركات أقراص USB الصلبة / محركات أقراص الحالة الصلبة (قد يعمل بعضها)</string>
-    <string name="memory_cards_using_the_internal_slot">بطاقات الذاكرة، باستخدام الفتحة الداخلية</string>
-    <string name="optical_disk_drives">محركات الأقراص الضوئية</string>
-    <string name="floppy_disk_drives">محركات الأقراص المرنة</string>
-    <string name="microsoft_windows_isos_any_version">Microsoft Windows ISOs (أي إصدار)</string>
-    <string name="apple_dmg_disk_images">صور قرص أبل DMG</string>
-    <string name="arch_linux_ubuntu_debian_fedora_pop_os_linux_mint_freebsd_etc">Arch Linux و Ubuntu و Debian و Fedora و pop! _OS و Linux Mint و FreeBSD إلخ.</string>
-    <string name="other_modern_gnu_linux_and_bsd_distributions_live_isos">توزيعات GNU / Linux و BSD الحديثة الأخرى لـ ISOs الحية</string>
-    <string name="raspberry_pi_sd_card_images_unzip_first">صور بطاقة Raspberry Pi SD (قم بفك الضغط أولاً!)</string>
-    <string name="older_gnu_linux_distributions_isos_2010">إصدارات ISO لتوزيعات GNU / Linux الأقدم (&lt;2010)</string>
     <string name="developed_by">طور بواسطة %1$s وآخرون %2$s.
 \nكود المصدر متاح على %3$s.
 \nمُرخصة بموجب ترخيص GNU GPLv3.</string>
     <string name="contributors">المساهمون</string>
-    <string name="website">الموقع اﻹلكتروني</string>
     <string name="verifying_image">يتحقق من الصورة</string>
     <string name="writing_image">يكتب الصورة</string>
     <string name="no_thanks">لا شكرًا</string>
@@ -102,8 +76,6 @@
     <string name="image_written_successfully">تمت كتابة الصورة بنجاح!</string>
     <string name="write_a_review">أكتب مراجعة</string>
     <string name="star_on_github">نجمة على جيثب</string>
-    <string name="got_an_unsupported_drive_notification">هل تلقيت إشعار \"مشكلات متعلقة بمحرك الأقراص هذا\"؟</string>
-    <string name="learn_what_it_means">تعرف على ما تعنيه</string>
     <string name="try_again">أعد المحاولة</string>
     <string name="i_did_not_unplug_it">أنا لم أفصله!</string>
     <string name="this_is_unexpected_it_s_probably_a_bug_please_report_it">هذا غير متوقع، ربما تكون علة. الرجاء الإبلاغ عن ذلك!</string>
@@ -115,26 +87,14 @@
     <string name="the_usb_drive_was_unplugged">تم فصل محرك أقراص USB</string>
     <string name="the_usb_drive_stopped_responding">توقف محرك أقراص USB عن الاستجابة</string>
     <string name="the_usb_device_content_does_not_match_the_image">محتوى جهاز USB لا يتطابق مع الصورة</string>
-    <string name="support_the_project">ادعم ماليًا</string>
     <string name="write_another_image">اكتب صورة أخرى</string>
     <string name="title_activity_confirm_operation">تأكيد العملية</string>
     <string name="no_image_uri_provided">لم يتم توفير صورة URI</string>
     <string name="no_destination_device_selected">‬لم يتم تحديد جهاز الوجهة</string>
     <string name="service_timeout_message">يبدو أن عملية الكتابة قد تعثرت. حاول مرة اخرى.</string>
-    <string name="usb_docks_and_hubs_might_have_power_issues">منافذ USB ولوحات الوصل (قد تواجه مشكلات في الطاقة)</string>
     <string name="worker_null_device_error">حاول مرة أخرى.</string>
     <string name="view_github_issues">عرض المشكلات على GitHub</string>
     <string name="please_report_fatal_issue">إذا استطعت، يرجى الإبلاغ عن هذه المشكلة على GitHub مع الخطوات التي أدت إلى هذا الخطأ.</string>
-    <string name="telemetry">القياس عن بعد</string>
-    <string name="privacy_policy">سياسة الخصوصية</string>
-    <string name="telemetry_opt_out">الخروج من الخدمة</string>
-    <string name="telemetry_keep_enabled">أبقها مفعلة</string>
-    <string name="we_need_your_help">نحن بحاجة لمساعدتك!</string>
-    <string name="telemetry_rationale">تقدر Vendroid خصوصيتك وتستخدم فقط الحد الأدنى من القياس عن بُعد للتحقيق في مشكلات التطبيق.\n\nكن جزءًا من تمكين القياس عن بُعد المفتوح المصدر للحفاظ على المجتمع وساعد في تحسين Vendroid للجميع!\n\nعلى الرغم من أننا لا نجمع أي معلومات تعريف شخصية، إلا أننا نؤمن بالشفافية ونريدك أن تعرف أن أسماء ملفات صور القرص المفتوحة ومعرفات أجهزة USB يتم جمعها بشكل مجهول للمساعدة في تشخيص المشكلات المتعلقة بأجهزة معينة. ما لم تكن أسماء ملفات صور القرص أو معرّفات الأجهزة حساسة للغاية، فمن الآمن مشاركة هذه البيانات. (%1$s)‭‭‭</string>
-    <string name="telemetry_icon">ايقونة القياس عن بعد</string>
-    <string name="vendroid_uses_telemetry" comment="Displayed in the main app screen on first launch in a toast/snackbar. It should be short and concise.">يرسل Vendroid معلومات القياس عن بُعد.</string>
-    <string name="learn_more" comment="Displayed in the main app screen on first launch as a snackbar action button. It should be short and concise.">احصل على المزيد من المعلومات</string>
-    <string name="send_anonymous_data" comment="Displayed in the main app menu; controls whether the app sends anonymous telemetry info.">أرسل بيانات مجهولة</string>
     <string name="about_project_summary">فيندرويد تطبيق أندرويد مفتوح المصدر لتثبيت Ventoy على وحدات تخزين USB وإدارة ملفات الإقلاع.</string>
     <string name="developer_credit">طوّره %1$s.</string>
     <string name="project_source">الشيفرة المصدرية للمشروع: %1$s.</string>

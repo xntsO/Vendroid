@@ -21,48 +21,29 @@
     <string name="permission_denied_for_usb_device">Permissão negada para dispositivo USB %1$s</string>
     <string name="usb_device_was_unplugged">O dispositivo USB foi desconectado</string>
     <string name="write_an_image">Escrever uma imagem</string>
-    <string name="whats_supported">O que é suportado\?</string>
     <string name="style">Estilo</string>
     <string name="device_setting">Configuração do dispositivo</string>
     <string name="light">Claro</string>
     <string name="dark">Escuro</string>
     <string name="is_this_a_windows_iso">Isso é um ISO do Windows\?</string>
     <string name="skip">Ignorar</string>
-    <string name="supported">Suportado</string>
-    <string name="maybe_supported">Talvez suportado</string>
-    <string name="not_supported">Não suportado</string>
-    <string name="supported_devices_and_images">Dispositivos e imagens compatíveis</string>
-    <string name="devices">Dispositivos</string>
-    <string name="usb_flash_drives">Pen drives USB</string>
-    <string name="memory_cards_using_a_usb_adapter">Cartões de memória, usando um adaptador USB</string>
-    <string name="usb_hard_drives_ssds_some_might_work">Discos rígidos USB / SSDs (alguns podem funcionar)</string>
-    <string name="memory_cards_using_the_internal_slot">Cartões de memória, usando o slot interno</string>
-    <string name="optical_disk_drives">Unidades de disco óptico</string>
-    <string name="floppy_disk_drives">Unidades de disquete</string>
     <string name="verifying">Verificando</string>
     <string name="continue_">Continuar</string>
     <string name="the_device_is_not_responding">O dispositivo não está respondendo</string>
-    <string name="learn_what_it_means">Aprenda o que significa</string>
     <string name="writing_image">Escrevendo imagem</string>
     <string name="there_was_an_error">Ocorreu um erro</string>
     <string name="the_usb_drive_was_unplugged">A unidade USB foi desconectada</string>
-    <string name="disk_images">Imagens de disco</string>
     <string name="to_recover_unplug">Para recuperar, desconecte sua unidade USB, conecte-a novamente e conceda a permissão para acessá-la novamente.</string>
     <string name="please_avoid_using_your_device">Por favor, evite usar seu dispositivo</string>
     <string name="select_a_usb_drive">Selecione uma unidade USB</string>
-    <string name="website">Site</string>
     <string name="a_regular_windows_iso_won_t_work">Um ISO normal do Windows não funcionará com Vendroid, a menos que tenha sido especificamente preparado para uso com Vendroid, Etcher ou dd.</string>
     <string name="star_on_github">Dar estrela no GitHub</string>
     <string name="usb_device_reconnected_resuming">Dispositivo USB reconectado, retomando</string>
-    <string name="raspberry_pi_sd_card_images_unzip_first">Imagens de Raspberry Pi de cartão SD (descompacte primeiro!)</string>
     <string name="the_usb_device_content_does_not_match_the_image">O conteúdo do dispositivo USB não corresponde à imagem</string>
     <string name="disk_image">Imagem de disco</string>
     <string name="missing_permission_to_access_the_usb_device">Falta de permissão para acessar o dispositivo USB</string>
     <string name="write_image">Escrever imagem</string>
-    <string name="microsoft_windows_isos_any_version">ISOs do Microsoft Windows (qualquer versão)</string>
     <string name="write_a_review">Escrever uma análise</string>
-    <string name="other_modern_gnu_linux_and_bsd_distributions_live_isos">Outras live ISOs de outras distribuições GNU/Linux e BSD modernas</string>
-    <string name="got_an_unsupported_drive_notification">Recebeu uma notificação \"Problemas com esta unidade\"?</string>
     <string name="this_is_unexpected_it_s_probably_a_bug_please_report_it">Isso não era esperado, provavelmente é um bug. Por favor, relate-o!</string>
     <string name="copying">Copiando</string>
     <string name="plug_in_the_same_usb">Conecte o mesmo dispositivo USB que você usou antes!</string>
@@ -71,8 +52,6 @@
     <string name="verifying_image">Verificando imagem</string>
     <string name="to">para</string>
     <string name="usb_drives_are_unreliable">Unidades USB não são confiáveis e o Android não concede permissões suficientes para recuperação automática. Temos que nos contentar com o que temos!</string>
-    <string name="it_s_safe_to_ignore">É seguro ignorar! Desligue sua unidade e use-a normalmente. %1$s e veja como formatar sua unidade mais tarde.</string>
-    <string name="arch_linux_ubuntu_debian_fedora_pop_os_linux_mint_freebsd_etc">Arch Linux, Ubuntu, Debian, Fedora, pop!_OS, Linux Mint, FreeBSD etc.</string>
     <string name="title_activity_confirm_operation">Confirmar operação</string>
     <string name="developed_by">Desenvolvido por %1$s e outros %2$s.
 \nCódigo fonte disponível em %3$s.
@@ -82,13 +61,10 @@
     <string name="confirm_operation">Confirmação da operação</string>
     <string name="representation_of_the_required_steps">Representação das etapas necessárias: desconectar, reconectar, conceder permissão</string>
     <string name="an_unknown_error_occurred">Ocorreu um erro desconhecido: %1$s</string>
-    <string name="apple_dmg_disk_images">Imagens de disco Apple DMG</string>
     <string name="grant_access">Conceder acesso</string>
     <string name="contributors">colaboradores</string>
-    <string name="support_the_project">Apoio financeiro</string>
     <string name="perhaps_your_usb_port_is_dirty">Talvez sua porta USB esteja suja, seu adaptador esteja com defeito ou seu dispositivo não forneça energia elétrica suficiente. Considere usar um adaptador ou dispositivo diferente.</string>
     <string name="how_did_this_happen">Como isso aconteceu?</string>
-    <string name="older_gnu_linux_distributions_isos_2010">ISOs de distribuições GNU/Linux mais antigas (&lt; 2010)</string>
     <string name="try_again">Tentar novamente</string>
     <string name="usb_drive">Unidade USB</string>
     <string name="could_not_open_the_source_file">Não foi possível abrir o arquivo de origem</string>
@@ -99,14 +75,10 @@
     <string name="start_over">Recomeçar</string>
     <string name="against">em relação a</string>
     <string name="no_destination_device_selected">Nenhum dispositivo de destino selecionado</string>
-    <string name="usb_docks_and_hubs_might_have_power_issues">Docks e hubs USB (podem ter problemas de energia)</string>
     <string name="image_to_write">Imagem para escrever</string>
-    <string name="support_for_dmg_images_was_removed">O suporte para imagens DMG foi removido no Vendroid 2.0. Versões mais antigas podem ser baixadas de %1$s.</string>
     <string name="sure">Claro</string>
     <string name="error">Erro</string>
     <string name="unknown_device">Dispositivo desconhecido</string>
-    <string name="any_thunderbolt_only_device">Qualquer dispositivo somente Thunderbolt</string>
-    <string name="very_large_drives_2tb">Unidades muito grandes (≥ 2 TB)</string>
     <string name="image_written_successfully">Imagem escrita com sucesso!</string>
     <string name="the_image_is_is_larger_than_the_device">A imagem (%1$s) é maior que o dispositivo (%2$s)</string>
     <string name="the_usb_drive_is_too_large">A unidade USB é muito grande e o Vendroid não a suporta.</string>
@@ -116,23 +88,11 @@
     <string name="skip_verification">Pular verificação</string>
     <string name="the_usb_drive_stopped_responding">A unidade USB parou de responder</string>
     <string name="no_thanks">Não, obrigado</string>
-    <string name="any_other_image_that_works_with_balena_etcher_or_dd">Qualquer outra imagem que funcione com o Balena Etcher ou dd</string>
     <string name="permission_granted">Permissão concedida</string>
     <string name="writing_the_image_will_erase">Escrever a imagem apagará todos os dados na unidade selecionada</string>
     <string name="connect_a_usb_drive">Conecte uma unidade USB</string>
     <string name="service_timeout_message">O processo de escrita parece que congelou. Por favor, tente novamente.</string>
-    <string name="community_windows_images">Versões do Windows criadas pela comunidade, feitas para o Vendroid (tenha cuidado: elas podem conter vírus!)</string>
     <string name="please_report_fatal_issue" comment="Displayed in the fatal error screen, prompting the users to report the issue on GitHub along with the steps to reproduce it">Se você poder, por favor, relate este problema no GitHub junto com os passos que fizeram com este erro acontecesse.</string>
     <string name="worker_null_device_error" comment="Error message displayed when users get a mysterious NullPointerException while starting a new write. The original translation tries to give the user a general idea of the issue without being too technical.">Uma tentativa de escrita foi inicada mas infelizmente algumas informações foram perdidas no caminho. Por favor tente novamente.</string>
-    <string name="telemetry_rationale" comment="Displayed in builds with telemetry enabled (Google Play) when the user tries to opt-out of telemetry to try to convince them not to. '%1$s' is replaced with a link to the privacy policy; the `privacy_policy` string is used.">O Vendroid valoriza sua privacidade e usa somente telemetria mínima para investigar problemas com o app.\n\nSeja parte da nossa comunidade de código-aberto—mantenha a telemetria ativada e ajude melhorar o Vendroid para todo mundo!\n\nNão coletamos dados pessoalmente identificáveis, acreditamos em transparência e queremos que saiba que o nome de imagens abertas e IDs de dispositivos USB são coletados anonimamente para ajudar a diagnosticar problemas com hardware específico. A menos que os nomes das imagens e os IDs de dispositivo são sensíveis, é seguro compartilhar estes dados. (%1$s)</string>
-    <string name="send_anonymous_data" comment="Displayed in the main app menu; controls whether the app sends anonymous telemetry info.">Enviar dados anônimos</string>
     <string name="view_github_issues" comment="Displayed in the fatal error screen, in a small button. When pressed, the app opens the GitHub issues page. Since the button is small, please keep this short. You can replace it with &quot;GitHub issues&quot; if &quot;View GitHub issues&quot; is too long in your language.">Ver problemas no GitHub</string>
-    <string name="telemetry" comment="Displayed in the menu if the current app build may send telemetry (Google Play builds)">Telemetria</string>
-    <string name="privacy_policy" comment="Displayed in the app menu, as well as in other links to the privacy policy">Política de Privacidade</string>
-    <string name="we_need_your_help" comment="Title of the dialog that asks the user to enable telemetry">Precisamos de sua ajuda!</string>
-    <string name="telemetry_icon" comment="Description of the telemetry icon for accessibility purposes">Ícone de telemetria</string>
-    <string name="telemetry_opt_out" comment="Button to opt-out of telemetry; it can be translated as &quot;Disable telemetry&quot; if it fits better in the target language">Desativar</string>
-    <string name="telemetry_keep_enabled" comment="Button to opt-in to telemetry; it can be translated as &quot;Enable telemetry&quot; if it fits better in the target language">Manter ativado</string>
-    <string name="vendroid_uses_telemetry" comment="Displayed in the main app screen on first launch in a toast/snackbar. It should be short and concise.">O Vendroid envia dados de telemetria.</string>
-    <string name="learn_more" comment="Displayed in the main app screen on first launch as a snackbar action button. It should be short and concise.">Saber mais</string>
 </resources>
