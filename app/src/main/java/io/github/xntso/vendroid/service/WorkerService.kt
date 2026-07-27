@@ -68,6 +68,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import me.jahnen.libaums.core.driver.BlockDeviceDriver
 import java.io.BufferedInputStream
+import java.io.EOFException
+import java.io.IOException
 import java.io.InputStream
 import java.util.Random
 import kotlin.math.max
@@ -288,14 +290,18 @@ class WorkerService : LifecycleService() {
                 PowerManager.PARTIAL_WAKE_LOCK, "Vendroid::WorkerService[$mProgressNotificationId]"
             )
         }
-        if (!mWakeLock!!.isHeld || System.currentTimeMillis() - mWakelockAcquireTime > WAKELOCK_TIMEOUT * .9) {
-            mWakeLock!!.acquire(WAKELOCK_TIMEOUT)
+        val wakeLock = mWakeLock!!
+        if (!wakeLock.isHeld || System.currentTimeMillis() - mWakelockAcquireTime > WAKELOCK_TIMEOUT * .9) {
+            // WakeLocks are reference-counted by default. Release before renewing so a long job
+            // does not leave earlier timed acquisitions held after the service finishes.
+            if (wakeLock.isHeld) wakeLock.release()
+            wakeLock.acquire(WAKELOCK_TIMEOUT)
             mWakelockAcquireTime = System.currentTimeMillis()
         }
     }
 
     private fun releaseWakelock() {
-        mWakeLock?.release()
+        mWakeLock?.let { if (it.isHeld) it.release() }
         mWakeLock = null
         mWakelockAcquireTime = -1L
     }
@@ -765,15 +771,27 @@ object WorkerServiceFlowImpl {
             timeoutWatchdog(IO_TIMEOUT) { watchdog ->
                 Thread.currentThread().name = "writeImage coroutine scope"
 
-                src.skip(currentOffset)
+                skipFully(src, currentOffset)
                 dst.seekAsync(currentOffset)
 
                 while (currentOffset < imageSize) {
                     grabWakeLock()
                     watchdog.bump()
 
-                    val read = src.read(buffer)
-                    if (read == -1) break
+                    val bytesToRead = minOf(buffer.size.toLong(), imageSize - currentOffset).toInt()
+                    val read = src.read(buffer, 0, bytesToRead)
+                    if (read == -1) {
+                        throw OpenFileException(
+                            "Image stream ended at $currentOffset bytes; expected $imageSize bytes",
+                            EOFException("Unexpected end of image stream"),
+                        )
+                    }
+                    if (read == 0) {
+                        throw OpenFileException(
+                            "Image stream returned no data before reaching its reported size",
+                            IOException("Image stream made no progress"),
+                        )
+                    }
 
                     watchdog.bump()
                     try {
@@ -790,6 +808,13 @@ object WorkerServiceFlowImpl {
 
                     sendProgressUpdate(read, currentOffset, imageSize, false)
                 }
+
+                if (src.read() != -1) {
+                    throw OpenFileException(
+                        "Image stream is longer than its reported size of $imageSize bytes",
+                        IOException("Image size changed while reading"),
+                    )
+                }
                 watchdog.bump()
                 try {
                     dst.flushAsync()
@@ -804,6 +829,45 @@ object WorkerServiceFlowImpl {
         } finally {
             src.close()
             dst.closeAsync()
+        }
+    }
+
+    private fun skipFully(stream: InputStream, byteCount: Long) {
+        require(byteCount >= 0) { "Skip distance must be non-negative" }
+
+        var remaining = byteCount
+        val discardBuffer = ByteArray(8 * 1024)
+        while (remaining > 0) {
+            val skipped = stream.skip(remaining)
+            if (skipped > 0) {
+                if (skipped > remaining) {
+                    throw OpenFileException(
+                        "Image stream skipped beyond the requested resume offset",
+                        IOException("Invalid skip result: $skipped > $remaining"),
+                    )
+                }
+                remaining -= skipped
+            } else {
+                val read = stream.read(
+                    discardBuffer,
+                    0,
+                    minOf(remaining, discardBuffer.size.toLong()).toInt(),
+                )
+                if (read == -1) {
+                    val reached = byteCount - remaining
+                    throw OpenFileException(
+                        "Image stream ended at $reached bytes while resuming at $byteCount bytes",
+                        EOFException("Unexpected end of image stream while seeking"),
+                    )
+                }
+                if (read == 0) {
+                    throw OpenFileException(
+                        "Image stream made no progress while resuming",
+                        IOException("Image stream returned no data while seeking"),
+                    )
+                }
+                remaining -= read
+            }
         }
     }
 
@@ -835,6 +899,7 @@ object WorkerServiceFlowImpl {
                 Thread.currentThread().name = "verifyImage coroutine scope"
 
                 var currentOffset = 0L
+                var verificationCancelled = false
 
                 src.skip(currentOffset)
                 dst.skipAsync(currentOffset)
@@ -844,12 +909,31 @@ object WorkerServiceFlowImpl {
                 val fileBuffer = ByteArray(1024)
                 val deviceBuffer = ByteArray(1024)
 
-                while (!isVerificationCanceled()) {
+                while (currentOffset < imageSize) {
+                    if (isVerificationCanceled()) {
+                        verificationCancelled = true
+                        break
+                    }
                     grabWakeLock()
                     watchdog.bump()
 
-                    val read = src.read(fileBuffer)
-                    if (read == -1) break
+                    val bytesToRead = minOf(
+                        fileBuffer.size.toLong(),
+                        imageSize - currentOffset,
+                    ).toInt()
+                    val read = src.read(fileBuffer, 0, bytesToRead)
+                    if (read == -1) {
+                        throw OpenFileException(
+                            "Image stream ended at $currentOffset bytes during verification; expected $imageSize bytes",
+                            EOFException("Unexpected end of image stream during verification"),
+                        )
+                    }
+                    if (read == 0) {
+                        throw OpenFileException(
+                            "Image stream returned no data during verification",
+                            IOException("Image stream made no progress during verification"),
+                        )
+                    }
 
                     watchdog.bump()
                     try {
@@ -884,6 +968,13 @@ object WorkerServiceFlowImpl {
                     notifyCurrentOffset(currentOffset)
 
                     sendProgressUpdate(read, currentOffset, imageSize, true)
+                }
+
+                if (!verificationCancelled && src.read() != -1) {
+                    throw OpenFileException(
+                        "Image stream is longer than its reported size of $imageSize bytes during verification",
+                        IOException("Image size changed while verifying"),
+                    )
                 }
             }
         } finally {

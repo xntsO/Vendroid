@@ -2,6 +2,7 @@ package io.github.xntso.vendroid
 
 import io.github.xntso.vendroid.service.BUFFER_BLOCKS
 import io.github.xntso.vendroid.service.WorkerServiceFlowImpl
+import io.github.xntso.vendroid.utils.exception.OpenFileException
 import io.github.xntso.vendroid.utils.exception.UsbCommunicationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -9,6 +10,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.debug.DebugProbes
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -17,6 +20,7 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.robolectric.annotation.Config
 import tech.apter.junit.jupiter.robolectric.RobolectricExtension
+import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.util.Random
 
@@ -104,6 +108,100 @@ class WorkerServiceFlowTest {
         }.run {
             assert(cause is IOException)
             assert(cause!!.message!!.contains("No space left on device"))
+        }
+    }
+
+    @Test
+    fun resumeConsumesTheExactSourcePrefixWhenSkipMakesNoProgress() = runBlocking {
+        val image = ByteArray(4096) { (it % 251).toByte() }
+        val source = object : ByteArrayInputStream(image) {
+            override fun skip(n: Long): Long = 0
+        }
+        val blockDev = MemoryBufferBlockDeviceDriver(8192, 512)
+        val resumeOffset = 700L
+        var currentOffset = resumeOffset
+
+        WorkerServiceFlowImpl.writeImage(
+            source,
+            blockDev,
+            image.size.toLong(),
+            1024,
+            resumeOffset,
+            { currentOffset = it },
+            coroutineScope,
+            grabWakeLock = {},
+            sendProgressUpdate = { _, _, _, _ -> },
+        )
+
+        assertEquals(image.size.toLong(), currentOffset)
+        assertTrue(blockDev.backingBuffer.copyOfRange(0, resumeOffset.toInt()).all { it == 0.toByte() })
+        assertEquals(
+            image.copyOfRange(resumeOffset.toInt(), image.size).toList(),
+            blockDev.backingBuffer.copyOfRange(resumeOffset.toInt(), image.size).toList(),
+        )
+    }
+
+    @Test
+    fun truncatedSourceDoesNotReportACompletedWrite() = runBlocking {
+        val source = ByteArray(1024) { 1 }
+        val blockDev = MemoryBufferBlockDeviceDriver(4096, 512)
+
+        assertThrows<OpenFileException> {
+            WorkerServiceFlowImpl.writeImage(
+                source.inputStream(),
+                blockDev,
+                imageSize = 2048,
+                bufferSize = 1024,
+                initialOffset = 0,
+                notifyCurrentOffset = {},
+                coroScope = coroutineScope,
+                grabWakeLock = {},
+                sendProgressUpdate = { _, _, _, _ -> },
+            )
+        }
+    }
+
+    @Test
+    fun sourceLargerThanReportedSizeIsNotWrittenPastTheDeclaredEnd() = runBlocking {
+        val source = ByteArray(2048) { 1 }
+        val blockDev = MemoryBufferBlockDeviceDriver(4096, 512)
+
+        assertThrows<OpenFileException> {
+            WorkerServiceFlowImpl.writeImage(
+                source.inputStream(),
+                blockDev,
+                imageSize = 1024,
+                bufferSize = 2048,
+                initialOffset = 0,
+                notifyCurrentOffset = {},
+                coroScope = coroutineScope,
+                grabWakeLock = {},
+                sendProgressUpdate = { _, _, _, _ -> },
+            )
+        }
+
+        assertTrue(blockDev.backingBuffer.copyOfRange(1024, 2048).all { it == 0.toByte() })
+    }
+
+    @Test
+    fun truncatedSourceDoesNotReportACompletedVerification() = runBlocking {
+        val source = ByteArray(1024) { 1 }
+        val blockDev = MemoryBufferBlockDeviceDriver(4096, 512).apply {
+            source.copyInto(backingBuffer)
+        }
+
+        assertThrows<OpenFileException> {
+            WorkerServiceFlowImpl.verifyImage(
+                source.inputStream(),
+                blockDev,
+                imageSize = 2048,
+                bufferSize = 1024,
+                notifyCurrentOffset = {},
+                lifecycleScope = coroutineScope,
+                sendProgressUpdate = { _, _, _, _ -> },
+                isVerificationCanceled = { false },
+                grabWakeLock = {},
+            )
         }
     }
 

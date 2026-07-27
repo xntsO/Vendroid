@@ -436,6 +436,52 @@ class BlockDeviceOutputStreamTest {
         )
     }
 
+    @Test
+    fun relativeSeekUsesTheCurrentStreamPosition() = runBlocking {
+        val testDev = MemoryBufferBlockDeviceDriver(4L * 512, 512).apply {
+            fillWithReverseGrowingSequence()
+        }
+        val original = testDev.backingBuffer.copyOf()
+        val outputStream = BlockDeviceOutputStream(
+            testDev,
+            coroutineScope = coroutineScope,
+            bufferBlocks = 4,
+            queueSize = 1,
+        )
+
+        outputStream.writeAsync(ByteArray(100) { 1 })
+        assertEquals(512L, outputStream.seekAsync(512))
+        assertEquals(612L, outputStream.mCurrentOffset)
+        outputStream.writeAsync(byteArrayOf(7, 8, 9))
+        outputStream.closeAsync()
+
+        assertArrayEquals(ByteArray(100) { 1 }, testDev.backingBuffer.copyOfRange(0, 100))
+        assertArrayEquals(original.copyOfRange(100, 612), testDev.backingBuffer.copyOfRange(100, 612))
+        assertArrayEquals(byteArrayOf(7, 8, 9), testDev.backingBuffer.copyOfRange(612, 615))
+        assertArrayEquals(original.copyOfRange(615, original.size), testDev.backingBuffer.copyOfRange(615, original.size))
+    }
+
+    @Test
+    fun backwardsSeekRebuildsABufferThatWasShrunkNearEof() = runBlocking {
+        val testDev = MemoryBufferBlockDeviceDriver(4L * 512, 512)
+        val outputStream = BlockDeviceOutputStream(
+            testDev,
+            coroutineScope = coroutineScope,
+            bufferBlocks = 4,
+            queueSize = 1,
+        )
+
+        outputStream.writeAsync(ByteArray(3 * 512) { 1 })
+        assertEquals(-1024L, outputStream.seekAsync(-1024))
+        assertEquals(512L, outputStream.mCurrentOffset)
+        outputStream.writeAsync(ByteArray(512) { 2 })
+        outputStream.closeAsync()
+
+        assertArrayEquals(ByteArray(512) { 1 }, testDev.backingBuffer.copyOfRange(0, 512))
+        assertArrayEquals(ByteArray(512) { 2 }, testDev.backingBuffer.copyOfRange(512, 1024))
+        assertArrayEquals(ByteArray(512) { 1 }, testDev.backingBuffer.copyOfRange(1024, 1536))
+    }
+
 
     private fun runWriteTest(testDevSize: Long, testBlockSize: Int, testBufferBlocks: Long) =
         runBlocking {
