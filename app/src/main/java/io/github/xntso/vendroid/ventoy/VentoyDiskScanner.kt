@@ -11,8 +11,9 @@ class VentoyDiskScanner {
         val part2 = entries[1]
 
         if (part1.startSector != VentoyDiskLayout.PARTITION1_START_SECTOR) return null
-        if (part1.type != VentoyDiskLayout.PARTITION1_TYPE) return null
-        if (part2.type != VentoyDiskLayout.PARTITION2_TYPE) return null
+        // Do not use the MBR type bytes as Ventoy identity. Partitioning tools and operating
+        // systems can rewrite them without changing the standard Ventoy layout; Ventoy's own
+        // detector intentionally ignores these bytes for the same reason.
         if (part2.sectorCount != VentoyDiskLayout.PARTITION2_SECTOR_COUNT) return null
         if (part2.startSector != part1.startSector + part1.sectorCount) return null
         if (part2.startSector % 8L != 0L) return null

@@ -111,6 +111,27 @@ class VentoyMbrTest {
     }
 }
 
+class VentoyDiskScannerTest {
+    @Test
+    fun `recognizes standard Ventoy layout after partition type bytes change`() {
+        val device = memoryDevice(40L * 1024 * 1024)
+        VentoyInstaller(syntheticPayload()).install(
+            device,
+            VentoyInstallOptions(forceInstall = true),
+        )
+        device.write(
+            (VentoyDiskLayout.MBR_PARTITION_TABLE_OFFSET + 4).toLong(),
+            byteArrayOf(0x0C),
+        )
+        device.write(
+            (VentoyDiskLayout.MBR_PARTITION_TABLE_OFFSET + 16 + 4).toLong(),
+            byteArrayOf(0x06),
+        )
+
+        assertNotNull(VentoyDiskScanner().scan(device))
+    }
+}
+
 class VentoyPayloadTest {
     @Test
     fun `rejects missing manifest asset`() {
