@@ -53,6 +53,14 @@
     <string name="files_will_be_preserved">Your files will be preserved</string>
     <string name="updating_ventoy_preserves_files">Only Ventoy boot components will be refreshed. Keep the drive connected and back up irreplaceable files first.</string>
     <string name="ventoy_options_summary">exFAT · Label: %1$s · Cluster: %2$s · Reserved: %3$s</string>
+    <string name="check_online_ventoy_update">Check for online update</string>
+    <string name="checking_online_ventoy_update">Checking Ventoy releases…</string>
+    <string name="downloading_online_ventoy">Downloading Ventoy %1$s…</string>
+    <string name="online_ventoy_download_percent">%1$d%% downloaded</string>
+    <string name="using_downloaded_ventoy">Using verified online Ventoy %1$s</string>
+    <string name="no_newer_ventoy_online">The selected Ventoy payload is already the latest available.</string>
+    <string name="online_ventoy_update_failed">Could not download the online Ventoy update.</string>
+    <string name="check_again">Check again</string>
     <string name="percent_complete">%1$d%% complete</string>
     <string name="style" comment="Title of the menu that allows selecting the app color scheme">Style</string>
     <string name="device_setting" comment="Style menu option that selects the device default light/dark theme">Device setting</string>

@@ -2,6 +2,7 @@ package io.github.xntso.vendroid.ventoy
 
 import android.content.res.AssetManager
 import java.io.ByteArrayInputStream
+import java.io.File
 import java.io.InputStream
 import java.security.MessageDigest
 import java.util.Locale
@@ -17,8 +18,12 @@ data class VentoyPayloadManifest(
     val files: Map<String, VentoyPayloadFile>,
 ) {
     fun requireComplete() {
-        REQUIRED_PAYLOAD_PATHS.forEach { path ->
-            require(files.containsKey(path)) { "Payload manifest is missing $path" }
+        val required = REQUIRED_PAYLOAD_PATHS.toSet()
+        require(files.keys == required) {
+            val missing = required - files.keys
+            val unexpected = files.keys - required
+            "Payload manifest entries do not match the required payload " +
+                "(missing=$missing, unexpected=$unexpected)"
         }
     }
 
@@ -49,7 +54,10 @@ data class VentoyPayloadManifest(
                             val path = parts[0]
                             val size = parts[1].toLong()
                             val sha256 = parts[2].lowercase(Locale.US)
-                            require(path.isNotBlank()) { "Payload file path must not be blank" }
+                            require(path in REQUIRED_PAYLOAD_PATHS) {
+                                "Unexpected payload file path: $path"
+                            }
+                            require(!files.containsKey(path)) { "Duplicate payload file path: $path" }
                             require(size >= 0) { "Payload file size must be non-negative" }
                             require(sha256.matches(Regex("[0-9a-f]{64}"))) {
                                 "Invalid SHA-256 for $path"
@@ -113,6 +121,26 @@ class VentoyPayload(
             }
             return VentoyPayload(VentoyPayloadManifest.parse(manifestText)) { path ->
                 assetManager.open("$ASSET_ROOT/$path")
+            }
+        }
+
+        fun fromDirectory(directory: File): VentoyPayload {
+            val root = directory.canonicalFile
+            val manifestFile = File(root, "payload.manifest").canonicalFile
+            require(manifestFile.parentFile == root && manifestFile.isFile) {
+                "Cached payload manifest is missing"
+            }
+            val manifest = VentoyPayloadManifest.parse(manifestFile.readText())
+            return VentoyPayload(manifest) { path ->
+                require(path in VentoyPayloadManifest.REQUIRED_PAYLOAD_PATHS) {
+                    "Unexpected cached payload path: $path"
+                }
+                val file = File(root, path).canonicalFile
+                val rootPrefix = root.path + File.separator
+                require(file.path.startsWith(rootPrefix) && file.isFile) {
+                    "Cached payload file is missing: $path"
+                }
+                file.inputStream()
             }
         }
 

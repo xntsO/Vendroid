@@ -60,6 +60,7 @@ import io.github.xntso.vendroid.ventoy.VentoyInstallProgress
 import io.github.xntso.vendroid.ventoy.VentoyInstallStage
 import io.github.xntso.vendroid.ventoy.VentoyInstaller
 import io.github.xntso.vendroid.ventoy.VentoyPayload
+import io.github.xntso.vendroid.ventoy.VentoyPayloadCache
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -453,7 +454,10 @@ class WorkerService : LifecycleService() {
                         ventoyOptions = mVentoyOptions,
                     ).broadcastLocallySync(this@WorkerService)
 
-                    val installer = VentoyInstaller(VentoyPayload.fromAssets(assets))
+                    val payload = mVentoyOptions.onlinePayloadVersion?.let { version ->
+                        VentoyPayloadCache(noBackupFilesDir).load(version)
+                    } ?: VentoyPayload.fromAssets(assets)
+                    val installer = VentoyInstaller(payload)
                     if (mOperation == Intents.OPERATION_VENTOY_UPDATE) {
                         installer.upgrade(
                             device = rawBlockDevice,

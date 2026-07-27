@@ -11,6 +11,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import io.github.xntso.vendroid.AppSettings
 import io.github.xntso.vendroid.Intents
 import io.github.xntso.vendroid.JobStatusInfo
@@ -26,8 +27,14 @@ import io.github.xntso.vendroid.utils.exception.base.VendroidException
 import io.github.xntso.vendroid.utils.exception.base.RecoverableException
 import io.github.xntso.vendroid.utils.ktexts.safeParcelableExtra
 import io.github.xntso.vendroid.ventoy.VentoyDiskInfo
+import io.github.xntso.vendroid.ventoy.VentoyOnlineUpdater
+import io.github.xntso.vendroid.ventoy.VentoyPayloadCache
 import io.github.xntso.vendroid.ventoy.VentoyVersion
 import io.github.xntso.vendroid.ventoy.VentoyVersionRelation
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -168,6 +175,15 @@ enum class VentoyDriveState {
     ScanFailed,
 }
 
+enum class VentoyOnlineState {
+    Idle,
+    Checking,
+    Downloading,
+    Ready,
+    UpToDate,
+    Error,
+}
+
 data class ConfirmOperationActivityState(
     override val dynamicColors: Boolean = false,
     override val themeMode: ThemeMode = ThemeMode.SYSTEM,
@@ -180,10 +196,19 @@ data class ConfirmOperationActivityState(
     val ventoyDriveState: VentoyDriveState = VentoyDriveState.NotApplicable,
     val installedVentoyVersion: String? = null,
     val bundledVentoyVersion: String? = null,
+    val onlineVentoyVersion: String? = null,
+    val onlineState: VentoyOnlineState = VentoyOnlineState.Idle,
+    val onlineDownloadPercent: Int = -1,
+    val onlineError: String? = null,
     val scannedDiskSizeBytes: Long = 0,
     val reservedSpaceBytes: Long = 0,
     val scanError: String? = null,
+    val hasRecognizedVentoy: Boolean = false,
+    val hasAnyPartition: Boolean = false,
 ) : IThemeState {
+    val targetVentoyVersion: String?
+        get() = ventoyOptions.onlinePayloadVersion ?: bundledVentoyVersion
+
     companion object {
         val Empty: ConfirmOperationActivityState
             get() = ConfirmOperationActivityState()
@@ -213,6 +238,7 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
         selectedDevice: UsbMassStorageDeviceDescriptor?,
         operation: String = Intents.OPERATION_WRITE_IMAGE,
         forceInstall: Boolean = false,
+        bundledVentoyVersion: String? = null,
     ) = _state.update {
         it.copy(
             openedImage = openedImage,
@@ -221,6 +247,7 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
             operation = operation,
             forceInstall = forceInstall,
             ventoyOptions = VentoyJobOptions(forceInstall = forceInstall),
+            bundledVentoyVersion = bundledVentoyVersion,
             ventoyDriveState = if (Intents.isVentoyOperation(operation)) {
                 VentoyDriveState.AwaitingPermission
             } else {
@@ -246,6 +273,7 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
         bundledVersion: String,
     ) {
         _state.update { state ->
+            val targetVersion = state.ventoyOptions.onlinePayloadVersion ?: bundledVersion
             if (state.forceInstall) {
                 return@update state.copy(
                     operation = Intents.OPERATION_VENTOY_INSTALL,
@@ -255,6 +283,8 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
                     scannedDiskSizeBytes = diskSizeBytes,
                     reservedSpaceBytes = diskInfo?.reservedSpaceBytes ?: 0,
                     scanError = null,
+                    hasRecognizedVentoy = diskInfo != null,
+                    hasAnyPartition = hasAnyPartition,
                 )
             }
 
@@ -266,13 +296,17 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
                     } else {
                         VentoyDriveState.ReadyToInstall
                     },
+                    installedVentoyVersion = null,
                     bundledVentoyVersion = bundledVersion,
                     scannedDiskSizeBytes = diskSizeBytes,
+                    reservedSpaceBytes = 0,
                     scanError = null,
+                    hasRecognizedVentoy = false,
+                    hasAnyPartition = hasAnyPartition,
                 )
             }
 
-            val relation = VentoyVersion.compare(diskInfo.installedVersion, bundledVersion)
+            val relation = VentoyVersion.compare(diskInfo.installedVersion, targetVersion)
             state.copy(
                 operation = Intents.OPERATION_VENTOY_UPDATE,
                 ventoyDriveState = when (relation) {
@@ -286,6 +320,8 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
                 scannedDiskSizeBytes = diskSizeBytes,
                 reservedSpaceBytes = diskInfo.reservedSpaceBytes,
                 scanError = null,
+                hasRecognizedVentoy = true,
+                hasAnyPartition = hasAnyPartition,
             )
         }
     }
@@ -309,7 +345,147 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
     }
 
     fun setVentoyOptions(options: VentoyJobOptions) {
-        _state.update { it.copy(ventoyOptions = options.copy(forceInstall = it.forceInstall)) }
+        _state.update {
+            it.copy(
+                ventoyOptions = options.copy(
+                    forceInstall = it.forceInstall,
+                    onlinePayloadVersion = it.ventoyOptions.onlinePayloadVersion,
+                ),
+            )
+        }
+    }
+
+    fun loadCachedOnlinePayload(cache: VentoyPayloadCache, bundledVersion: String) {
+        if (_state.value.onlineState != VentoyOnlineState.Idle) return
+        viewModelScope.launch(Dispatchers.IO) {
+            cache.newestCompatible(bundledVersion)
+                ?.let { selectOnlinePayload(it.version) }
+        }
+    }
+
+    fun checkForOnlinePayload(updater: VentoyOnlineUpdater, bundledVersion: String) {
+        if (_state.value.onlineState in setOf(
+                VentoyOnlineState.Checking,
+                VentoyOnlineState.Downloading,
+            )
+        ) return
+
+        _state.update {
+            it.copy(
+                onlineState = VentoyOnlineState.Checking,
+                onlineDownloadPercent = -1,
+                onlineError = null,
+            )
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val release = updater.fetchLatestRelease()
+                val currentTarget = _state.value.targetVentoyVersion ?: bundledVersion
+                when (VentoyVersion.compare(release.version, currentTarget)) {
+                    VentoyVersionRelation.Older,
+                    VentoyVersionRelation.Same -> {
+                        _state.update {
+                            it.copy(
+                                onlineVentoyVersion = release.version,
+                                onlineState = VentoyOnlineState.UpToDate,
+                                onlineDownloadPercent = 100,
+                            )
+                        }
+                    }
+                    VentoyVersionRelation.Newer -> {
+                        _state.update {
+                            it.copy(
+                                onlineVentoyVersion = release.version,
+                                onlineState = VentoyOnlineState.Downloading,
+                                onlineDownloadPercent = 0,
+                            )
+                        }
+                        val payload = updater.downloadRelease(
+                            release = release,
+                            bundledVersion = bundledVersion,
+                        ) { progress ->
+                            coroutineContext.ensureActive()
+                            val percent = if (progress.totalBytes > 0) {
+                                (progress.downloadedBytes * 100 / progress.totalBytes)
+                                    .toInt()
+                                    .coerceIn(0, 100)
+                            } else {
+                                -1
+                            }
+                            _state.update {
+                                it.copy(
+                                    onlineState = VentoyOnlineState.Downloading,
+                                    onlineDownloadPercent = percent,
+                                )
+                            }
+                        }
+                        selectOnlinePayload(payload.version)
+                    }
+                    VentoyVersionRelation.Unknown ->
+                        error("Could not compare Ventoy release versions")
+                }
+            }.onFailure { exception ->
+                if (exception is CancellationException) throw exception
+                _state.update {
+                    it.copy(
+                        onlineState = VentoyOnlineState.Error,
+                        onlineDownloadPercent = -1,
+                        onlineError = exception.message,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun selectOnlinePayload(version: String) {
+        _state.update { state ->
+            val updated = state.copy(
+                onlineVentoyVersion = version,
+                onlineState = VentoyOnlineState.Ready,
+                onlineDownloadPercent = 100,
+                onlineError = null,
+                ventoyOptions = state.ventoyOptions.copy(onlinePayloadVersion = version),
+            )
+            when (state.ventoyDriveState) {
+                VentoyDriveState.AwaitingPermission,
+                VentoyDriveState.Scanning,
+                VentoyDriveState.ScanFailed,
+                VentoyDriveState.NotApplicable -> updated
+                else -> updated.withTargetVersion(version)
+            }
+        }
+    }
+
+    private fun ConfirmOperationActivityState.withTargetVersion(
+        targetVersion: String,
+    ): ConfirmOperationActivityState {
+        if (forceInstall) {
+            return copy(
+                operation = Intents.OPERATION_VENTOY_INSTALL,
+                ventoyDriveState = VentoyDriveState.ReadyToInstall,
+            )
+        }
+        if (!hasRecognizedVentoy) {
+            return copy(
+                operation = Intents.OPERATION_VENTOY_INSTALL,
+                ventoyDriveState = if (hasAnyPartition) {
+                    VentoyDriveState.ExistingPartitions
+                } else {
+                    VentoyDriveState.ReadyToInstall
+                },
+            )
+        }
+        return copy(
+            operation = Intents.OPERATION_VENTOY_UPDATE,
+            ventoyDriveState = when (
+                VentoyVersion.compare(installedVentoyVersion, targetVersion)
+            ) {
+                VentoyVersionRelation.Older -> VentoyDriveState.UpdateAvailable
+                VentoyVersionRelation.Same,
+                VentoyVersionRelation.Unknown -> VentoyDriveState.ReadyToRepair
+                VentoyVersionRelation.Newer -> VentoyDriveState.NewerVersion
+            },
+        )
     }
 }
 
