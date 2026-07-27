@@ -142,22 +142,24 @@ class WorkerServiceFlowTest {
     }
 
     @Test
-    fun truncatedSourceDoesNotReportACompletedWrite() = runBlocking {
-        val source = ByteArray(1024) { 1 }
-        val blockDev = MemoryBufferBlockDeviceDriver(4096, 512)
+    fun truncatedSourceDoesNotReportACompletedWrite() {
+        runBlocking {
+            val source = ByteArray(1024) { 1 }
+            val blockDev = MemoryBufferBlockDeviceDriver(4096, 512)
 
-        assertThrows<OpenFileException> {
-            WorkerServiceFlowImpl.writeImage(
-                source.inputStream(),
-                blockDev,
-                imageSize = 2048,
-                bufferSize = 1024,
-                initialOffset = 0,
-                notifyCurrentOffset = {},
-                coroScope = coroutineScope,
-                grabWakeLock = {},
-                sendProgressUpdate = { _, _, _, _ -> },
-            )
+            assertThrows<OpenFileException> {
+                WorkerServiceFlowImpl.writeImage(
+                    source.inputStream(),
+                    blockDev,
+                    imageSize = 2048,
+                    bufferSize = 1024,
+                    initialOffset = 0,
+                    notifyCurrentOffset = {},
+                    coroScope = coroutineScope,
+                    grabWakeLock = {},
+                    sendProgressUpdate = { _, _, _, _ -> },
+                )
+            }
         }
     }
 
@@ -184,24 +186,26 @@ class WorkerServiceFlowTest {
     }
 
     @Test
-    fun truncatedSourceDoesNotReportACompletedVerification() = runBlocking {
-        val source = ByteArray(1024) { 1 }
-        val blockDev = MemoryBufferBlockDeviceDriver(4096, 512).apply {
-            source.copyInto(backingBuffer)
-        }
+    fun truncatedSourceDoesNotReportACompletedVerification() {
+        runBlocking {
+            val source = ByteArray(1024) { 1 }
+            val blockDev = MemoryBufferBlockDeviceDriver(4096, 512).apply {
+                source.copyInto(backingBuffer)
+            }
 
-        assertThrows<OpenFileException> {
-            WorkerServiceFlowImpl.verifyImage(
-                source.inputStream(),
-                blockDev,
-                imageSize = 2048,
-                bufferSize = 1024,
-                notifyCurrentOffset = {},
-                lifecycleScope = coroutineScope,
-                sendProgressUpdate = { _, _, _, _ -> },
-                isVerificationCanceled = { false },
-                grabWakeLock = {},
-            )
+            assertThrows<OpenFileException> {
+                WorkerServiceFlowImpl.verifyImage(
+                    source.inputStream(),
+                    blockDev,
+                    imageSize = 2048,
+                    bufferSize = 1024,
+                    notifyCurrentOffset = {},
+                    lifecycleScope = coroutineScope,
+                    sendProgressUpdate = { _, _, _, _ -> },
+                    isVerificationCanceled = { false },
+                    grabWakeLock = {},
+                )
+            }
         }
     }
 
