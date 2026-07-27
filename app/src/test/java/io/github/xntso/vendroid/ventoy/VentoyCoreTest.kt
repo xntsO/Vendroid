@@ -227,6 +227,17 @@ class ExFatFormatterTest {
 
 class VentoyVersionTest {
     @Test
+    fun `reads installed version from official grub config format`() {
+        val config = """
+            set timeout=10
+            set VENTOY_VERSION="1.1.17"
+            export VENTOY_VERSION
+        """.trimIndent()
+
+        assertEquals("1.1.17", VentoyVersion.fromGrubConfig(config))
+    }
+
+    @Test
     fun `compares numeric Ventoy versions`() {
         assertEquals(VentoyVersionRelation.Older, VentoyVersion.compare("1.1.9", "1.1.16"))
         assertEquals(VentoyVersionRelation.Same, VentoyVersion.compare("v1.1.16", "1.1.16"))

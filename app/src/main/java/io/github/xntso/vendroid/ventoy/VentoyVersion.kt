@@ -8,6 +8,13 @@ enum class VentoyVersionRelation {
 }
 
 object VentoyVersion {
+    private val grubVersionPattern = Regex(
+        """(?m)^\s*set\s+VENTOY_VERSION\s*=\s*["']?([0-9]+(?:\.[0-9]+)+)["']?\s*$""",
+    )
+
+    fun fromGrubConfig(config: String): String? =
+        grubVersionPattern.find(config)?.groupValues?.get(1)
+
     fun compare(installed: String?, bundled: String): VentoyVersionRelation {
         val installedParts = installed?.toVersionParts() ?: return VentoyVersionRelation.Unknown
         val bundledParts = bundled.toVersionParts() ?: return VentoyVersionRelation.Unknown

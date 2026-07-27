@@ -43,8 +43,8 @@ android {
         applicationId = "io.github.xntso.vendroid"
         minSdk = sdkMin
         targetSdk = sdkTarget
-        versionCode = 28
-        versionName = "0.1.1"
+        versionCode = 29
+        versionName = "0.1.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true

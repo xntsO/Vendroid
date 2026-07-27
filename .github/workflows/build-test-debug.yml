@@ -16,8 +16,8 @@ concurrency:
 
 env:
   VENTOY_VERSION: '1.1.16'
-  VENDROID_VERSION: '0.1.1'
-  VENDROID_VERSION_CODE: '28'
+  VENDROID_VERSION: '0.1.2'
+  VENDROID_VERSION_CODE: '29'
 
 jobs:
   verify:

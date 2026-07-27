@@ -22,7 +22,10 @@ class VentoyDiskScanner {
         }
 
         val installedVersion = runCatching {
-            Fat16Reader(device, part2.startSector).readText("/ventoy/version")?.trim()
+            val fat = Fat16Reader(device, part2.startSector)
+            fat.readText("/grub/grub.cfg")
+                ?.let(VentoyVersion::fromGrubConfig)
+                ?: fat.readText("/ventoy/version")?.trim()
         }.getOrNull()
 
         return VentoyDiskInfo(
