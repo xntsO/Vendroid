@@ -309,23 +309,21 @@ class BlockDeviceOutputStream(
         val newByteOffset = mCurrentOffset + actualSkipDistance
         val newBlockOffset = newByteOffset / blockDev.blockSize
 
-        // Check if the new offset is within the written range of the current buffer
-        if (newBlockOffset in mCurrentBlockOffset until mCurrentBlockOffset + mByteBuffer.position() / blockDev.blockSize) {
-            val bufferByteOffset = (newBlockOffset - mCurrentBlockOffset) * blockDev.blockSize + newByteOffset
-            mByteBuffer.position(bufferByteOffset.toInt())
-            return actualSkipDistance
-        }
-
         // Flush all the unwritten changes to disk
         flushAsync()
 
-        // Jump to the closest block
+        // Jump to the closest block. Reallocate because the old buffer may have been shrunk near
+        // EOF; reusing it after a backwards seek can leave less than one block of capacity.
         mCurrentBlockOffset = newBlockOffset
-        mByteBuffer.clear()
+        val bufferCapacity = minOf(
+            blockDev.blockSize.toLong() * bufferBlocks,
+            mSizeBytes - newBlockOffset * blockDev.blockSize,
+        )
+        mByteBuffer = ByteBuffer.allocate(bufferCapacity.toInt())
 
-        if (offset % blockDev.blockSize != 0L) {
+        val blockByteOffset = (newByteOffset % blockDev.blockSize).toInt()
+        if (blockByteOffset != 0) {
             // Read the part between the start of the new block and the sought position
-            val blockByteOffset = offset % blockDev.blockSize
             mByteBuffer.apply {
                 position(0)
                 limit(blockDev.blockSize)
@@ -335,7 +333,7 @@ class BlockDeviceOutputStream(
                     }
                 }
                 clear()
-                position(blockByteOffset.toInt())
+                position(blockByteOffset)
             }
         }
 

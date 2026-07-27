@@ -64,7 +64,10 @@ class VentoyIntentTest {
 
     @Test
     fun `update intent preserves operation and options`() {
-        val options = VentoyJobOptions(label = "RECOVERY")
+        val options = VentoyJobOptions(
+            label = "RECOVERY",
+            onlinePayloadVersion = "1.1.17",
+        )
 
         val intent = getStartVentoyUpdateJobIntent(
             destDevice = device,

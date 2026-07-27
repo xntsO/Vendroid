@@ -7,6 +7,8 @@ Vendroid is a no-root Android app for installing Ventoy on external USB drives a
 - Install, repair, and update an MBR Ventoy layout on a USB drive.
 - Manage supported boot image files through Android's Storage Access Framework.
 - Bundle and verify a pinned official Ventoy payload.
+- Optionally download a newer compatible Ventoy payload from the official GitHub release,
+  verify its published SHA-256, and keep it in private app storage for future offline use.
 - Work directly with USB mass-storage devices without root access.
 
 ## Current limitations

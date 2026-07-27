@@ -47,6 +47,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -124,6 +125,8 @@ import io.github.xntso.vendroid.ventoy.BlockDeviceRawBlockDevice
 import io.github.xntso.vendroid.ventoy.VentoyDiskScanner
 import io.github.xntso.vendroid.ventoy.VentoyClusterSize
 import io.github.xntso.vendroid.ventoy.VentoyPayload
+import io.github.xntso.vendroid.ventoy.VentoyOnlineUpdater
+import io.github.xntso.vendroid.ventoy.VentoyPayloadCache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.random.Random
@@ -136,6 +139,8 @@ class ConfirmOperationActivity : ActivityBase() {
     private lateinit var mUsbPermissionIntent: PendingIntent
     private var mOperation: String = Intents.OPERATION_WRITE_IMAGE
     private var mForceInstall: Boolean = false
+    private val mVentoyPayloadCache by lazy { VentoyPayloadCache(noBackupFilesDir) }
+    private val mVentoyOnlineUpdater by lazy { VentoyOnlineUpdater(mVentoyPayloadCache) }
 
 
     private val mUsbDevicesReceiver = broadcastReceiver { intent ->
@@ -300,8 +305,25 @@ class ConfirmOperationActivity : ActivityBase() {
                 finish()
                 return
             }
+        val bundledVentoyVersion = if (Intents.isVentoyOperation(mOperation)) {
+            VentoyPayload.fromAssets(assets).version
+        } else {
+            null
+        }
         if (mViewModel.state.value.selectedDevice == null) {
-            mViewModel.init(openedImage, selectedDevice, mOperation, mForceInstall)
+            mViewModel.init(
+                openedImage,
+                selectedDevice,
+                mOperation,
+                mForceInstall,
+                bundledVentoyVersion,
+            )
+            if (bundledVentoyVersion != null) {
+                mViewModel.loadCachedOnlinePayload(
+                    mVentoyPayloadCache,
+                    bundledVentoyVersion,
+                )
+            }
         }
 
         val imageFileName = openedImage.getFileName(this) ?: "unknown"
@@ -374,6 +396,11 @@ class ConfirmOperationActivity : ActivityBase() {
                     showAdvancedOptions = true
                 }, onRetryVentoyScan = {
                     mViewModel.retryVentoyScan()
+                }, onCheckOnlineVentoy = {
+                    val bundled = mViewModel.state.value.bundledVentoyVersion
+                    if (bundled != null) {
+                        mViewModel.checkForOnlinePayload(mVentoyOnlineUpdater, bundled)
+                    }
                 }, askUsbPermission = {
                     val usbManager = getSystemService(USB_SERVICE) as UsbManager
 //                    Monitoring.addBreadcrumb("Requesting USB permission", "usb")
@@ -617,6 +644,7 @@ fun ConfirmationView(
     askUsbPermission: () -> Unit,
     onEditVentoyOptions: () -> Unit = {},
     onRetryVentoyScan: () -> Unit = {},
+    onCheckOnlineVentoy: () -> Unit = {},
 ) {
     val uiState by viewModel.state.collectAsState()
 
@@ -686,6 +714,10 @@ fun ConfirmationView(
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             if (isVentoyOperation) {
                                 VentoyDriveStatus(uiState, onRetryVentoyScan)
+                                VentoyOnlineUpdateControls(
+                                    state = uiState,
+                                    onCheckOnline = onCheckOnlineVentoy,
+                                )
                                 if (uiState.operation == Intents.OPERATION_VENTOY_INSTALL &&
                                     uiState.ventoyDriveState == VentoyDriveState.ReadyToInstall
                                 ) {
@@ -862,7 +894,13 @@ fun ConfirmationView(
             Button(
                 modifier = Modifier.appiumTag("writeImageButton"),
                 onClick = onConfirm,
-                enabled = uiState.selectedDevice != null && uiState.hasUsbPermission && ventoyReady,
+                enabled = uiState.selectedDevice != null &&
+                    uiState.hasUsbPermission &&
+                    ventoyReady &&
+                    uiState.onlineState !in setOf(
+                        VentoyOnlineState.Checking,
+                        VentoyOnlineState.Downloading,
+                    ),
             ) {
                 Text(
                     text = stringResource(
@@ -884,7 +922,7 @@ private fun VentoyDriveStatus(
     onRetry: () -> Unit,
 ) {
     val installed = state.installedVentoyVersion ?: stringResource(R.string.unknown_version)
-    val bundled = state.bundledVentoyVersion ?: stringResource(R.string.unknown_version)
+    val target = state.targetVentoyVersion ?: stringResource(R.string.unknown_version)
     when (state.ventoyDriveState) {
         VentoyDriveState.AwaitingPermission -> Text(
             stringResource(R.string.grant_access_to_check_ventoy),
@@ -898,12 +936,12 @@ private fun VentoyDriveStatus(
             Text(stringResource(R.string.checking_ventoy_installation))
         }
         VentoyDriveState.ReadyToInstall -> Text(
-            stringResource(R.string.ready_to_install_ventoy_version, bundled),
+            stringResource(R.string.ready_to_install_ventoy_version, target),
             style = MaterialTheme.typography.labelLarge,
         )
         VentoyDriveState.UpdateAvailable -> {
             Text(
-                stringResource(R.string.ventoy_update_available, installed, bundled),
+                stringResource(R.string.ventoy_update_available, installed, target),
                 style = MaterialTheme.typography.labelLarge,
             )
             Text(
@@ -916,7 +954,7 @@ private fun VentoyDriveStatus(
             style = MaterialTheme.typography.labelLarge,
         )
         VentoyDriveState.NewerVersion -> Text(
-            stringResource(R.string.ventoy_newer_than_bundled, installed, bundled),
+            stringResource(R.string.ventoy_newer_than_bundled, installed, target),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.error,
         )
@@ -936,6 +974,88 @@ private fun VentoyDriveStatus(
             }
         }
         VentoyDriveState.NotApplicable -> Unit
+    }
+}
+
+@Composable
+private fun VentoyOnlineUpdateControls(
+    state: ConfirmOperationActivityState,
+    onCheckOnline: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.padding(top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        when (state.onlineState) {
+            VentoyOnlineState.Idle -> OutlinedButton(
+                modifier = Modifier.appiumTag("ventoyOnlineUpdateButton"),
+                onClick = onCheckOnline,
+            ) {
+                Text(stringResource(R.string.check_online_ventoy_update))
+            }
+            VentoyOnlineState.Checking -> Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                Text(stringResource(R.string.checking_online_ventoy_update))
+            }
+            VentoyOnlineState.Downloading -> {
+                Text(
+                    stringResource(
+                        R.string.downloading_online_ventoy,
+                        state.onlineVentoyVersion ?: stringResource(R.string.unknown_version),
+                    ),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                if (state.onlineDownloadPercent >= 0) {
+                    LinearProgressIndicator(
+                        progress = { state.onlineDownloadPercent / 100f },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        stringResource(
+                            R.string.online_ventoy_download_percent,
+                            state.onlineDownloadPercent,
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                } else {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+            }
+            VentoyOnlineState.Ready -> {
+                Text(
+                    stringResource(
+                        R.string.using_downloaded_ventoy,
+                        state.onlineVentoyVersion ?: stringResource(R.string.unknown_version),
+                    ),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                TextButton(onClick = onCheckOnline) {
+                    Text(stringResource(R.string.check_again))
+                }
+            }
+            VentoyOnlineState.UpToDate -> {
+                Text(
+                    stringResource(R.string.no_newer_ventoy_online),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                TextButton(onClick = onCheckOnline) {
+                    Text(stringResource(R.string.check_again))
+                }
+            }
+            VentoyOnlineState.Error -> {
+                Text(
+                    state.onlineError ?: stringResource(R.string.online_ventoy_update_failed),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                TextButton(onClick = onCheckOnline) {
+                    Text(stringResource(R.string.try_again))
+                }
+            }
+        }
     }
 }
 

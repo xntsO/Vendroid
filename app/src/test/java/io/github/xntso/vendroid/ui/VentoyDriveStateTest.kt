@@ -1,6 +1,7 @@
 package io.github.xntso.vendroid.ui
 
 import io.github.xntso.vendroid.Intents
+import io.github.xntso.vendroid.VentoyJobOptions
 import io.github.xntso.vendroid.ventoy.VentoyDiskInfo
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -47,6 +48,26 @@ class VentoyDriveStateTest {
         )
 
         assertEquals(VentoyDriveState.ExistingPartitions, viewModel.state.value.ventoyDriveState)
+    }
+
+    @Test
+    fun `downloaded payload becomes the update target`() {
+        val viewModel = ConfirmOperationActivityViewModel()
+        viewModel.setState(
+            viewModel.state.value.copy(
+                ventoyOptions = VentoyJobOptions(onlinePayloadVersion = "1.1.17"),
+            ),
+        )
+
+        viewModel.setVentoyScanResult(
+            diskInfo = diskInfo("1.1.16"),
+            hasAnyPartition = true,
+            diskSizeBytes = DISK_SIZE,
+            bundledVersion = "1.1.16",
+        )
+
+        assertEquals(VentoyDriveState.UpdateAvailable, viewModel.state.value.ventoyDriveState)
+        assertEquals("1.1.17", viewModel.state.value.targetVentoyVersion)
     }
 
     private fun diskInfo(version: String) = VentoyDiskInfo(

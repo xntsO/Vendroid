@@ -22,6 +22,14 @@ object VentoyVersion {
         return VentoyVersionRelation.Same
     }
 
+    fun isPayloadCompatible(candidate: String, bundled: String): Boolean {
+        val candidateParts = candidate.toVersionParts() ?: return false
+        val bundledParts = bundled.toVersionParts() ?: return false
+        if (candidateParts.size < 2 || bundledParts.size < 2) return false
+        return candidateParts.take(2) == bundledParts.take(2) &&
+            compare(candidate, bundled) != VentoyVersionRelation.Older
+    }
+
     private fun String.toVersionParts(): List<Int>? {
         val normalized = trim().removePrefix("v")
         if (normalized.isEmpty()) return null

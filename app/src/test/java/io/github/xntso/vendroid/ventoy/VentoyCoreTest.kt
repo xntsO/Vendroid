@@ -211,6 +211,9 @@ class VentoyVersionTest {
         assertEquals(VentoyVersionRelation.Same, VentoyVersion.compare("v1.1.16", "1.1.16"))
         assertEquals(VentoyVersionRelation.Newer, VentoyVersion.compare("1.2.0", "1.1.16"))
         assertEquals(VentoyVersionRelation.Unknown, VentoyVersion.compare("dev", "1.1.16"))
+        assertTrue(VentoyVersion.isPayloadCompatible("1.1.17", "1.1.16"))
+        assertFalse(VentoyVersion.isPayloadCompatible("1.2.0", "1.1.16"))
+        assertFalse(VentoyVersion.isPayloadCompatible("1.1.15", "1.1.16"))
     }
 }
 

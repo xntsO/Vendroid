@@ -40,6 +40,7 @@ data class VentoyJobOptions(
     val label: String = "Ventoy",
     val reservedSpaceBytes: Long = 0,
     val clusterSize: VentoyClusterSize = VentoyClusterSize.Automatic,
+    val onlinePayloadVersion: String? = null,
 ) : Parcelable {
     fun toInstallOptions(): VentoyInstallOptions = VentoyInstallOptions(
         forceInstall = forceInstall,
