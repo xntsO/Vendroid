@@ -10,6 +10,44 @@ internal data class MbrPartitionEntry(
 )
 
 internal object VentoyMbr {
+    fun buildProtective(
+        bootImage: ByteArray,
+        diskSizeBytes: Long,
+        random: SecureRandom,
+        preservedVentoyUuid: ByteArray? = null,
+        preservedDiskSignature: ByteArray? = null,
+    ): ByteArray {
+        require(bootImage.size >= VentoyDiskLayout.SECTOR_SIZE) {
+            "boot.img must contain at least one 512-byte sector"
+        }
+        require(diskSizeBytes % VentoyDiskLayout.SECTOR_SIZE == 0L) {
+            "Disk size must be aligned to 512-byte sectors"
+        }
+        require(diskSizeBytes >= 2L * VentoyDiskLayout.SECTOR_SIZE) {
+            "Disk is too small for a protective MBR"
+        }
+
+        val mbr = bootImage.copyOfRange(0, VentoyDiskLayout.SECTOR_SIZE)
+        writeIdentity(mbr, random, preservedVentoyUuid, preservedDiskSignature)
+        mbr[92] = 0x22
+        mbr.fill(
+            0,
+            VentoyDiskLayout.MBR_PARTITION_TABLE_OFFSET,
+            VentoyDiskLayout.MBR_PARTITION_TABLE_OFFSET + 4 * 16,
+        )
+        val diskSectors = diskSizeBytes / VentoyDiskLayout.SECTOR_SIZE
+        writePartitionEntry(
+            mbr = mbr,
+            index = 0,
+            active = 0,
+            type = 0xEE,
+            startSector = 1,
+            sectorCount = minOf(diskSectors - 1, UInt.MAX_VALUE.toLong()),
+        )
+        writeBootSignature(mbr)
+        return mbr
+    }
+
     fun build(
         bootImage: ByteArray,
         plan: VentoyInstallPlan,
@@ -23,12 +61,7 @@ internal object VentoyMbr {
         }
         val mbr = bootImage.copyOfRange(0, VentoyDiskLayout.SECTOR_SIZE)
 
-        val uuid = preservedVentoyUuid ?: ByteArray(16).also(random::nextBytes)
-        val diskSignature = preservedDiskSignature ?: ByteArray(4).also(random::nextBytes)
-        require(uuid.size == 16) { "Ventoy UUID must be 16 bytes" }
-        require(diskSignature.size == 4) { "Disk signature must be 4 bytes" }
-        uuid.copyInto(mbr, VentoyDiskLayout.VENTOY_UUID_OFFSET)
-        diskSignature.copyInto(mbr, VentoyDiskLayout.DISK_SIGNATURE_OFFSET)
+        writeIdentity(mbr, random, preservedVentoyUuid, preservedDiskSignature)
 
         writePartitionEntry(
             mbr,
@@ -56,8 +89,7 @@ internal object VentoyMbr {
             preservedExtraPartitionEntries.copyInto(mbr, extraPartitionsOffset)
         }
 
-        mbr[VentoyDiskLayout.MBR_BOOT_SIGNATURE_OFFSET] = 0x55
-        mbr[VentoyDiskLayout.MBR_BOOT_SIGNATURE_OFFSET + 1] = 0xAA.toByte()
+        writeBootSignature(mbr)
         return mbr
     }
 
@@ -78,6 +110,25 @@ internal object VentoyMbr {
         mbr.size >= VentoyDiskLayout.SECTOR_SIZE &&
             (mbr[510].toInt() and 0xff) == 0x55 &&
             (mbr[511].toInt() and 0xff) == 0xAA
+
+    private fun writeIdentity(
+        mbr: ByteArray,
+        random: SecureRandom,
+        preservedVentoyUuid: ByteArray?,
+        preservedDiskSignature: ByteArray?,
+    ) {
+        val uuid = preservedVentoyUuid ?: ByteArray(16).also(random::nextBytes)
+        val diskSignature = preservedDiskSignature ?: ByteArray(4).also(random::nextBytes)
+        require(uuid.size == 16) { "Ventoy UUID must be 16 bytes" }
+        require(diskSignature.size == 4) { "Disk signature must be 4 bytes" }
+        uuid.copyInto(mbr, VentoyDiskLayout.VENTOY_UUID_OFFSET)
+        diskSignature.copyInto(mbr, VentoyDiskLayout.DISK_SIGNATURE_OFFSET)
+    }
+
+    private fun writeBootSignature(mbr: ByteArray) {
+        mbr[VentoyDiskLayout.MBR_BOOT_SIGNATURE_OFFSET] = 0x55
+        mbr[VentoyDiskLayout.MBR_BOOT_SIGNATURE_OFFSET + 1] = 0xAA.toByte()
+    }
 
     private fun writePartitionEntry(
         mbr: ByteArray,

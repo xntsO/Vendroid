@@ -96,6 +96,7 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 import com.airbnb.lottie.compose.rememberLottieDynamicProperties
 import com.airbnb.lottie.compose.rememberLottieDynamicProperty
 import io.github.xntso.vendroid.AppSettings
+import io.github.xntso.vendroid.BuildConfig
 import io.github.xntso.vendroid.Intents
 import io.github.xntso.vendroid.R
 import io.github.xntso.vendroid.VENTOY_INSTALL_URI
@@ -126,6 +127,7 @@ import io.github.xntso.vendroid.ventoy.VentoyDiskScanner
 import io.github.xntso.vendroid.ventoy.VentoyClusterSize
 import io.github.xntso.vendroid.ventoy.VentoyPayload
 import io.github.xntso.vendroid.ventoy.VentoyOnlineUpdater
+import io.github.xntso.vendroid.ventoy.VentoyPartitionStyle
 import io.github.xntso.vendroid.ventoy.VentoyPayloadCache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -459,8 +461,10 @@ class ConfirmOperationActivity : ActivityBase() {
                     ?: error("The USB drive does not expose a usable block device.")
                 val rawDevice = BlockDeviceRawBlockDevice(blockDevice)
                 val scanner = VentoyDiskScanner()
-                val diskInfo = scanner.scan(rawDevice)
-                val hasAnyPartition = scanner.hasAnyMbrPartition(rawDevice)
+                val diskInfo = scanner.scan(rawDevice)?.takeIf {
+                    BuildConfig.IS_PREVIEW || it.partitionStyle == VentoyPartitionStyle.Mbr
+                }
+                val hasAnyPartition = scanner.hasAnyPartition(rawDevice)
                 val bundledVersion = VentoyPayload.fromAssets(assets).version
                 mViewModel.setVentoyScanResult(
                     diskInfo = diskInfo,
@@ -1079,6 +1083,10 @@ private fun ventoyOptionsSummary(options: VentoyJobOptions): String {
     }
     return stringResource(
         R.string.ventoy_options_summary,
+        when (options.partitionStyle) {
+            VentoyPartitionStyle.Mbr -> "MBR"
+            VentoyPartitionStyle.Gpt -> "GPT"
+        },
         options.label,
         cluster,
         reserved,
@@ -1111,7 +1119,9 @@ fun VentoyAdvancedOptionsBottomSheet(
         mutableStateOf((options.reservedSpaceBytes / initialUnit.bytes).toString())
     }
     var clusterSize by rememberSaveable(options) { mutableStateOf(options.clusterSize) }
+    var partitionStyle by rememberSaveable(options) { mutableStateOf(options.partitionStyle) }
     var clusterMenuOpen by remember { mutableStateOf(false) }
+    var partitionStyleMenuOpen by remember { mutableStateOf(false) }
     var unitMenuOpen by remember { mutableStateOf(false) }
     val parsedReservedAmount = reservedAmount.toLongOrNull()
     val maximumReservedAmount = if (diskSizeBytes > 40L * mebibyte) {
@@ -1142,6 +1152,56 @@ fun VentoyAdvancedOptionsBottomSheet(
                 stringResource(R.string.advanced_options),
                 style = MaterialTheme.typography.titleLarge,
             )
+            if (BuildConfig.IS_PREVIEW) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.partition_style), fontWeight = FontWeight.Bold)
+                    Text(
+                        stringResource(R.string.partition_style_description),
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    Box {
+                        OutlinedButton(
+                            modifier = Modifier.appiumTag("ventoyPartitionStyleButton"),
+                            onClick = { partitionStyleMenuOpen = true },
+                        ) {
+                            Text(
+                                when (partitionStyle) {
+                                    VentoyPartitionStyle.Mbr -> stringResource(R.string.partition_style_mbr)
+                                    VentoyPartitionStyle.Gpt -> stringResource(R.string.partition_style_gpt_preview)
+                                },
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = partitionStyleMenuOpen,
+                            onDismissRequest = { partitionStyleMenuOpen = false },
+                        ) {
+                            VentoyPartitionStyle.entries.forEach { style ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            when (style) {
+                                                VentoyPartitionStyle.Mbr -> stringResource(R.string.partition_style_mbr)
+                                                VentoyPartitionStyle.Gpt -> stringResource(R.string.partition_style_gpt_preview)
+                                            },
+                                        )
+                                    },
+                                    onClick = {
+                                        partitionStyle = style
+                                        partitionStyleMenuOpen = false
+                                    },
+                                )
+                            }
+                        }
+                    }
+                    if (partitionStyle == VentoyPartitionStyle.Gpt) {
+                        Text(
+                            stringResource(R.string.gpt_preview_warning),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            }
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth().appiumTag("ventoyVolumeLabelField"),
                 value = label,
@@ -1291,6 +1351,7 @@ fun VentoyAdvancedOptionsBottomSheet(
                                     0
                                 },
                                 clusterSize = clusterSize,
+                                partitionStyle = partitionStyle,
                             ),
                         )
                     },

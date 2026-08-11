@@ -52,7 +52,12 @@
     <string name="could_not_check_ventoy">Could not inspect this USB drive.</string>
     <string name="files_will_be_preserved">Your files will be preserved</string>
     <string name="updating_ventoy_preserves_files">Only Ventoy boot components will be refreshed. Keep the drive connected and back up irreplaceable files first.</string>
-    <string name="ventoy_options_summary">exFAT · Label: %1$s · Cluster: %2$s · Reserved: %3$s</string>
+    <string name="ventoy_options_summary">%1$s · exFAT · Label: %2$s · Cluster: %3$s · Reserved: %4$s</string>
+    <string name="partition_style">Partition style</string>
+    <string name="partition_style_description">MBR is the compatible default. GPT supports disks larger than 2 TiB and modern UEFI systems.</string>
+    <string name="partition_style_mbr" translatable="false">MBR</string>
+    <string name="partition_style_gpt_preview" translatable="false">GPT (Preview)</string>
+    <string name="gpt_preview_warning">Experimental: back up the USB drive before installing with GPT.</string>
     <string name="check_online_ventoy_update">Check for online update</string>
     <string name="checking_online_ventoy_update">Checking Ventoy releases…</string>
     <string name="downloading_online_ventoy">Downloading Ventoy %1$s…</string>

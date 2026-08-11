@@ -51,6 +51,36 @@ class VentoyLayoutTest {
     }
 
     @Test
+    fun `builds GPT layout with space for backup table`() {
+        val diskSize = 8L * 1024 * 1024 * 1024
+        val plan = VentoyDiskLayout.plan(
+            diskSizeBytes = diskSize,
+            blockSize = 512,
+            payloadVersion = "1.1.16",
+            partitionStyle = VentoyPartitionStyle.Gpt,
+        )
+
+        assertEquals(VentoyPartitionStyle.Gpt, plan.partitionStyle)
+        assertEquals(0, plan.partition2StartSector % 8)
+        assertTrue(
+            plan.partition2EndSector <=
+                diskSize / 512 - VentoyDiskLayout.GPT_BACKUP_SECTOR_COUNT - 1,
+        )
+    }
+
+    @Test
+    fun `allows GPT disks larger than MBR limit`() {
+        val plan = VentoyDiskLayout.plan(
+            diskSizeBytes = VentoyDiskLayout.MAX_MBR_DISK_BYTES + 512,
+            blockSize = 512,
+            payloadVersion = "1.1.16",
+            partitionStyle = VentoyPartitionStyle.Gpt,
+        )
+
+        assertEquals(VentoyPartitionStyle.Gpt, plan.partitionStyle)
+    }
+
+    @Test
     fun `reserves aligned space at the end of the disk`() {
         val diskSize = 8L * 1024 * 1024 * 1024
         val requested = 2L * 1024 * 1024 * 1024
@@ -109,6 +139,21 @@ class VentoyMbrTest {
         assertEquals(plan.partition2StartSector, entries[1].startSector)
         assertEquals(plan.partition2SectorCount, entries[1].sectorCount)
     }
+
+    @Test
+    fun `writes GPT protective partition entry`() {
+        val mbr = VentoyMbr.buildProtective(
+            bootImage = ByteArray(512) { 0x5A },
+            diskSizeBytes = 64L * 1024 * 1024,
+            random = SecureRandom(),
+        )
+        val entries = VentoyMbr.parse(mbr)
+
+        assertEquals(0x22, mbr[92].toInt() and 0xff)
+        assertEquals(0xEE, entries[0].type)
+        assertEquals(1, entries[0].startSector)
+        assertTrue(entries.drop(1).all { it.type == 0 && it.sectorCount == 0L })
+    }
 }
 
 class VentoyDiskScannerTest {
@@ -129,6 +174,23 @@ class VentoyDiskScannerTest {
         )
 
         assertNotNull(VentoyDiskScanner().scan(device))
+    }
+
+    @Test
+    fun `recognizes GPT Ventoy layout`() {
+        val device = memoryDevice(40L * 1024 * 1024)
+        VentoyInstaller(syntheticPayload()).install(
+            device,
+            VentoyInstallOptions(
+                forceInstall = true,
+                partitionStyle = VentoyPartitionStyle.Gpt,
+            ),
+        )
+
+        val info = VentoyDiskScanner().scan(device)
+
+        assertNotNull(info)
+        assertEquals(VentoyPartitionStyle.Gpt, info?.partitionStyle)
     }
 }
 
@@ -269,6 +331,46 @@ class VentoyInstallerTest {
     }
 
     @Test
+    fun `installs GPT layout with primary and backup tables`() {
+        val device = memoryDevice(40L * 1024 * 1024)
+        val plan = VentoyInstaller(syntheticPayload()).install(
+            device = device,
+            options = VentoyInstallOptions(
+                forceInstall = true,
+                partitionStyle = VentoyPartitionStyle.Gpt,
+            ),
+        )
+
+        val protectiveMbr = VentoyMbr.parse(device.readBytes(0, 512)).first()
+        val primaryHeader = device.readBytes(512, 512)
+        val primaryEntries = device.readBytes(2L * 512, 32 * 512)
+        val gpt = VentoyGpt.read(device)
+        assertEquals(0xEE, protectiveMbr.type)
+        assertArrayEquals("EFI PART".encodeToByteArray(), primaryHeader.copyOfRange(0, 8))
+        assertEquals(1, primaryHeader.readUInt64Le(24))
+        assertEquals(device.sizeBytes / 512 - 1, primaryHeader.readUInt64Le(32))
+        assertEquals(34, primaryHeader.readUInt64Le(40))
+        assertArrayEquals(
+            byteArrayOf(
+                0xA2.toByte(), 0xA0.toByte(), 0xD0.toByte(), 0xEB.toByte(),
+                0xE5.toByte(), 0xB9.toByte(), 0x33, 0x44,
+                0x87.toByte(), 0xC0.toByte(), 0x68, 0xB6.toByte(),
+                0xB7.toByte(), 0x26, 0x99.toByte(), 0xC7.toByte(),
+            ),
+            primaryEntries.copyOfRange(0, 16),
+        )
+        assertEquals(plan.partition1StartSector, gpt.partition1.startSector)
+        assertEquals(plan.partition2StartSector, gpt.partition2.startSector)
+        assertEquals("VTOYEFI", gpt.partition2.name)
+        assertEquals(Long.MIN_VALUE, gpt.partition2.attributes)
+        assertArrayEquals(
+            byteArrayOf(0, 1, 2, 3),
+            device.readBytes(VentoyDiskLayout.GPT_FIRST_USABLE_SECTOR * 512, 4),
+        )
+        assertEquals(0x23, device.readBytes(17908, 1)[0].toInt() and 0xff)
+    }
+
+    @Test
     fun `upgrade preserves partition one bytes`() {
         val device = memoryDevice(40L * 1024 * 1024)
         val payload = syntheticPayload()
@@ -311,6 +413,34 @@ class VentoyInstallerTest {
         installer.upgrade(device)
 
         assertArrayEquals(extraEntries, device.readBytes(extraEntriesOffset.toLong(), 32))
+    }
+
+    @Test
+    fun `upgrade preserves GPT tables and partition one bytes`() {
+        val device = memoryDevice(40L * 1024 * 1024)
+        val installer = VentoyInstaller(syntheticPayload())
+        val plan = installer.install(
+            device,
+            VentoyInstallOptions(
+                forceInstall = true,
+                partitionStyle = VentoyPartitionStyle.Gpt,
+            ),
+        )
+        val markerOffset = plan.partition1StartSector * 512 + 2L * 1024 * 1024
+        val marker = "keep-gpt".encodeToByteArray()
+        device.write(markerOffset, marker)
+        val primaryGpt = device.readBytes(512, 33 * 512)
+        val backupGpt = device.readBytes(device.sizeBytes - 33L * 512, 33 * 512)
+
+        val info = installer.upgrade(device)
+
+        assertEquals(VentoyPartitionStyle.Gpt, info.partitionStyle)
+        assertArrayEquals(marker, device.readBytes(markerOffset, marker.size))
+        assertArrayEquals(primaryGpt, device.readBytes(512, primaryGpt.size))
+        assertArrayEquals(
+            backupGpt,
+            device.readBytes(device.sizeBytes - backupGpt.size, backupGpt.size),
+        )
     }
 }
 

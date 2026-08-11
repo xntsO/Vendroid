@@ -5,6 +5,7 @@ Vendroid is a no-root Android app for installing Ventoy on external USB drives a
 ## Features
 
 - Install, repair, and update an MBR Ventoy layout on a USB drive.
+- Experiment with GPT installs in the separately installable V-Preview build.
 - Manage supported boot image files through Android's Storage Access Framework.
 - Bundle and verify a pinned official Ventoy payload.
 - Optionally download a newer compatible Ventoy payload from the official GitHub release,
@@ -14,8 +15,8 @@ Vendroid is a no-root Android app for installing Ventoy on external USB drives a
 ## Current limitations
 
 - External USB drives only; Android does not expose internal SD card slots as writable block devices.
-- MBR layout and 512-byte logical sectors only.
-- Drives larger than 2 TiB are rejected.
+- Stable builds support MBR only; V-Preview contains experimental GPT support.
+- MBR installs reject drives larger than 2 TiB.
 - The data partition uses exFAT.
 - Secure Boot support is enabled by default.
 - Phone-as-USB mode, persistence plugins, and advanced Ventoy theme/plugin editing are not included yet.
@@ -23,6 +24,10 @@ Vendroid is a no-root Android app for installing Ventoy on external USB drives a
 ## Build
 
 Vendroid currently has one `foss` product flavor. It requires Java 17 and the Android SDK.
+
+The `fossPreview` build type uses the package ID `io.github.xntso.vendroid.preview` and
+the launcher name `V-Preview`, so it can be installed beside the stable app. GitHub Actions
+publishes its debug-signed APK as a workflow artifact from the `preview` branch.
 
 The app bundles Ventoy `1.1.16`. Download the official Linux archive before building:
 

@@ -17,6 +17,7 @@ class VentoyInstaller(
         blockSize = device.blockSize,
         payloadVersion = payload.version,
         reservedSpaceBytes = options.reservedSpaceBytes,
+        partitionStyle = options.partitionStyle,
     )
 
     fun install(
@@ -24,9 +25,6 @@ class VentoyInstaller(
         options: VentoyInstallOptions = VentoyInstallOptions(),
         onProgress: (VentoyInstallProgress) -> Unit = {},
     ): VentoyInstallPlan {
-        require(options.partitionStyle == VentoyPartitionStyle.Mbr) {
-            "Only MBR Ventoy installs are supported in this version."
-        }
         require(options.secureBoot) {
             "Secure Boot is always enabled in this version."
         }
@@ -36,7 +34,7 @@ class VentoyInstaller(
         payload.validate()
         val plan = plan(device, options)
 
-        if (!options.forceInstall && scanner.hasAnyMbrPartition(device) && scanner.scan(device) == null) {
+        if (!options.forceInstall && scanner.hasAnyPartition(device) && scanner.scan(device) == null) {
             throw IllegalStateException("The USB drive already has a partition table. Use force install to overwrite it.")
         }
 
@@ -44,8 +42,8 @@ class VentoyInstaller(
         zeroInstallAreas(device)
 
         onProgress(VentoyInstallProgress(VentoyInstallStage.WritingBootloader))
-        writeMbr(device, plan)
-        writeCoreImage(device, onProgress)
+        writePartitionLayout(device, plan)
+        writeCoreImage(device, plan, onProgress)
 
         onProgress(VentoyInstallProgress(VentoyInstallStage.WritingVentoyPayload))
         writeVentoyDiskImage(device, plan, onProgress)
@@ -60,7 +58,7 @@ class VentoyInstaller(
         )
 
         onProgress(VentoyInstallProgress(VentoyInstallStage.Verifying))
-        verifyMbr(device, plan)
+        verifyPartitionLayout(device, plan)
         onProgress(VentoyInstallProgress(VentoyInstallStage.Complete))
         return plan
     }
@@ -73,7 +71,7 @@ class VentoyInstaller(
         payload.validate()
 
         val diskInfo = scanner.scan(device)
-            ?: throw IllegalStateException("This drive is not a supported MBR Ventoy disk.")
+            ?: throw IllegalStateException("This drive is not a supported Ventoy disk.")
 
         val mbr = device.readBytes(0, VentoyDiskLayout.SECTOR_SIZE)
         val preservedUuid = mbr.copyOfRange(
@@ -95,23 +93,37 @@ class VentoyInstaller(
             partition2StartSector = diskInfo.partition2StartSector,
             partition2EndSector = diskInfo.partition2EndSector,
             payloadVersion = payload.version,
+            partitionStyle = diskInfo.partitionStyle,
         )
 
         onProgress(VentoyInstallProgress(VentoyInstallStage.WritingBootloader))
-        writeMbr(
-            device,
-            plan,
-            preservedUuid,
-            preservedDiskSignature,
-            preservedExtraPartitionEntries,
-        )
-        writeCoreImage(device, onProgress)
+        if (plan.partitionStyle == VentoyPartitionStyle.Mbr) {
+            writeMbr(
+                device,
+                plan,
+                preservedUuid,
+                preservedDiskSignature,
+                preservedExtraPartitionEntries,
+            )
+            writeCoreImage(device, plan, onProgress)
+        } else {
+            writeGptUpgradeBootRecord(device, preservedUuid)
+            val preservedCoreTail = device.readBytes(
+                CORE_TAIL_START_SECTOR * VentoyDiskLayout.SECTOR_SIZE,
+                CORE_TAIL_SECTOR_COUNT * VentoyDiskLayout.SECTOR_SIZE,
+            )
+            writeCoreImage(device, plan, onProgress)
+            device.write(
+                CORE_TAIL_START_SECTOR * VentoyDiskLayout.SECTOR_SIZE,
+                preservedCoreTail,
+            )
+        }
 
         onProgress(VentoyInstallProgress(VentoyInstallStage.WritingVentoyPayload))
         writeVentoyDiskImage(device, plan, onProgress)
 
         onProgress(VentoyInstallProgress(VentoyInstallStage.Verifying))
-        verifyMbr(device, plan)
+        verifyPartitionLayout(device, plan)
         onProgress(VentoyInstallProgress(VentoyInstallStage.Complete))
         return scanner.scan(device) ?: diskInfo.copy(installedVersion = payload.version)
     }
@@ -121,6 +133,21 @@ class VentoyInstaller(
         device.writeZeros(0, zeroLength)
         if (device.sizeBytes > zeroLength) {
             device.writeZeros(device.sizeBytes - zeroLength, zeroLength)
+        }
+    }
+
+    private fun writePartitionLayout(device: RawBlockDevice, plan: VentoyInstallPlan) {
+        when (plan.partitionStyle) {
+            VentoyPartitionStyle.Mbr -> writeMbr(device, plan)
+            VentoyPartitionStyle.Gpt -> {
+                VentoyGpt.write(device, plan, random)
+                val protectiveMbr = VentoyMbr.buildProtective(
+                    bootImage = payload.bootImage(),
+                    diskSizeBytes = device.sizeBytes,
+                    random = random,
+                )
+                device.write(0, protectiveMbr)
+            }
         }
     }
 
@@ -142,22 +169,52 @@ class VentoyInstaller(
         device.write(0, mbr)
     }
 
+    private fun writeGptUpgradeBootRecord(
+        device: RawBlockDevice,
+        preservedVentoyUuid: ByteArray,
+    ) {
+        val bootCode = payload.bootImage().copyOfRange(0, VentoyDiskLayout.DISK_SIGNATURE_OFFSET)
+        bootCode[92] = 0x22
+        device.write(0, bootCode)
+        device.write(VentoyDiskLayout.VENTOY_UUID_OFFSET.toLong(), preservedVentoyUuid)
+    }
+
     private fun writeCoreImage(
         device: RawBlockDevice,
+        plan: VentoyInstallPlan,
         onProgress: (VentoyInstallProgress) -> Unit,
     ) {
+        val startSector: Long
+        val sectorCount: Long
+        val requireEndOfStream: Boolean
+        when (plan.partitionStyle) {
+            VentoyPartitionStyle.Mbr -> {
+                startSector = 1
+                sectorCount = 2047
+                requireEndOfStream = true
+            }
+            VentoyPartitionStyle.Gpt -> {
+                startSector = VentoyDiskLayout.GPT_FIRST_USABLE_SECTOR
+                sectorCount = 2014
+                requireEndOfStream = false
+            }
+        }
+        val expectedBytes = sectorCount * VentoyDiskLayout.SECTOR_SIZE
         payload.openCoreImage().use { compressed ->
             XZInputStream(compressed).use { input ->
-                copyToDevice(
+                copyExactToDevice(
                     input = input,
                     device = device,
-                    offset = VentoyDiskLayout.SECTOR_SIZE.toLong(),
-                    maxBytes = 1024L * 1024L - VentoyDiskLayout.SECTOR_SIZE,
-                    expectedBytes = 1024L * 1024L - VentoyDiskLayout.SECTOR_SIZE,
+                    offset = startSector * VentoyDiskLayout.SECTOR_SIZE,
+                    expectedBytes = expectedBytes,
                     stage = VentoyInstallStage.WritingBootloader,
                     onProgress = onProgress,
+                    requireEndOfStream = requireEndOfStream,
                 )
             }
+        }
+        if (plan.partitionStyle == VentoyPartitionStyle.Gpt) {
+            device.write(GPT_CORE_PATCH_OFFSET, byteArrayOf(0x23))
         }
     }
 
@@ -208,6 +265,41 @@ class VentoyInstaller(
         }
     }
 
+    private fun copyExactToDevice(
+        input: java.io.InputStream,
+        device: RawBlockDevice,
+        offset: Long,
+        expectedBytes: Long,
+        stage: VentoyInstallStage,
+        onProgress: (VentoyInstallProgress) -> Unit,
+        requireEndOfStream: Boolean,
+    ) {
+        val buffer = ByteArray(1024 * 1024)
+        var written = 0L
+        while (written < expectedBytes) {
+            val requested = minOf(buffer.size.toLong(), expectedBytes - written).toInt()
+            val read = input.read(buffer, 0, requested)
+            require(read > 0) {
+                "Ventoy payload decompressed to $written bytes; expected at least $expectedBytes bytes."
+            }
+            device.write(offset + written, buffer, 0, read)
+            written += read
+            onProgress(VentoyInstallProgress(stage, written, expectedBytes))
+        }
+        if (requireEndOfStream) {
+            require(input.read() < 0) {
+                "Ventoy payload exceeds its reserved disk area."
+            }
+        }
+    }
+
+    private fun verifyPartitionLayout(device: RawBlockDevice, plan: VentoyInstallPlan) {
+        when (plan.partitionStyle) {
+            VentoyPartitionStyle.Mbr -> verifyMbr(device, plan)
+            VentoyPartitionStyle.Gpt -> verifyGpt(device, plan)
+        }
+    }
+
     private fun verifyMbr(device: RawBlockDevice, plan: VentoyInstallPlan) {
         val mbr = device.readBytes(0, VentoyDiskLayout.SECTOR_SIZE)
         require(VentoyMbr.hasBootSignature(mbr)) { "Missing MBR boot signature after install." }
@@ -220,5 +312,37 @@ class VentoyInstaller(
         require(entries[1].type == VentoyDiskLayout.PARTITION2_TYPE) { "VTOYEFI partition type mismatch." }
         require(entries[1].startSector == plan.partition2StartSector) { "VTOYEFI partition start mismatch." }
         require(entries[1].sectorCount == plan.partition2SectorCount) { "VTOYEFI partition size mismatch." }
+    }
+
+    private fun verifyGpt(device: RawBlockDevice, plan: VentoyInstallPlan) {
+        val mbr = device.readBytes(0, VentoyDiskLayout.SECTOR_SIZE)
+        require(VentoyMbr.hasBootSignature(mbr)) { "Missing protective MBR boot signature." }
+        val protectiveEntry = VentoyMbr.parse(mbr).first()
+        require(protectiveEntry.type == 0xEE && protectiveEntry.startSector == 1L) {
+            "Missing protective MBR partition entry."
+        }
+
+        val gpt = VentoyGpt.read(device)
+        require(gpt.partition1.startSector == plan.partition1StartSector) {
+            "Ventoy data partition start mismatch."
+        }
+        require(gpt.partition1.sectorCount == plan.partition1SectorCount) {
+            "Ventoy data partition size mismatch."
+        }
+        require(gpt.partition2.startSector == plan.partition2StartSector) {
+            "VTOYEFI partition start mismatch."
+        }
+        require(gpt.partition2.sectorCount == plan.partition2SectorCount) {
+            "VTOYEFI partition size mismatch."
+        }
+        require(gpt.partition2.name == "VTOYEFI" && gpt.partition2.attributes == Long.MIN_VALUE) {
+            "VTOYEFI GPT metadata mismatch."
+        }
+    }
+
+    private companion object {
+        const val GPT_CORE_PATCH_OFFSET = 17908L
+        const val CORE_TAIL_START_SECTOR = 2040L
+        const val CORE_TAIL_SECTOR_COUNT = 8
     }
 }

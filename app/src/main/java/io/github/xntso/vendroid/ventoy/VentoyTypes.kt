@@ -2,6 +2,7 @@ package io.github.xntso.vendroid.ventoy
 
 enum class VentoyPartitionStyle {
     Mbr,
+    Gpt,
 }
 
 enum class VentoyClusterSize(val bytes: Int?) {
@@ -38,6 +39,7 @@ data class VentoyInstallPlan(
     val partition2StartSector: Long,
     val partition2EndSector: Long,
     val payloadVersion: String,
+    val partitionStyle: VentoyPartitionStyle = VentoyPartitionStyle.Mbr,
 ) {
     val partition1SectorCount: Long
         get() = partition1EndSector - partition1StartSector + 1
@@ -71,6 +73,7 @@ data class VentoyDiskInfo(
     val installedVersion: String?,
     val supportedForUpgrade: Boolean,
     val reservedSpaceBytes: Long,
+    val partitionStyle: VentoyPartitionStyle = VentoyPartitionStyle.Mbr,
 )
 
 internal object VentoyDiskLayout {
@@ -83,6 +86,13 @@ internal object VentoyDiskLayout {
     const val DISK_SIGNATURE_OFFSET = 440
     const val MAX_MBR_DISK_BYTES = 2L * 1024L * 1024L * 1024L * 1024L
     const val MIN_PARTITION1_SECTORS = 2048L
+    const val GPT_PRIMARY_HEADER_SECTOR = 1L
+    const val GPT_PRIMARY_TABLE_START_SECTOR = 2L
+    const val GPT_PARTITION_ENTRY_COUNT = 128
+    const val GPT_PARTITION_ENTRY_SIZE = 128
+    const val GPT_TABLE_SECTOR_COUNT = 32L
+    const val GPT_BACKUP_SECTOR_COUNT = GPT_TABLE_SECTOR_COUNT + 1
+    const val GPT_FIRST_USABLE_SECTOR = 34L
     const val PARTITION1_TYPE = 0x07
     const val PARTITION2_TYPE = 0xEF
 
@@ -91,6 +101,7 @@ internal object VentoyDiskLayout {
         blockSize: Int,
         payloadVersion: String,
         reservedSpaceBytes: Long = 0,
+        partitionStyle: VentoyPartitionStyle = VentoyPartitionStyle.Mbr,
     ): VentoyInstallPlan {
         require(blockSize == SECTOR_SIZE) {
             "Vendroid only supports 512-byte logical USB blocks in this version."
@@ -98,8 +109,10 @@ internal object VentoyDiskLayout {
         require(diskSizeBytes % SECTOR_SIZE == 0L) {
             "Disk size must be aligned to 512-byte sectors."
         }
-        require(diskSizeBytes <= MAX_MBR_DISK_BYTES) {
-            "MBR Ventoy install is limited to disks up to 2 TiB."
+        if (partitionStyle == VentoyPartitionStyle.Mbr) {
+            require(diskSizeBytes <= MAX_MBR_DISK_BYTES) {
+                "MBR Ventoy install is limited to disks up to 2 TiB."
+            }
         }
         require(reservedSpaceBytes >= 0 && reservedSpaceBytes % SECTOR_SIZE == 0L) {
             "Reserved space must be non-negative and aligned to 512-byte sectors."
@@ -107,7 +120,12 @@ internal object VentoyDiskLayout {
 
         val totalSectors = diskSizeBytes / SECTOR_SIZE
         val requestedReservedSectors = reservedSpaceBytes / SECTOR_SIZE
-        var partition2Start = totalSectors - requestedReservedSectors - PARTITION2_SECTOR_COUNT
+        val trailingMetadataSectors = when (partitionStyle) {
+            VentoyPartitionStyle.Mbr -> 0L
+            VentoyPartitionStyle.Gpt -> GPT_BACKUP_SECTOR_COUNT
+        }
+        var partition2Start = totalSectors - requestedReservedSectors -
+            trailingMetadataSectors - PARTITION2_SECTOR_COUNT
         partition2Start -= partition2Start % 8L
         val partition1End = partition2Start - 1
         val partition1Sectors = partition1End - PARTITION1_START_SECTOR + 1
@@ -115,11 +133,17 @@ internal object VentoyDiskLayout {
         require(partition1Sectors >= MIN_PARTITION1_SECTORS) {
             "Disk is too small for the Ventoy partition layout."
         }
-        require(partition2Start <= UInt.MAX_VALUE.toLong()) {
-            "Partition start does not fit in an MBR entry."
-        }
-        require(partition1Sectors <= UInt.MAX_VALUE.toLong()) {
-            "Partition size does not fit in an MBR entry."
+        if (partitionStyle == VentoyPartitionStyle.Mbr) {
+            require(partition2Start <= UInt.MAX_VALUE.toLong()) {
+                "Partition start does not fit in an MBR entry."
+            }
+            require(partition1Sectors <= UInt.MAX_VALUE.toLong()) {
+                "Partition size does not fit in an MBR entry."
+            }
+        } else {
+            require(partition2Start + PARTITION2_SECTOR_COUNT - 1 <= totalSectors - GPT_BACKUP_SECTOR_COUNT - 1) {
+                "GPT Ventoy partitions overlap the backup partition table."
+            }
         }
 
         return VentoyInstallPlan(
@@ -129,6 +153,7 @@ internal object VentoyDiskLayout {
             partition2StartSector = partition2Start,
             partition2EndSector = partition2Start + PARTITION2_SECTOR_COUNT - 1,
             payloadVersion = payloadVersion,
+            partitionStyle = partitionStyle,
         )
     }
 }

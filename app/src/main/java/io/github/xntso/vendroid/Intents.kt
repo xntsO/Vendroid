@@ -10,13 +10,14 @@ import io.github.xntso.vendroid.utils.exception.base.VendroidException
 import io.github.xntso.vendroid.utils.ktexts.safeParcelableExtra
 import io.github.xntso.vendroid.ventoy.VentoyClusterSize
 import io.github.xntso.vendroid.ventoy.VentoyInstallOptions
+import io.github.xntso.vendroid.ventoy.VentoyPartitionStyle
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import java.util.Random
 
 object Intents {
     const val START_JOB = "io.github.xntso.vendroid.action.START_JOB"
-    const val USB_PERMISSION = "io.github.xntso.vendroid.action.USB_PERMISSION"
+    val USB_PERMISSION = "${BuildConfig.APPLICATION_ID}.action.USB_PERMISSION"
     const val SKIP_VERIFY = "io.github.xntso.vendroid.action.CANCEL_VERIFY"
     const val JOB_PROGRESS = "io.github.xntso.vendroid.broadcast.JOB_PROGRESS"
     const val ERROR = "io.github.xntso.vendroid.broadcast.ERROR"
@@ -40,6 +41,7 @@ data class VentoyJobOptions(
     val label: String = "Ventoy",
     val reservedSpaceBytes: Long = 0,
     val clusterSize: VentoyClusterSize = VentoyClusterSize.Automatic,
+    val partitionStyle: VentoyPartitionStyle = VentoyPartitionStyle.Mbr,
     val onlinePayloadVersion: String? = null,
 ) : Parcelable {
     fun toInstallOptions(): VentoyInstallOptions = VentoyInstallOptions(
@@ -47,6 +49,7 @@ data class VentoyJobOptions(
         label = label,
         reservedSpaceBytes = reservedSpaceBytes,
         clusterSize = clusterSize,
+        partitionStyle = partitionStyle,
     )
 }
 

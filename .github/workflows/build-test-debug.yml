@@ -2,7 +2,7 @@ name: Build and test
 
 on:
   push:
-    branches: [main]
+    branches: [main, preview]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -55,7 +55,15 @@ jobs:
             "https://github.com/ventoy/Ventoy/releases/download/v${VENTOY_VERSION}/ventoy-${VENTOY_VERSION}-linux.tar.gz"
 
       - name: Build and verify
-        run: ./gradlew assembleFossDebug assembleFossOptimized testFossDebugUnitTest lint
+        run: ./gradlew assembleFossDebug assembleFossPreview assembleFossOptimized testFossDebugUnitTest lint
+
+      - name: Upload V-Preview APK
+        uses: actions/upload-artifact@v5
+        with:
+          name: V-Preview-${{ github.sha }}
+          path: app/build/outputs/apk/foss/preview/app-foss-preview.apk
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload verification reports after failure
         if: failure()
@@ -70,7 +78,7 @@ jobs:
 
   signed-apk:
     name: Signed Vendroid APK
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: verify
     runs-on: ubuntu-24.04
     timeout-minutes: 25
