@@ -1,0 +1,73 @@
+name: Build preview
+
+on:
+  push:
+    branches: [preview]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VENTOY_VERSION: '1.1.16'
+
+jobs:
+  preview:
+    name: Build V-Preview APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      JAVA_TOOL_OPTIONS: -Xmx4g
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: wrapper
+          add-job-summary: on-failure
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Download Ventoy payload
+        run: |
+          mkdir -p .vendroid-cache
+          curl --fail --location --retry 3 \
+            --output ".vendroid-cache/ventoy-${VENTOY_VERSION}-linux.tar.gz" \
+            "https://github.com/ventoy/Ventoy/releases/download/v${VENTOY_VERSION}/ventoy-${VENTOY_VERSION}-linux.tar.gz"
+
+      - name: Build and verify preview
+        run: ./gradlew assembleFossPreview testFossDebugUnitTest lint
+
+      - name: Upload V-Preview APK
+        uses: actions/upload-artifact@v5
+        with:
+          name: V-Preview-${{ github.sha }}
+          path: app/build/outputs/apk/foss/preview/app-foss-preview.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload verification reports after failure
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: preview-verification-reports
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
