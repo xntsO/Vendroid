@@ -23,6 +23,9 @@ val releaseSigningConfigured = listOf(
     releaseKeyAlias,
     releaseKeyPassword,
 ).all { !it.isNullOrBlank() }
+val previewVersionCode = providers.environmentVariable("GITHUB_RUN_NUMBER")
+    .orElse("29")
+    .map { runNumber -> 1_000_000 + runNumber.toInt() }
 
 plugins {
     alias(libs.plugins.android.application)
@@ -45,6 +48,7 @@ android {
         targetSdk = sdkTarget
         versionCode = 29
         versionName = "0.1.2"
+        buildConfigField("boolean", "IS_PREVIEW", "false")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -75,6 +79,13 @@ android {
         debug {
             isMinifyEnabled = false
             isPseudoLocalesEnabled = true
+        }
+        create("preview") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".preview"
+            versionNameSuffix = "-preview"
+            buildConfigField("boolean", "IS_PREVIEW", "true")
+            resValue("string", "app_name", "V-Preview")
         }
         create("optimized") {
             // Optimized like release (minify + shrinkResources + proguard) but debug-signed
@@ -126,6 +137,14 @@ android {
             it.maxHeapSize = "4g"
             it.systemProperty("robolectric.dependency.proxy.host", project.findProperty("systemProp.https.proxyHost") ?: System.getenv("ROBOLECTRIC_PROXY_HOST"))
             it.systemProperty("robolectric.dependency.proxy.port", project.findProperty("systemProp.https.proxyPort") ?: System.getenv("ROBOLECTRIC_PROXY_PORT"))
+        }
+    }
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("preview")) { variant ->
+        variant.outputs.forEach { output ->
+            output.versionCode.set(previewVersionCode)
         }
     }
 }

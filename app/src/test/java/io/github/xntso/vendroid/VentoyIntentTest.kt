@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import io.github.xntso.vendroid.ventoy.VentoyClusterSize
+import io.github.xntso.vendroid.ventoy.VentoyPartitionStyle
 import org.junit.jupiter.api.extension.ExtendWith
 import org.robolectric.annotation.Config
 import tech.apter.junit.jupiter.robolectric.RobolectricExtension
@@ -27,6 +28,7 @@ class VentoyIntentTest {
             label = "TOOLS",
             reservedSpaceBytes = 1024L * 1024 * 1024,
             clusterSize = VentoyClusterSize.KiB64,
+            partitionStyle = VentoyPartitionStyle.Gpt,
         )
         val intent = getProgressUpdateIntent(
             sourceUri = VENTOY_INSTALL_URI,
