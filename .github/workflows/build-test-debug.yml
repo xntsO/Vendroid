@@ -97,16 +97,19 @@ jobs:
       matrix:
         include:
           - channel: stable
+            app_name: Vendroid
             artifact: vendroid-e2e-stable-apk
             package: io.github.xntso.vendroid
             partition_style: MBR (Recommended)
             version: 0.2.0
           - channel: preview
+            app_name: V-Preview
             artifact: vendroid-e2e-preview-apk
             package: io.github.xntso.vendroid.preview
             partition_style: GPT (Preview)
             version: 0.2.0-preview
     env:
+      VENDROID_APP_NAME: ${{ matrix.app_name }}
       VENDROID_PACKAGE_NAME: ${{ matrix.package }}
       VENDROID_PARTITION_STYLE: ${{ matrix.partition_style }}
       VENDROID_EXPECTED_VERSION: ${{ matrix.version }}
