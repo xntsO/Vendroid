@@ -3,7 +3,7 @@ from selenium.common import (
     TimeoutException,
 )
 
-from vendroid import package_name
+from vendroid import activity_name, package_name
 from vendroid.utils import wait_for_element, run_adb_command
 
 
@@ -139,7 +139,7 @@ def open_file(driver: Remote, file_name: str):
         "start-activity",
         "-a",
         "android.intent.action.VIEW",
-        f"-n{package_name}/.ui.MainActivity",
+        f"-n{package_name}/{activity_name}",
         "-d",
         f"file://{file_name}",
         "--grant-persistable-uri-permission",
