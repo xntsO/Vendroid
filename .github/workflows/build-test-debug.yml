@@ -126,7 +126,9 @@ jobs:
 
       - name: Install QEMU
         run: |
-          sudo apt-get update
+          sudo sed -i \
+            's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' \
+            /etc/apt/apt-mirrors.txt
           sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
             qemu-system-x86 qemu-utils
 
