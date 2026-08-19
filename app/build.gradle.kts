@@ -26,6 +26,7 @@ val releaseSigningConfigured = listOf(
 val previewVersionCode = providers.environmentVariable("GITHUB_RUN_NUMBER")
     .orElse("29")
     .map { runNumber -> 1_000_000 + runNumber.toInt() }
+val stableGptEnabled = false
 
 plugins {
     alias(libs.plugins.android.application)
@@ -47,8 +48,9 @@ android {
         minSdk = sdkMin
         targetSdk = sdkTarget
         versionCode = 29
-        versionName = "0.1.2"
+        versionName = "0.2.0"
         buildConfigField("boolean", "IS_PREVIEW", "false")
+        buildConfigField("boolean", "GPT_ENABLED", stableGptEnabled.toString())
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -85,6 +87,7 @@ android {
             applicationIdSuffix = ".preview"
             versionNameSuffix = "-preview"
             buildConfigField("boolean", "IS_PREVIEW", "true")
+            buildConfigField("boolean", "GPT_ENABLED", "true")
             resValue("string", "app_name", "V-Preview")
         }
         create("optimized") {

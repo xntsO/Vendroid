@@ -55,9 +55,13 @@
     <string name="ventoy_options_summary">%1$s · exFAT · Label: %2$s · Cluster: %3$s · Reserved: %4$s</string>
     <string name="partition_style">Partition style</string>
     <string name="partition_style_description">MBR is the compatible default. GPT supports disks larger than 2 TiB and modern UEFI systems.</string>
-    <string name="partition_style_mbr" translatable="false">MBR</string>
+    <string name="partition_style_mbr">MBR (Recommended)</string>
+    <string name="partition_style_gpt" translatable="false">GPT</string>
     <string name="partition_style_gpt_preview" translatable="false">GPT (Preview)</string>
     <string name="gpt_preview_warning">Experimental: back up the USB drive before installing with GPT.</string>
+    <string name="gpt_available_in_v_preview">GPT installation is available in the separately installable GitHub V-Preview.</string>
+    <string name="drive_requires_v_preview">This drive requires the separately installable GitHub V-Preview until the GPT path passes physical testing.</string>
+    <string name="get_v_preview">Get V-Preview from GitHub</string>
     <string name="check_online_ventoy_update">Check for online update</string>
     <string name="checking_online_ventoy_update">Checking Ventoy releases…</string>
     <string name="downloading_online_ventoy">Downloading Ventoy %1$s…</string>

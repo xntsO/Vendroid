@@ -72,6 +72,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontStyle
@@ -134,6 +135,8 @@ import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
 private const val TAG = "ConfirmOperationActivit"
+private const val V_PREVIEW_DOWNLOAD_URL =
+    "https://github.com/xntsO/Vendroid/actions/workflows/build-preview.yml"
 
 class ConfirmOperationActivity : ActivityBase() {
     private val mViewModel: ConfirmOperationActivityViewModel by viewModels()
@@ -461,9 +464,7 @@ class ConfirmOperationActivity : ActivityBase() {
                     ?: error("The USB drive does not expose a usable block device.")
                 val rawDevice = BlockDeviceRawBlockDevice(blockDevice)
                 val scanner = VentoyDiskScanner()
-                val diskInfo = scanner.scan(rawDevice)?.takeIf {
-                    BuildConfig.IS_PREVIEW || it.partitionStyle == VentoyPartitionStyle.Mbr
-                }
+                val diskInfo = scanner.scan(rawDevice)
                 val hasAnyPartition = scanner.hasAnyPartition(rawDevice)
                 val bundledVersion = VentoyPayload.fromAssets(assets).version
                 mViewModel.setVentoyScanResult(
@@ -471,6 +472,7 @@ class ConfirmOperationActivity : ActivityBase() {
                     hasAnyPartition = hasAnyPartition,
                     diskSizeBytes = rawDevice.sizeBytes,
                     bundledVersion = bundledVersion,
+                    supportsGpt = BuildConfig.GPT_ENABLED,
                 )
             } catch (exception: Exception) {
                 Log.e(TAG, "Failed to inspect Ventoy drive", exception)
@@ -962,6 +964,17 @@ private fun VentoyDriveStatus(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.error,
         )
+        VentoyDriveState.RequiresPreview -> {
+            val uriHandler = LocalUriHandler.current
+            Text(
+                stringResource(R.string.drive_requires_v_preview),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+            TextButton(onClick = { uriHandler.openUri(V_PREVIEW_DOWNLOAD_URL) }) {
+                Text(stringResource(R.string.get_v_preview))
+            }
+        }
         VentoyDriveState.ExistingPartitions -> Text(
             stringResource(R.string.existing_partitions_use_force_install),
             style = MaterialTheme.typography.labelMedium,
@@ -1093,6 +1106,19 @@ private fun ventoyOptionsSummary(options: VentoyJobOptions): String {
     )
 }
 
+@Composable
+private fun partitionStyleLabel(style: VentoyPartitionStyle): String =
+    when (style) {
+        VentoyPartitionStyle.Mbr -> stringResource(R.string.partition_style_mbr)
+        VentoyPartitionStyle.Gpt -> stringResource(
+            if (BuildConfig.IS_PREVIEW) {
+                R.string.partition_style_gpt_preview
+            } else {
+                R.string.partition_style_gpt
+            },
+        )
+    }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VentoyAdvancedOptionsBottomSheet(
@@ -1101,6 +1127,7 @@ fun VentoyAdvancedOptionsBottomSheet(
     onApply: (VentoyJobOptions) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
+    val uriHandler = LocalUriHandler.current
     val mebibyte = 1024L * 1024L
     val gibibyte = 1024L * mebibyte
     val initialUnit = if (
@@ -1152,54 +1179,51 @@ fun VentoyAdvancedOptionsBottomSheet(
                 stringResource(R.string.advanced_options),
                 style = MaterialTheme.typography.titleLarge,
             )
-            if (BuildConfig.IS_PREVIEW) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.partition_style), fontWeight = FontWeight.Bold)
-                    Text(
-                        stringResource(R.string.partition_style_description),
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                    Box {
-                        OutlinedButton(
-                            modifier = Modifier.appiumTag("ventoyPartitionStyleButton"),
-                            onClick = { partitionStyleMenuOpen = true },
-                        ) {
-                            Text(
-                                when (partitionStyle) {
-                                    VentoyPartitionStyle.Mbr -> stringResource(R.string.partition_style_mbr)
-                                    VentoyPartitionStyle.Gpt -> stringResource(R.string.partition_style_gpt_preview)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.partition_style), fontWeight = FontWeight.Bold)
+                Text(
+                    stringResource(R.string.partition_style_description),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                Box {
+                    OutlinedButton(
+                        modifier = Modifier.appiumTag("ventoyPartitionStyleButton"),
+                        onClick = { partitionStyleMenuOpen = true },
+                    ) {
+                        Text(partitionStyleLabel(partitionStyle))
+                    }
+                    DropdownMenu(
+                        expanded = partitionStyleMenuOpen,
+                        onDismissRequest = { partitionStyleMenuOpen = false },
+                    ) {
+                        VentoyPartitionStyle.entries.forEach { style ->
+                            DropdownMenuItem(
+                                text = { Text(partitionStyleLabel(style)) },
+                                enabled = style == VentoyPartitionStyle.Mbr || BuildConfig.GPT_ENABLED,
+                                onClick = {
+                                    partitionStyle = style
+                                    partitionStyleMenuOpen = false
                                 },
                             )
                         }
-                        DropdownMenu(
-                            expanded = partitionStyleMenuOpen,
-                            onDismissRequest = { partitionStyleMenuOpen = false },
-                        ) {
-                            VentoyPartitionStyle.entries.forEach { style ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            when (style) {
-                                                VentoyPartitionStyle.Mbr -> stringResource(R.string.partition_style_mbr)
-                                                VentoyPartitionStyle.Gpt -> stringResource(R.string.partition_style_gpt_preview)
-                                            },
-                                        )
-                                    },
-                                    onClick = {
-                                        partitionStyle = style
-                                        partitionStyleMenuOpen = false
-                                    },
-                                )
-                            }
-                        }
                     }
-                    if (partitionStyle == VentoyPartitionStyle.Gpt) {
-                        Text(
-                            stringResource(R.string.gpt_preview_warning),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.error,
-                        )
+                }
+                if (!BuildConfig.GPT_ENABLED) {
+                    Text(
+                        stringResource(R.string.gpt_available_in_v_preview),
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    TextButton(onClick = { uriHandler.openUri(V_PREVIEW_DOWNLOAD_URL) }) {
+                        Text(stringResource(R.string.get_v_preview))
                     }
+                } else if (BuildConfig.IS_PREVIEW &&
+                    partitionStyle == VentoyPartitionStyle.Gpt
+                ) {
+                    Text(
+                        stringResource(R.string.gpt_preview_warning),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
                 }
             }
             OutlinedTextField(

@@ -27,7 +27,9 @@ import io.github.xntso.vendroid.utils.exception.base.VendroidException
 import io.github.xntso.vendroid.utils.exception.base.RecoverableException
 import io.github.xntso.vendroid.utils.ktexts.safeParcelableExtra
 import io.github.xntso.vendroid.ventoy.VentoyDiskInfo
+import io.github.xntso.vendroid.ventoy.VentoyDiskLayout
 import io.github.xntso.vendroid.ventoy.VentoyOnlineUpdater
+import io.github.xntso.vendroid.ventoy.VentoyPartitionStyle
 import io.github.xntso.vendroid.ventoy.VentoyPayloadCache
 import io.github.xntso.vendroid.ventoy.VentoyVersion
 import io.github.xntso.vendroid.ventoy.VentoyVersionRelation
@@ -171,6 +173,7 @@ enum class VentoyDriveState {
     UpdateAvailable,
     ReadyToRepair,
     NewerVersion,
+    RequiresPreview,
     ExistingPartitions,
     ScanFailed,
 }
@@ -205,6 +208,7 @@ data class ConfirmOperationActivityState(
     val scanError: String? = null,
     val hasRecognizedVentoy: Boolean = false,
     val hasAnyPartition: Boolean = false,
+    val ventoyNeedsRepair: Boolean = false,
 ) : IThemeState {
     val targetVentoyVersion: String?
         get() = ventoyOptions.onlinePayloadVersion ?: bundledVentoyVersion
@@ -271,9 +275,27 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
         hasAnyPartition: Boolean,
         diskSizeBytes: Long,
         bundledVersion: String,
+        supportsGpt: Boolean = false,
     ) {
         _state.update { state ->
             val targetVersion = state.ventoyOptions.onlinePayloadVersion ?: bundledVersion
+            val requiresPreview = !supportsGpt && (
+                diskSizeBytes > VentoyDiskLayout.MAX_MBR_DISK_BYTES ||
+                    diskInfo?.partitionStyle == VentoyPartitionStyle.Gpt
+                )
+            if (requiresPreview) {
+                return@update state.copy(
+                    ventoyDriveState = VentoyDriveState.RequiresPreview,
+                    installedVentoyVersion = diskInfo?.installedVersion,
+                    bundledVentoyVersion = bundledVersion,
+                    scannedDiskSizeBytes = diskSizeBytes,
+                    reservedSpaceBytes = diskInfo?.reservedSpaceBytes ?: 0,
+                    scanError = null,
+                    hasRecognizedVentoy = diskInfo != null,
+                    hasAnyPartition = hasAnyPartition,
+                    ventoyNeedsRepair = diskInfo?.needsRepair == true,
+                )
+            }
             if (state.forceInstall) {
                 return@update state.copy(
                     operation = Intents.OPERATION_VENTOY_INSTALL,
@@ -285,6 +307,7 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
                     scanError = null,
                     hasRecognizedVentoy = diskInfo != null,
                     hasAnyPartition = hasAnyPartition,
+                    ventoyNeedsRepair = diskInfo?.needsRepair == true,
                 )
             }
 
@@ -303,6 +326,7 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
                     scanError = null,
                     hasRecognizedVentoy = false,
                     hasAnyPartition = hasAnyPartition,
+                    ventoyNeedsRepair = false,
                 )
             }
 
@@ -313,7 +337,11 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
                     VentoyVersionRelation.Older -> VentoyDriveState.UpdateAvailable
                     VentoyVersionRelation.Same, VentoyVersionRelation.Unknown ->
                         VentoyDriveState.ReadyToRepair
-                    VentoyVersionRelation.Newer -> VentoyDriveState.NewerVersion
+                    VentoyVersionRelation.Newer -> if (diskInfo.needsRepair) {
+                        VentoyDriveState.ReadyToRepair
+                    } else {
+                        VentoyDriveState.NewerVersion
+                    }
                 },
                 installedVentoyVersion = diskInfo.installedVersion,
                 bundledVentoyVersion = bundledVersion,
@@ -322,6 +350,7 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
                 scanError = null,
                 hasRecognizedVentoy = true,
                 hasAnyPartition = hasAnyPartition,
+                ventoyNeedsRepair = diskInfo.needsRepair,
             )
         }
     }
@@ -459,6 +488,9 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
     private fun ConfirmOperationActivityState.withTargetVersion(
         targetVersion: String,
     ): ConfirmOperationActivityState {
+        if (ventoyDriveState == VentoyDriveState.RequiresPreview) {
+            return copy(ventoyDriveState = VentoyDriveState.RequiresPreview)
+        }
         if (forceInstall) {
             return copy(
                 operation = Intents.OPERATION_VENTOY_INSTALL,
@@ -483,7 +515,11 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
                 VentoyVersionRelation.Older -> VentoyDriveState.UpdateAvailable
                 VentoyVersionRelation.Same,
                 VentoyVersionRelation.Unknown -> VentoyDriveState.ReadyToRepair
-                VentoyVersionRelation.Newer -> VentoyDriveState.NewerVersion
+                VentoyVersionRelation.Newer -> if (ventoyNeedsRepair) {
+                    VentoyDriveState.ReadyToRepair
+                } else {
+                    VentoyDriveState.NewerVersion
+                }
             },
         )
     }
