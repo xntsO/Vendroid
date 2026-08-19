@@ -7,7 +7,7 @@ import traceback
 from appium.options.android import UiAutomator2Options
 from appium.webdriver.appium_service import AppiumService
 from appium.webdriver.client_config import AppiumClientConfig
-from vendroid import package_name
+from vendroid import activity_name, package_name
 from vendroid.config import Config
 from vendroid.qemu import QEMUController
 from vendroid.utils import denoise_logcat, execute_script, get_adb_udid, write_app_filtered_logcat
@@ -47,7 +47,7 @@ def driver(appium_service, request) -> Generator[appium.webdriver.Remote, None, 
     print(f"\n[DEBUG] Starting driver fixture for {request.node.name}")
     options = UiAutomator2Options()
     options.app_package = package_name
-    options.app_activity = ".ui.MainActivity"
+    options.app_activity = activity_name
     client_config = AppiumClientConfig(remote_server_addr=f"http://{Config.APPIUM_HOST}:{Config.APPIUM_PORT}")
     print("[DEBUG] Connecting to Appium...")
     _driver = appium.webdriver.Remote(
@@ -89,7 +89,7 @@ def driver(appium_service, request) -> Generator[appium.webdriver.Remote, None, 
                 _driver,
                 "mobile: startActivity",
                 {
-                    "component": f"{package_name}/.ui.MainActivity",
+                    "component": f"{package_name}/{activity_name}",
                 },
             )
 

@@ -211,7 +211,7 @@ def test_ventoy_install_options_and_repair(
     app.select_first_usb_device_if_multiple(driver)
     app.grant_usb_permission(driver)
     repair_button = wait_for_element(driver, '//*[@resource-id="writeImageButton"]', timeout=30)
-    assert repair_button.text == "Repair"
+    wait_for_element(driver, '//*[@text="Repair"]', timeout=30)
     repair_button.click()
     app.skip_lay_flat_sheet(driver)
     app.wait_for_success(driver, timeout=180)
