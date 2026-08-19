@@ -1,1 +1,4 @@
-package_name = "io.github.xntso.vendroid"
+import os
+
+
+package_name = os.environ.get("VENDROID_PACKAGE_NAME", "io.github.xntso.vendroid")

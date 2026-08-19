@@ -23,8 +23,6 @@ from vendroid.utils import (
     grant_permissions,
 )
 
-pytestmark = pytest.mark.legacy_etchdroid
-
 used(appium_service)
 
 
@@ -136,9 +134,16 @@ def verify_written_image(payload: bytes, raw_blockdev: Path):
 def verify_ventoy_options(raw_blockdev: Path, label: str, reserved_mib: int, cluster_size: int):
     with open(raw_blockdev, "rb") as disk:
         mbr = disk.read(512)
-        partition1_start, = struct.unpack_from("<I", mbr, 446 + 8)
-        partition2_start, partition2_size = struct.unpack_from("<II", mbr, 462 + 8)
-        actual_reserved = raw_blockdev.stat().st_size - (partition2_start + partition2_size) * 512
+        if mbr[446 + 4] == 0xEE:
+            disk.seek(2 * 512)
+            entries = disk.read(2 * 128)
+            partition1_start, = struct.unpack_from("<Q", entries, 32)
+            partition2_start, partition2_end = struct.unpack_from("<QQ", entries, 128 + 32)
+            actual_reserved = raw_blockdev.stat().st_size - (partition2_end + 34) * 512
+        else:
+            partition1_start, = struct.unpack_from("<I", mbr, 446 + 8)
+            partition2_start, partition2_size = struct.unpack_from("<II", mbr, 462 + 8)
+            actual_reserved = raw_blockdev.stat().st_size - (partition2_start + partition2_size) * 512
         assert actual_reserved >= reserved_mib * 1024 * 1024
 
         disk.seek(partition1_start * 512)
@@ -161,6 +166,7 @@ def verify_ventoy_options(raw_blockdev: Path, label: str, reserved_mib: int, clu
 
 
 @pytest.mark.qemu
+@pytest.mark.legacy_etchdroid
 def test_unplug_xhci(driver: appium.webdriver.Remote, qemu: QEMUController):
     with device_temp_sparse_file(driver, "vendroid_test_unplug_xhci_", ".iso", "1000M") as image:
         app.basic_flow(driver, image.filename)
@@ -185,7 +191,13 @@ def test_ventoy_install_options_and_repair(
     app.select_first_usb_device_if_multiple(driver)
     app.grant_usb_permission(driver)
     app.open_ventoy_advanced_options(driver)
-    app.configure_ventoy_options(driver, "TOOLS", 1, "64 KiB")
+    app.configure_ventoy_options(
+        driver,
+        "TOOLS",
+        1,
+        "64 KiB",
+        partition_style=os.environ.get("VENDROID_PARTITION_STYLE"),
+    )
     app.confirm_write_image(driver)
     app.skip_lay_flat_sheet(driver)
     app.wait_for_success(driver, timeout=180)
@@ -209,6 +221,7 @@ def test_ventoy_install_options_and_repair(
 
 
 @pytest.mark.qemu
+@pytest.mark.legacy_etchdroid
 def test_regular_flow_with_random_data_uhci(
     driver: appium.webdriver.Remote,
     random_image_file: tuple[str, bytes],
@@ -225,6 +238,7 @@ def test_regular_flow_with_random_data_uhci(
 
 
 @pytest.mark.qemu
+@pytest.mark.legacy_etchdroid
 def test_unplug_with_random_data_uhci(
     driver: appium.webdriver.Remote,
     random_image_file: tuple[str, bytes],
@@ -249,6 +263,7 @@ def test_unplug_with_random_data_uhci(
 
 
 @pytest.mark.qemu
+@pytest.mark.legacy_etchdroid
 def test_unplug_resume_from_notification(driver: appium.webdriver.Remote, qemu: QEMUController):
     grant_permissions(driver, ["android.permission.POST_NOTIFICATIONS"])
 
