@@ -1,0 +1,1 @@
+Adds the GPT install, detection, update, and repair lifecycle after Preview testing. MBR remains the recommended default, with stronger write verification and data-preserving repairs.

@@ -3,6 +3,7 @@ name: Build and test
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -15,9 +16,12 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  BLISSOS_FILE: Bliss-v16.9.7-x86_64-OFFICIAL-foss-20241011.iso
+  BLISSOS_URL: https://deac-riga.dl.sourceforge.net/project/blissos-x86/Official/BlissOS16/FOSS/Generic/
   VENTOY_VERSION: '1.1.16'
-  VENDROID_VERSION: '0.1.2'
+  VENDROID_VERSION: '0.2.0'
   VENDROID_VERSION_CODE: '29'
+  VM_DIR: /appium-vm
 
 jobs:
   verify:
@@ -55,7 +59,21 @@ jobs:
             "https://github.com/ventoy/Ventoy/releases/download/v${VENTOY_VERSION}/ventoy-${VENTOY_VERSION}-linux.tar.gz"
 
       - name: Build and verify
-        run: ./gradlew assembleFossDebug assembleFossOptimized testFossDebugUnitTest lint
+        run: ./gradlew assembleFossDebug assembleFossOptimized assembleFossPreview testFossDebugUnitTest lint
+
+      - name: Upload stable APK for end-to-end tests
+        uses: actions/upload-artifact@v5
+        with:
+          name: vendroid-e2e-stable-apk
+          path: app/build/outputs/apk/foss/optimized/app-foss-optimized.apk
+          retention-days: 3
+
+      - name: Upload Preview APK for end-to-end tests
+        uses: actions/upload-artifact@v5
+        with:
+          name: vendroid-e2e-preview-apk
+          path: app/build/outputs/apk/foss/preview/app-foss-preview.apk
+          retention-days: 3
 
       - name: Upload verification reports after failure
         if: failure()
@@ -68,12 +86,150 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  signed-apk:
-    name: Signed Vendroid APK
-    if: github.event_name != 'pull_request'
+  qemu-tests:
+    name: Appium tests in QEMU (${{ matrix.channel }})
     needs: verify
     runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - channel: stable
+            artifact: vendroid-e2e-stable-apk
+            package: io.github.xntso.vendroid
+            partition_style: MBR (Recommended)
+            version: 0.2.0
+          - channel: preview
+            artifact: vendroid-e2e-preview-apk
+            package: io.github.xntso.vendroid.preview
+            partition_style: GPT (Preview)
+            version: 0.2.0-preview
+    env:
+      VENDROID_PACKAGE_NAME: ${{ matrix.package }}
+      VENDROID_PARTITION_STYLE: ${{ matrix.partition_style }}
+      VENDROID_EXPECTED_VERSION: ${{ matrix.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download test APK
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ matrix.artifact }}
+          path: apk
+
+      - name: Install QEMU
+        uses: etchdroid/qemu-kvm-action/setup@v1
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: appium-tests/package-lock.json
+
+      - name: Install Appium and prepare directories
+        run: |
+          cd appium-tests
+          npm ci
+          sudo mkdir -p "$VM_DIR"
+          sudo chown "$USER" "$VM_DIR"
+          mkdir -p ../vm-outputs/logcat
+
+      - name: Restore Bliss OS cache
+        id: bliss-cache
+        uses: actions/cache/restore@v4
+        with:
+          key: blissos-${{ env.BLISSOS_FILE }}
+          path: ${{ env.VM_DIR }}
+
+      - name: Prepare Bliss OS
+        run: |
+          ./appium-tests/scripts/prepare-vm.sh
+          rm -f "${VM_DIR}/${BLISSOS_FILE}"
+
+      - name: Save pristine Bliss OS cache
+        if: steps.bliss-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          key: blissos-${{ env.BLISSOS_FILE }}
+          path: ${{ env.VM_DIR }}
+
+      - name: Run QEMU and Appium tests
+        uses: etchdroid/qemu-kvm-action@v1
+        with:
+          video-record: true
+          video-output: vm-outputs/qemu-${{ matrix.channel }}.mkv
+          kernel: ${{ env.VM_DIR }}/kernel
+          initrd: ${{ env.VM_DIR }}/initrd.img
+          cmdline: root=/dev/ram0 androidboot.selinux=permissive console=ttyS0 FFMPEG_CODEC=1 FFMPEG_PREFER_C2=1
+          flags: |
+            -chardev
+            stdio,id=char0,logfile=vm-outputs/serial.log,signal=off
+            -serial
+            chardev:char0
+            -netdev
+            user,id=network,hostfwd=tcp::5556-:5555
+            -device
+            virtio-net-pci,netdev=network
+            -device
+            virtio-vga-gl
+            -display
+            sdl,gl=on
+            -drive
+            index=0,if=virtio,id=system,file=${{ env.VM_DIR }}/system.efs,format=raw,readonly=on
+            -usb
+            -device
+            usb-tablet,bus=usb-bus.0
+            -device
+            nec-usb-xhci,id=xhci
+            -device
+            ich9-usb-uhci1,id=uhci
+            -drive
+            if=none,id=usbstick,file=${{ env.VM_DIR }}/usb-storage.qcow2,format=qcow2
+            -device
+            usb-storage,id=usbstick,bus=xhci.0,drive=usbstick,removable=on
+            -qmp
+            unix:/tmp/qmp.sock,server=on,wait=off
+            -monitor
+            unix:/tmp/qemu-monitor.sock,server=on,wait=off
+          run: |
+            cd appium-tests
+            export LOGCAT_DIR="$PWD/../vm-outputs/logcat"
+            ./scripts/wait-vm-startup.sh
+            adb install -r ../apk/*.apk
+            adb install -r ../apk/*.apk
+            adb shell dumpsys package "$VENDROID_PACKAGE_NAME" | tee ../vm-outputs/package.txt
+            grep -q "versionName=${VENDROID_EXPECTED_VERSION}$" ../vm-outputs/package.txt
+            adb logcat -d > "$LOGCAT_DIR/0_before.log" 2>&1
+            uv run pytest -sv --tb=native --junit-xml=../vm-outputs/junit.xml
+
+      - name: Upload QEMU diagnostics after failure
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: qemu-diagnostics-${{ matrix.channel }}
+          path: vm-outputs/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  signed-apk:
+    name: Signed Vendroid release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: qemu-tests
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
+    permissions:
+      contents: write
     env:
       JAVA_TOOL_OPTIONS: -Xmx4g
       VENDROID_KEYSTORE_BASE64: ${{ secrets.VENDROID_KEYSTORE_BASE64 }}
@@ -101,6 +257,12 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
 
+      - name: Check release readiness
+        run: |
+          test "$GITHUB_REF_NAME" = "v${VENDROID_VERSION}"
+          test "$VENDROID_VERSION_CODE" -gt 29
+          grep -q '^val stableGptEnabled = true$' app/build.gradle.kts
+
       - name: Require release-signing secrets
         run: |
           test -n "$VENDROID_KEYSTORE_BASE64" || { echo "Missing VENDROID_KEYSTORE_BASE64"; exit 1; }
@@ -117,13 +279,14 @@ jobs:
           printf '%s' "$VENDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/vendroid-release.jks"
           echo "VENDROID_KEYSTORE_PATH=$RUNNER_TEMP/vendroid-release.jks" >> "$GITHUB_ENV"
 
-      - name: Build signed release APK
-        run: ./gradlew assembleFossRelease
+      - name: Build signed release APK and Play AAB
+        run: ./gradlew assembleFossRelease bundleFossRelease
 
       - name: Verify and name release APK
         run: |
           apk="app/build/outputs/apk/foss/release/app-foss-release.apk"
           output="app/build/outputs/apk/foss/release/vendroid-v${VENDROID_VERSION}.apk"
+          checksum="app/build/outputs/apk/foss/release/vendroid-v${VENDROID_VERSION}.apk.sha256"
           aapt="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
           apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           "$apksigner" verify --verbose --print-certs "$apk"
@@ -131,10 +294,25 @@ jobs:
           grep -q "versionCode='${VENDROID_VERSION_CODE}'" apk-metadata.txt
           grep -q "versionName='${VENDROID_VERSION}'" apk-metadata.txt
           cp "$apk" "$output"
+          (cd "$(dirname "$output")" && sha256sum "$(basename "$output")" > "$(basename "$checksum")")
 
-      - name: Upload signed APK
+      - name: Upload signed distribution artifacts
         uses: actions/upload-artifact@v5
         with:
           name: vendroid-v${{ env.VENDROID_VERSION }}
-          path: app/build/outputs/apk/foss/release/vendroid-v${{ env.VENDROID_VERSION }}.apk
+          path: |
+            app/build/outputs/apk/foss/release/vendroid-v${{ env.VENDROID_VERSION }}.apk
+            app/build/outputs/apk/foss/release/vendroid-v${{ env.VENDROID_VERSION }}.apk.sha256
+            app/build/outputs/bundle/fossRelease/app-foss-release.aab
           if-no-files-found: error
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "app/build/outputs/apk/foss/release/vendroid-v${VENDROID_VERSION}.apk" \
+            "app/build/outputs/apk/foss/release/vendroid-v${VENDROID_VERSION}.apk.sha256" \
+            --verify-tag \
+            --title "Vendroid ${VENDROID_VERSION}" \
+            --notes-file "docs/releases/${VENDROID_VERSION}.md"

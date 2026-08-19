@@ -36,7 +36,13 @@ def configure_ventoy_options(
     label: str,
     reserved_mib: int,
     cluster_size: str,
+    partition_style: str | None = None,
 ):
+    if partition_style is not None:
+        partition_button = wait_for_element(driver, '//*[@resource-id="ventoyPartitionStyleButton"]')
+        partition_button.click()
+        wait_for_element(driver, f'//*[@text="{partition_style}"]').click()
+
     label_field = wait_for_element(driver, '//*[@resource-id="ventoyVolumeLabelField"]')
     label_field.clear()
     label_field.send_keys(label)
