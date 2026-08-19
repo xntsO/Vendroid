@@ -9,10 +9,12 @@ import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.Mockito
 import org.robolectric.annotation.Config
 import tech.apter.junit.jupiter.robolectric.RobolectricExtension
 import org.tukaani.xz.LZMA2Options
@@ -24,6 +26,7 @@ import java.io.IOException
 import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.security.SecureRandom
+import java.util.zip.CRC32
 
 class VentoyLayoutTest {
     @Test
@@ -152,6 +155,7 @@ class VentoyMbrTest {
         assertEquals(0x22, mbr[92].toInt() and 0xff)
         assertEquals(0xEE, entries[0].type)
         assertEquals(1, entries[0].startSector)
+        assertEquals(64L * 1024 * 1024 / 512 - 1, entries[0].sectorCount)
         assertTrue(entries.drop(1).all { it.type == 0 && it.sectorCount == 0L })
     }
 }
@@ -191,6 +195,118 @@ class VentoyDiskScannerTest {
 
         assertNotNull(info)
         assertEquals(VentoyPartitionStyle.Gpt, info?.partitionStyle)
+        assertFalse(info?.needsRepair ?: true)
+    }
+
+    @Test
+    fun `recognizes GPT from backup when primary header CRC is damaged`() {
+        val device = installedGptDevice()
+        device.write(512 + 24, byteArrayOf(0x7F))
+
+        val info = VentoyDiskScanner().scan(device)
+
+        assertEquals(VentoyPartitionStyle.Gpt, info?.partitionStyle)
+        assertTrue(info?.needsRepair == true)
+        assertThrows<IllegalArgumentException> { VentoyGpt.read(device) }
+    }
+
+    @Test
+    fun `recognizes backup GPT when protective MBR and primary signature are damaged`() {
+        val device = installedGptDevice()
+        device.write(510, byteArrayOf(0, 0))
+        device.write(512, ByteArray(8))
+
+        val info = VentoyDiskScanner().scan(device)
+
+        assertEquals(VentoyPartitionStyle.Gpt, info?.partitionStyle)
+        assertTrue(info?.needsRepair == true)
+        assertTrue(VentoyDiskScanner().hasAnyPartition(device))
+    }
+
+    @Test
+    fun `marks an incomplete protective MBR span for repair`() {
+        val device = installedGptDevice()
+        val mbr = device.readBytes(0, 512)
+        mbr.writeUInt32Le(VentoyDiskLayout.MBR_PARTITION_TABLE_OFFSET + 12, 1)
+        device.write(0, mbr)
+
+        val info = VentoyDiskScanner().scan(device)
+
+        assertEquals(VentoyPartitionStyle.Gpt, info?.partitionStyle)
+        assertTrue(info?.needsRepair == true)
+    }
+
+    @Test
+    fun `failed primary repair leaves the valid backup GPT untouched`() {
+        val device = installedGptDevice()
+        device.write(512 + 24, byteArrayOf(0x7F))
+        val backupOffset = device.sizeBytes -
+            VentoyDiskLayout.GPT_BACKUP_SECTOR_COUNT * VentoyDiskLayout.SECTOR_SIZE
+        val backup = device.readBytes(
+            backupOffset,
+            (VentoyDiskLayout.GPT_BACKUP_SECTOR_COUNT * 512).toInt(),
+        )
+        val failingDevice = FailingWriteRawBlockDevice(
+            delegate = device,
+            failingOffset = VentoyDiskLayout.GPT_PRIMARY_TABLE_START_SECTOR * 512,
+        )
+
+        assertThrows<IOException> { VentoyGpt.repair(failingDevice) }
+
+        assertArrayEquals(backup, device.readBytes(backupOffset, backup.size))
+        assertTrue(VentoyDiskScanner().scan(device)?.needsRepair == true)
+    }
+
+    @Test
+    fun `recognizes GPT from primary when backup table CRC is damaged`() {
+        val device = installedGptDevice()
+        val backupTableOffset = device.sizeBytes -
+            VentoyDiskLayout.GPT_BACKUP_SECTOR_COUNT * VentoyDiskLayout.SECTOR_SIZE
+        device.write(backupTableOffset, byteArrayOf(0x7F))
+
+        val info = VentoyDiskScanner().scan(device)
+
+        assertEquals(VentoyPartitionStyle.Gpt, info?.partitionStyle)
+        assertTrue(info?.needsRepair == true)
+        assertTrue(VentoyGpt.repair(device).redundancyHealthy)
+    }
+
+    @Test
+    fun `repairs a damaged backup GPT header CRC from the primary copy`() {
+        val device = installedGptDevice()
+        val backupHeaderOffset = device.sizeBytes - VentoyDiskLayout.SECTOR_SIZE
+        device.write(backupHeaderOffset + 16, byteArrayOf(0, 0, 0, 0))
+
+        assertTrue(VentoyDiskScanner().scan(device)?.needsRepair == true)
+
+        val repaired = VentoyGpt.repair(device)
+
+        assertTrue(repaired.redundancyHealthy)
+        assertFalse(VentoyDiskScanner().scan(device)?.needsRepair ?: true)
+    }
+
+    @Test
+    fun `rejects GPT when both partition table CRCs are damaged`() {
+        val device = installedGptDevice()
+        val backupTableOffset = device.sizeBytes -
+            VentoyDiskLayout.GPT_BACKUP_SECTOR_COUNT * VentoyDiskLayout.SECTOR_SIZE
+        device.write(2L * 512, byteArrayOf(0x7F))
+        device.write(backupTableOffset, byteArrayOf(0x7F))
+
+        assertNull(VentoyDiskScanner().scan(device))
+    }
+
+    @Test
+    fun `rejects a valid foreign GPT with Ventoy-like geometry`() {
+        val device = installedGptDevice()
+        rewriteGptPartitionType(device, tableStartSector = 2, headerSector = 1)
+        rewriteGptPartitionType(
+            device,
+            tableStartSector = device.sizeBytes / 512 - 33,
+            headerSector = device.sizeBytes / 512 - 1,
+        )
+
+        assertNull(VentoyDiskScanner().scan(device))
     }
 }
 
@@ -429,6 +545,9 @@ class VentoyInstallerTest {
         val markerOffset = plan.partition1StartSector * 512 + 2L * 1024 * 1024
         val marker = "keep-gpt".encodeToByteArray()
         device.write(markerOffset, marker)
+        val coreTailOffset = 2040L * 512
+        val coreTailMarker = "keep-core-tail".encodeToByteArray()
+        device.write(coreTailOffset, coreTailMarker)
         val primaryGpt = device.readBytes(512, 33 * 512)
         val backupGpt = device.readBytes(device.sizeBytes - 33L * 512, 33 * 512)
 
@@ -436,11 +555,126 @@ class VentoyInstallerTest {
 
         assertEquals(VentoyPartitionStyle.Gpt, info.partitionStyle)
         assertArrayEquals(marker, device.readBytes(markerOffset, marker.size))
+        assertArrayEquals(
+            coreTailMarker,
+            device.readBytes(coreTailOffset, coreTailMarker.size),
+        )
         assertArrayEquals(primaryGpt, device.readBytes(512, primaryGpt.size))
         assertArrayEquals(
             backupGpt,
             device.readBytes(device.sizeBytes - backupGpt.size, backupGpt.size),
         )
+    }
+
+    @Test
+    fun `repair rebuilds damaged primary GPT and preserves disk identity and files`() {
+        val device = memoryDevice(40L * 1024 * 1024)
+        val installer = VentoyInstaller(syntheticPayload())
+        val plan = installer.install(
+            device,
+            VentoyInstallOptions(
+                forceInstall = true,
+                partitionStyle = VentoyPartitionStyle.Gpt,
+            ),
+        )
+        val diskGuid = device.readBytes(512 + 56, 16)
+        val partitionGuids = device.readBytes(2L * 512 + 16, 16 + 128)
+        val markerOffset = plan.partition1StartSector * 512 + 1024L * 1024
+        val marker = "repair-keeps-me".encodeToByteArray()
+        device.write(markerOffset, marker)
+        device.write(512 + 24, byteArrayOf(0x7F))
+
+        val damagedInfo = VentoyDiskScanner().scan(device)
+        assertTrue(damagedInfo?.needsRepair == true)
+
+        val repairedInfo = installer.upgrade(device)
+
+        assertFalse(repairedInfo.needsRepair)
+        assertTrue(VentoyGpt.read(device).redundancyHealthy)
+        assertArrayEquals(diskGuid, device.readBytes(512 + 56, 16))
+        assertArrayEquals(partitionGuids, device.readBytes(2L * 512 + 16, 16 + 128))
+        assertArrayEquals(marker, device.readBytes(markerOffset, marker.size))
+    }
+
+    @Test
+    fun `repair restores a damaged protective MBR and preserves files`() {
+        val device = memoryDevice(40L * 1024 * 1024)
+        val installer = VentoyInstaller(syntheticPayload())
+        val plan = installer.install(
+            device,
+            VentoyInstallOptions(
+                forceInstall = true,
+                partitionStyle = VentoyPartitionStyle.Gpt,
+            ),
+        )
+        val markerOffset = plan.partition1StartSector * 512 + 1024L * 1024
+        val marker = "protective-mbr-repair".encodeToByteArray()
+        device.write(markerOffset, marker)
+        device.write(510, byteArrayOf(0, 0))
+
+        assertTrue(VentoyDiskScanner().scan(device)?.needsRepair == true)
+
+        val repaired = installer.upgrade(device)
+
+        assertFalse(repaired.needsRepair)
+        assertTrue(VentoyMbr.hasBootSignature(device.readBytes(0, 512)))
+        assertEquals(0xEE, VentoyMbr.parse(device.readBytes(0, 512)).first().type)
+        assertArrayEquals(marker, device.readBytes(markerOffset, marker.size))
+    }
+
+    @Test
+    fun `repairs newer GPT metadata without downgrading its payload`() {
+        val device = memoryDevice(40L * 1024 * 1024)
+        val installedPayload = syntheticPayload("1.1.17")
+        val plan = VentoyInstaller(installedPayload).install(
+            device,
+            VentoyInstallOptions(
+                forceInstall = true,
+                partitionStyle = VentoyPartitionStyle.Gpt,
+            ),
+        )
+        val scanner = Mockito.mock(VentoyDiskScanner::class.java)
+        val detected = VentoyDiskScanner().scan(device)!!.copy(
+            installedVersion = "1.1.17",
+            needsRepair = true,
+        )
+        Mockito.`when`(scanner.scan(device)).thenReturn(
+            detected,
+            detected.copy(needsRepair = false),
+        )
+        val coreBefore = device.readBytes(34L * 512, 2014 * 512)
+        val payloadBefore = device.readBytes(plan.partition2StartSector * 512, 1024 * 1024)
+        device.write(512 + 24, byteArrayOf(0x7F))
+
+        val repaired = VentoyInstaller(
+            payload = syntheticPayload("1.1.16"),
+            scanner = scanner,
+        ).upgrade(device)
+
+        assertFalse(repaired.needsRepair)
+        assertTrue(VentoyGpt.read(device).redundancyHealthy)
+        assertArrayEquals(coreBefore, device.readBytes(34L * 512, coreBefore.size))
+        assertArrayEquals(
+            payloadBefore,
+            device.readBytes(plan.partition2StartSector * 512, payloadBefore.size),
+        )
+    }
+
+    @Test
+    fun `post-write verification rejects a corrupted VTOYEFI payload`() {
+        val backing = memoryDevice(40L * 1024 * 1024)
+        val plan = VentoyDiskLayout.plan(backing.sizeBytes, backing.blockSize, "1.1.16")
+        val device = CorruptingRawBlockDevice(
+            delegate = backing,
+            targetOffset = plan.partition2StartSector * 512 + 4096,
+        )
+
+        assertThrows<IllegalArgumentException> {
+            VentoyInstaller(syntheticPayload()).install(
+                device,
+                VentoyInstallOptions(forceInstall = true),
+            )
+        }
     }
 }
 
@@ -570,6 +804,83 @@ private fun xz(bytes: ByteArray): ByteArray {
 
 private fun memoryDevice(size: Long): RawBlockDevice =
     BlockDeviceRawBlockDevice(MemoryBufferBlockDeviceDriver(size, 512))
+
+private fun installedGptDevice(): RawBlockDevice =
+    memoryDevice(40L * 1024 * 1024).also { device ->
+        VentoyInstaller(syntheticPayload()).install(
+            device,
+            VentoyInstallOptions(
+                forceInstall = true,
+                partitionStyle = VentoyPartitionStyle.Gpt,
+            ),
+        )
+    }
+
+private fun rewriteGptPartitionType(
+    device: RawBlockDevice,
+    tableStartSector: Long,
+    headerSector: Long,
+) {
+    val tableLength = VentoyDiskLayout.GPT_PARTITION_ENTRY_COUNT *
+        VentoyDiskLayout.GPT_PARTITION_ENTRY_SIZE
+    val table = device.readBytes(tableStartSector * 512, tableLength)
+    table[0] = (table[0].toInt() xor 0x01).toByte()
+    device.write(tableStartSector * 512, table)
+
+    val tableCrc = CRC32().run {
+        update(table)
+        value
+    }
+    val header = device.readBytes(headerSector * 512, 512)
+    header.writeUInt32Le(88, tableCrc)
+    header.writeUInt32Le(16, 0)
+    val headerSize = header.readUInt32Le(12).toInt()
+    val headerCrc = CRC32().run {
+        update(header, 0, headerSize)
+        value
+    }
+    header.writeUInt32Le(16, headerCrc)
+    device.write(headerSector * 512, header)
+}
+
+private class CorruptingRawBlockDevice(
+    private val delegate: RawBlockDevice,
+    private val targetOffset: Long,
+) : RawBlockDevice by delegate {
+    private var corrupted = false
+
+    override fun write(
+        offset: Long,
+        source: ByteArray,
+        sourceOffset: Int,
+        length: Int,
+    ) {
+        delegate.write(offset, source, sourceOffset, length)
+        if (!corrupted && targetOffset in offset until offset + length) {
+            val byte = delegate.readBytes(targetOffset, 1)
+            byte[0] = (byte[0].toInt() xor 0x01).toByte()
+            delegate.write(targetOffset, byte)
+            corrupted = true
+        }
+    }
+}
+
+private class FailingWriteRawBlockDevice(
+    private val delegate: RawBlockDevice,
+    private val failingOffset: Long,
+) : RawBlockDevice by delegate {
+    override fun write(
+        offset: Long,
+        source: ByteArray,
+        sourceOffset: Int,
+        length: Int,
+    ) {
+        if (failingOffset in offset until offset + length) {
+            throw IOException("Injected GPT repair failure")
+        }
+        delegate.write(offset, source, sourceOffset, length)
+    }
+}
 
 private fun rootEntryOffset(device: RawBlockDevice, plan: VentoyInstallPlan): Long {
     val bootSector = device.readBytes(plan.partition1StartSector * 512, 512)

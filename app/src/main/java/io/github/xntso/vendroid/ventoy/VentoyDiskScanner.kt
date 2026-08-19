@@ -4,13 +4,14 @@ class VentoyDiskScanner {
     fun scan(device: RawBlockDevice): VentoyDiskInfo? {
         if (device.blockSize != VentoyDiskLayout.SECTOR_SIZE) return null
         val mbr = device.readBytes(0, VentoyDiskLayout.SECTOR_SIZE)
-        if (!VentoyMbr.hasBootSignature(mbr)) return null
-
         val entries = VentoyMbr.parse(mbr)
-        return if (entries.first().type == 0xEE && entries.first().startSector == 1L) {
-            scanGpt(device)
-        } else {
-            scanMbr(device, entries)
+        val protectiveMbrHealthy = VentoyMbr.isProtective(mbr, device.sizeBytes)
+        val hasGptSignature = hasGptHeaderSignature(device)
+        return when {
+            protectiveMbrHealthy || hasGptSignature ->
+                scanGpt(device, protectiveMbrHealthy)
+            VentoyMbr.hasBootSignature(mbr) -> scanMbr(device, entries)
+            else -> null
         }
     }
 
@@ -46,8 +47,11 @@ class VentoyDiskScanner {
         )
     }
 
-    private fun scanGpt(device: RawBlockDevice): VentoyDiskInfo? {
-        val gpt = runCatching { VentoyGpt.read(device) }.getOrNull() ?: return null
+    private fun scanGpt(
+        device: RawBlockDevice,
+        protectiveMbrHealthy: Boolean,
+    ): VentoyDiskInfo? {
+        val gpt = runCatching { VentoyGpt.readRecoverable(device) }.getOrNull() ?: return null
         val part1 = gpt.partition1
         val part2 = gpt.partition2
         val totalSectors = device.sizeBytes / VentoyDiskLayout.SECTOR_SIZE
@@ -72,6 +76,7 @@ class VentoyDiskScanner {
                 (part2.endSector + 1 + VentoyDiskLayout.GPT_BACKUP_SECTOR_COUNT) *
                 VentoyDiskLayout.SECTOR_SIZE,
             partitionStyle = VentoyPartitionStyle.Gpt,
+            needsRepair = !protectiveMbrHealthy || !gpt.redundancyHealthy,
         )
     }
 
@@ -93,8 +98,15 @@ class VentoyDiskScanner {
         ) {
             return true
         }
-        return device.sizeBytes >= 2L * VentoyDiskLayout.SECTOR_SIZE &&
-            device.readBytes(VentoyDiskLayout.SECTOR_SIZE.toLong(), 8)
+        return hasGptHeaderSignature(device)
+    }
+
+    private fun hasGptHeaderSignature(device: RawBlockDevice): Boolean {
+        val totalSectors = device.sizeBytes / VentoyDiskLayout.SECTOR_SIZE
+        if (totalSectors < 2) return false
+        return sequenceOf(1L, totalSectors - 1).any { sector ->
+            device.readBytes(sector * VentoyDiskLayout.SECTOR_SIZE, 8)
                 .contentEquals("EFI PART".encodeToByteArray())
+        }
     }
 }
