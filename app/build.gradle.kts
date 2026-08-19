@@ -171,8 +171,7 @@ dependencies {
     implementation(libs.documentfile)
     implementation(libs.kotlinx.coroutines.debug)
     implementation(libs.libaums.core)
-    // TODO: re-enable once released
-    // implementation(libs.libaums.libusbcommunication)
+    implementation(libs.libaums.libusbcommunication)
     implementation(libs.lifecycle.runtime.ktx)
     implementation(libs.lifecycle.service)
     implementation(libs.localbroadcastmanager)
