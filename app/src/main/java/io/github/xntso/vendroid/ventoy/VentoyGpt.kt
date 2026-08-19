@@ -4,6 +4,8 @@ import java.security.SecureRandom
 import java.util.zip.CRC32
 
 internal data class GptPartitionEntry(
+    val typeGuid: ByteArray,
+    val uniqueGuid: ByteArray,
     val startSector: Long,
     val endSector: Long,
     val attributes: Long,
@@ -16,6 +18,7 @@ internal data class GptPartitionEntry(
 internal data class VentoyGptInfo(
     val partition1: GptPartitionEntry,
     val partition2: GptPartitionEntry,
+    val redundancyHealthy: Boolean,
 )
 
 internal object VentoyGpt {
@@ -99,59 +102,110 @@ internal object VentoyGpt {
         )
     }
 
-    fun read(device: RawBlockDevice): VentoyGptInfo {
+    fun read(device: RawBlockDevice): VentoyGptInfo =
+        readState(device).info.also { info ->
+            require(info.redundancyHealthy) {
+                "Primary and backup GPT structures are not both valid."
+            }
+        }
+
+    fun readRecoverable(device: RawBlockDevice): VentoyGptInfo = readState(device).info
+
+    fun repair(device: RawBlockDevice): VentoyGptInfo {
+        val state = readState(device)
+        if (state.info.redundancyHealthy) return state.info
+
+        val totalSectors = device.sizeBytes / VentoyDiskLayout.SECTOR_SIZE
+        val backupHeaderSector = totalSectors - 1
+        val backupTableStartSector = backupHeaderSector - VentoyDiskLayout.GPT_TABLE_SECTOR_COUNT
+        val lastUsableSector = totalSectors - VentoyDiskLayout.GPT_BACKUP_SECTOR_COUNT - 1
+        val entriesCrc = crc32(state.entries)
+        val primaryHeader = buildHeader(
+            currentSector = VentoyDiskLayout.GPT_PRIMARY_HEADER_SECTOR,
+            backupSector = backupHeaderSector,
+            lastUsableSector = lastUsableSector,
+            partitionTableStartSector = VentoyDiskLayout.GPT_PRIMARY_TABLE_START_SECTOR,
+            diskGuid = state.diskGuid,
+            entriesCrc = entriesCrc,
+        )
+        val backupHeader = buildHeader(
+            currentSector = backupHeaderSector,
+            backupSector = VentoyDiskLayout.GPT_PRIMARY_HEADER_SECTOR,
+            lastUsableSector = lastUsableSector,
+            partitionTableStartSector = backupTableStartSector,
+            diskGuid = state.diskGuid,
+            entriesCrc = entriesCrc,
+        )
+
+        if (!state.primaryValid) {
+            device.write(
+                VentoyDiskLayout.GPT_PRIMARY_TABLE_START_SECTOR * VentoyDiskLayout.SECTOR_SIZE,
+                state.entries,
+            )
+            device.write(
+                VentoyDiskLayout.GPT_PRIMARY_HEADER_SECTOR * VentoyDiskLayout.SECTOR_SIZE,
+                primaryHeader,
+            )
+            readCopy(
+                device = device,
+                headerSector = VentoyDiskLayout.GPT_PRIMARY_HEADER_SECTOR,
+                expectedBackupSector = backupHeaderSector,
+                expectedTableStartSector = VentoyDiskLayout.GPT_PRIMARY_TABLE_START_SECTOR,
+                expectedLastUsableSector = lastUsableSector,
+            )
+        } else if (!state.backupValid) {
+            device.write(backupTableStartSector * VentoyDiskLayout.SECTOR_SIZE, state.entries)
+            device.write(backupHeaderSector * VentoyDiskLayout.SECTOR_SIZE, backupHeader)
+            readCopy(
+                device = device,
+                headerSector = backupHeaderSector,
+                expectedBackupSector = VentoyDiskLayout.GPT_PRIMARY_HEADER_SECTOR,
+                expectedTableStartSector = backupTableStartSector,
+                expectedLastUsableSector = lastUsableSector,
+            )
+        }
+        return read(device)
+    }
+
+    private fun readState(device: RawBlockDevice): GptState {
         require(device.blockSize == VentoyDiskLayout.SECTOR_SIZE) {
             "GPT support requires 512-byte logical sectors."
         }
         val totalSectors = device.sizeBytes / VentoyDiskLayout.SECTOR_SIZE
         val lastSector = totalSectors - 1
-        val primaryHeaderBytes = device.readBytes(
-            VentoyDiskLayout.GPT_PRIMARY_HEADER_SECTOR * VentoyDiskLayout.SECTOR_SIZE,
-            VentoyDiskLayout.SECTOR_SIZE,
-        )
-        val primaryHeader = parseHeader(
-            bytes = primaryHeaderBytes,
-            expectedCurrentSector = VentoyDiskLayout.GPT_PRIMARY_HEADER_SECTOR,
-            expectedBackupSector = lastSector,
-        )
-        require(primaryHeader.partitionTableStartSector == VentoyDiskLayout.GPT_PRIMARY_TABLE_START_SECTOR) {
-            "Unexpected primary GPT partition table location."
-        }
         val expectedLastUsableSector =
             totalSectors - VentoyDiskLayout.GPT_BACKUP_SECTOR_COUNT - 1
-        require(primaryHeader.lastUsableSector == expectedLastUsableSector) {
-            "Unexpected last usable GPT sector."
+        val primary = runCatching {
+            readCopy(
+                device = device,
+                headerSector = VentoyDiskLayout.GPT_PRIMARY_HEADER_SECTOR,
+                expectedBackupSector = lastSector,
+                expectedTableStartSector = VentoyDiskLayout.GPT_PRIMARY_TABLE_START_SECTOR,
+                expectedLastUsableSector = expectedLastUsableSector,
+            )
+        }.getOrNull()
+        val backup = runCatching {
+            readCopy(
+                device = device,
+                headerSector = lastSector,
+                expectedBackupSector = VentoyDiskLayout.GPT_PRIMARY_HEADER_SECTOR,
+                expectedTableStartSector = lastSector - VentoyDiskLayout.GPT_TABLE_SECTOR_COUNT,
+                expectedLastUsableSector = expectedLastUsableSector,
+            )
+        }.getOrNull()
+        require(primary != null || backup != null) { "No valid GPT header and partition table copy." }
+        if (primary != null && backup != null) {
+            require(primary.header.diskGuid.contentEquals(backup.header.diskGuid)) {
+                "Primary and backup GPT disk GUIDs differ."
+            }
+            require(primary.entries.contentEquals(backup.entries)) {
+                "Primary and backup GPT partition tables differ."
+            }
         }
 
-        val primaryEntries = readAndValidateEntries(device, primaryHeader)
-        val backupHeaderBytes = device.readBytes(
-            lastSector * VentoyDiskLayout.SECTOR_SIZE,
-            VentoyDiskLayout.SECTOR_SIZE,
-        )
-        val backupHeader = parseHeader(
-            bytes = backupHeaderBytes,
-            expectedCurrentSector = lastSector,
-            expectedBackupSector = VentoyDiskLayout.GPT_PRIMARY_HEADER_SECTOR,
-        )
-        require(
-            backupHeader.partitionTableStartSector ==
-                lastSector - VentoyDiskLayout.GPT_TABLE_SECTOR_COUNT,
-        ) {
-            "Unexpected backup GPT partition table location."
-        }
-        require(primaryHeader.diskGuid.contentEquals(backupHeader.diskGuid)) {
-            "Primary and backup GPT disk GUIDs differ."
-        }
-        require(backupHeader.lastUsableSector == expectedLastUsableSector) {
-            "Primary and backup GPT usable ranges differ."
-        }
-        val backupEntries = readAndValidateEntries(device, backupHeader)
-        require(primaryEntries.contentEquals(backupEntries)) {
-            "Primary and backup GPT partition tables differ."
-        }
-
-        val partition1 = parsePartitionEntry(primaryEntries, 0)
-        val partition2 = parsePartitionEntry(primaryEntries, 1)
+        val source = primary ?: backup!!
+        val partition1 = parsePartitionEntry(source.entries, 0)
+        val partition2 = parsePartitionEntry(source.entries, 1)
         require(partition1.startSector >= VentoyDiskLayout.GPT_FIRST_USABLE_SECTOR &&
             partition1.endSector >= partition1.startSector
         ) {
@@ -163,7 +217,57 @@ internal object VentoyGpt {
         ) {
             "Invalid second GPT partition range."
         }
-        return VentoyGptInfo(partition1, partition2)
+        require(partition1.typeGuid.contentEquals(basicDataPartitionType) &&
+            partition2.typeGuid.contentEquals(basicDataPartitionType)
+        ) {
+            "Unexpected Ventoy GPT partition type."
+        }
+        require(!partition1.uniqueGuid.contentEquals(partition2.uniqueGuid)) {
+            "Ventoy GPT partitions share a unique GUID."
+        }
+        require(partition1.name == "Ventoy" && partition1.attributes == 0L) {
+            "Ventoy data partition metadata mismatch."
+        }
+        require(partition2.name == "VTOYEFI" &&
+            partition2.attributes == VENTOY_EFI_PARTITION_ATTRIBUTES
+        ) {
+            "VTOYEFI GPT metadata mismatch."
+        }
+        return GptState(
+            info = VentoyGptInfo(
+                partition1 = partition1,
+                partition2 = partition2,
+                redundancyHealthy = primary != null && backup != null,
+            ),
+            entries = source.entries,
+            diskGuid = source.header.diskGuid,
+            primaryValid = primary != null,
+            backupValid = backup != null,
+        )
+    }
+
+    private fun readCopy(
+        device: RawBlockDevice,
+        headerSector: Long,
+        expectedBackupSector: Long,
+        expectedTableStartSector: Long,
+        expectedLastUsableSector: Long,
+    ): GptCopy {
+        val header = parseHeader(
+            bytes = device.readBytes(
+                headerSector * VentoyDiskLayout.SECTOR_SIZE,
+                VentoyDiskLayout.SECTOR_SIZE,
+            ),
+            expectedCurrentSector = headerSector,
+            expectedBackupSector = expectedBackupSector,
+        )
+        require(header.partitionTableStartSector == expectedTableStartSector) {
+            "Unexpected GPT partition table location."
+        }
+        require(header.lastUsableSector == expectedLastUsableSector) {
+            "Unexpected last usable GPT sector."
+        }
+        return GptCopy(header, readAndValidateEntries(device, header))
     }
 
     private fun buildHeader(
@@ -270,6 +374,9 @@ internal object VentoyGpt {
         require(entries.copyOfRange(offset, offset + 16).any { it.toInt() != 0 }) {
             "Missing GPT partition ${index + 1}."
         }
+        require(entries.copyOfRange(offset + 16, offset + 32).any { it.toInt() != 0 }) {
+            "GPT partition ${index + 1} has no unique GUID."
+        }
         val nameBytes = entries.copyOfRange(offset + 56, offset + 128)
         var nameLength = 0
         while (nameLength + 1 < nameBytes.size &&
@@ -278,6 +385,8 @@ internal object VentoyGpt {
             nameLength += 2
         }
         return GptPartitionEntry(
+            typeGuid = entries.copyOfRange(offset, offset + 16),
+            uniqueGuid = entries.copyOfRange(offset + 16, offset + 32),
             startSector = entries.readUInt64Le(offset + 32),
             endSector = entries.readUInt64Le(offset + 40),
             attributes = entries.readUInt64Le(offset + 48),
@@ -303,5 +412,18 @@ internal object VentoyGpt {
         val diskGuid: ByteArray,
         val partitionTableStartSector: Long,
         val partitionTableCrc: Long,
+    )
+
+    private data class GptCopy(
+        val header: GptHeader,
+        val entries: ByteArray,
+    )
+
+    private data class GptState(
+        val info: VentoyGptInfo,
+        val entries: ByteArray,
+        val diskGuid: ByteArray,
+        val primaryValid: Boolean,
+        val backupValid: Boolean,
     )
 }

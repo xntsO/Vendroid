@@ -74,6 +74,7 @@ data class VentoyDiskInfo(
     val supportedForUpgrade: Boolean,
     val reservedSpaceBytes: Long,
     val partitionStyle: VentoyPartitionStyle = VentoyPartitionStyle.Mbr,
+    val needsRepair: Boolean = false,
 )
 
 internal object VentoyDiskLayout {

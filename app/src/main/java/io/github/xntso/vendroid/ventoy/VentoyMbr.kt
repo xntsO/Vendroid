@@ -111,6 +111,28 @@ internal object VentoyMbr {
             (mbr[510].toInt() and 0xff) == 0x55 &&
             (mbr[511].toInt() and 0xff) == 0xAA
 
+    fun isProtective(mbr: ByteArray, diskSizeBytes: Long): Boolean {
+        if (!hasBootSignature(mbr) || diskSizeBytes < 2L * VentoyDiskLayout.SECTOR_SIZE) {
+            return false
+        }
+        val entries = parse(mbr)
+        val protectedSectors = minOf(
+            diskSizeBytes / VentoyDiskLayout.SECTOR_SIZE - 1,
+            UInt.MAX_VALUE.toLong(),
+        )
+        return entries.first().let { entry ->
+            entry.active == 0 &&
+                entry.type == 0xEE &&
+                entry.startSector == 1L &&
+                entry.sectorCount == protectedSectors
+        } && entries.drop(1).all { entry ->
+            entry.active == 0 &&
+                entry.type == 0 &&
+                entry.startSector == 0L &&
+                entry.sectorCount == 0L
+        }
+    }
+
     private fun writeIdentity(
         mbr: ByteArray,
         random: SecureRandom,
