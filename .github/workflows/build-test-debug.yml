@@ -125,7 +125,11 @@ jobs:
           path: apk
 
       - name: Install QEMU
-        uses: etchdroid/qemu-kvm-action/setup@v1
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
+            ffmpeg i3-wm ovmf qemu-system-gui qemu-system-modules-opengl \
+            qemu-system-x86 qemu-utils x11-utils xvfb
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
