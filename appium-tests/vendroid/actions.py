@@ -101,6 +101,7 @@ def accept_usb_permission(driver: Remote):
 
 def confirm_write_image(driver: Remote):
     write_image_btn = wait_for_element(driver, '//*[@resource-id="writeImageButton"]')
+    assert write_image_btn.is_displayed(), "Confirmation action must remain visible"
     write_image_btn.click()
 
 
