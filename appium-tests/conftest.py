@@ -1,13 +1,12 @@
 import pytest
+import os
 import traceback as _tb
 from pathlib import Path
 
 from vendroid.config import Config
 
-# A failing e2e test is almost never a Python bug in the harness — it's the app not
-# reaching the expected state. So for every test failure we drop the firehose
-# pytest/pluggy/selenium traceback and instead show a concise message + the in-repo
-# frames + the denoised app logcat, which is what's actually useful when triaging.
+# Keep app failures and harness failures reviewable with the in-repo frames,
+# Android screen, and logcat; omit irrelevant pytest/pluggy internals.
 _CLEAN_REPORT = pytest.StashKey()
 
 
@@ -57,6 +56,20 @@ def pytest_runtest_makereport(item, call):
     report = yield
 
     if report.when == "call" and report.failed and call.excinfo is not None:
+        evidence_dir = os.environ.get("VENDROID_EVIDENCE_DIR")
+        driver = item.funcargs.get("driver")
+        if evidence_dir and driver is not None:
+            destination = Path(evidence_dir) / "failure-screens"
+            destination.mkdir(parents=True, exist_ok=True)
+            for suffix, capture in (
+                ("xml", lambda path: path.write_text(driver.page_source, encoding="utf-8")),
+                ("png", lambda path: driver.save_screenshot(str(path))),
+            ):
+                try:
+                    capture(destination / f"{item.name}.{suffix}")
+                except Exception as error:
+                    # Diagnostics must not replace the original test failure.
+                    print(f"Could not capture failure {suffix}: {error}")
         report.longrepr = (
             f"{call.excinfo.typename}: {_exception_message(call.excinfo.value)}\n\n"
             f"{_repo_frames(call.excinfo.tb)}"

@@ -33,9 +33,13 @@ The old/new payload archives are pinned by version and SHA-256 from the upstream
 
 The disk image is detached from QEMU and its block backend released before host inspection, filesystem mounting, or intentional corruption. Helpers accept regular image files, not physical block devices. Firmware checks use disposable snapshot writes and no network.
 
+The exact-byte downgrade check temporarily stops the disposable VM's `vold` service, then restores it. Bliss OS otherwise mounts GPT's VTOYEFI partition and runs `fsck_msdos`, adding an independent writer to the test. ADB root controls this VM service only; Vendroid runs under its ordinary app UID. Installation, reconnect, repair, and update checks retain normal Android mounting behavior. This isolated assertion verifies Vendroid's behavior, not that Android itself never writes to an attached drive.
+
 ## Read the result
 
 Download the workflow artifacts. They retain APKs, unit/lint reports, JUnit, package metadata, APK checksums, the tested commit, lifecycle checkpoints, large-drive results, and boot serial logs for 30 days, including successful runs. A missing final `passed: true` or a missing expected report is not a pass. The workflow status and JUnit failures remain authoritative; earlier successful checkpoints do not override a later failure.
+
+Failed Android tests also attempt to save a screenshot and UI XML under `validation/failure-screens/`. Firmware failures save a QEMU screen capture when available. Logs remain available if screen capture fails.
 
 An intentionally skipped second large-drive controller case avoids repeating the same capacity test. Existing `legacy_etchdroid` tests remain excluded because they exercise the inherited raw-image flow. CI does not claim those interruption cases passed.
 
@@ -52,6 +56,8 @@ Reuse evidence for changes that do not affect storage, USB handling, payloads, o
 If no boot-capable computer or prior signed APK is available, record that check as untested. Seek additional device reports from Preview users; do not describe the one-device result as universal compatibility. Drives above 2 TiB remain Preview-only until real large-drive evidence is available. Ordinary GPT promotion must have a separate capacity gate.
 
 ## Remaining work outside this automation change
+
+The first expanded CI run exposed a real large-drive failure: the 3 TiB virtual USB is reported as zero bytes, so scanning fails before the intended capacity policy appears. In pinned libaums 0.10.0, READ CAPACITY(10)'s unsigned `0xFFFFFFFF` sentinel becomes `-1`; Vendroid's block-count adapter adds one. The driver also truncates read/write LBAs to 32 bits. Full support therefore needs READ CAPACITY(16) plus READ(16)/WRITE(16), not just a capacity arithmetic change. Until then, reject unsupported capacity explicitly and do not claim large-drive support. The 3 TiB checks remain enabled and failing to keep this gap visible. Sources: [capacity parser](https://github.com/magnusja/libaums/blob/af89120aa434ccd97b985a6d66420c1b7e30a1ad/libaums/src/main/java/me/jahnen/libaums/core/driver/scsi/commands/ScsiReadCapacityResponse.kt#L62), [SCSI driver](https://github.com/magnusja/libaums/blob/af89120aa434ccd97b985a6d66420c1b7e30a1ad/libaums/src/main/java/me/jahnen/libaums/core/driver/scsi/ScsiBlockDevice.kt#L117), [CI reproduction](https://github.com/xntsO/Vendroid/actions/runs/33950982930/job/101266912346).
 
 The prior source review identified independent fixes: separate the stable GPT and large-capacity gates; handle unknown installed versions without silent downgrade; recover when the primary-header read fails; tolerate editable GPT names; and avoid overwriting preserved boot-core bytes during updates. Passing this suite does not close scenarios it does not inject. Stable GPT also needs its own optimized-package CI matrix entry when enabled. No merge, promotion, or publication is implied by a validation run.
 

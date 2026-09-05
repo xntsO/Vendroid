@@ -122,7 +122,7 @@ jobs:
     timeout-minutes: 90
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 4
       matrix:
         controller: [uhci, xhci]
         channel: [stable, preview]
@@ -263,6 +263,11 @@ jobs:
             cd appium-tests
             export LOGCAT_DIR="$PWD/../vm-outputs/logcat"
             ./scripts/wait-vm-startup.sh
+            # Control only the disposable VM's auto-mounter for the zero-write
+            # assertion. The installed APK still runs under its normal app UID.
+            adb root
+            ./scripts/wait-vm-startup.sh
+            test "$(adb shell id -u | tr -d '\r')" = 0
             adb install -r ../apk/*.apk
             sha256sum ../apk/*.apk > ../vm-outputs/apk.sha256
             git rev-parse HEAD > ../vm-outputs/commit.txt
