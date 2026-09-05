@@ -1,5 +1,6 @@
 import asyncio
 import socket
+import time
 from pathlib import Path
 from typing import cast
 
@@ -211,6 +212,29 @@ class QEMUController:
         index = self._monitor.expect([r"\(qemu\) ", r"Error:"])
         if index == 1:
             raise RuntimeError(f"Failed to delete device: {self._monitor.after}")
+
+    @async_to_sync_with_loop
+    async def detach_usb_drive(self, device_id: str):
+        """Wait for guest removal, then release the image before host inspection/writes."""
+        await self._qmp.execute("device_del", {"id": device_id})
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            children = await self._qmp.execute("qom-list", {"path": "/machine/peripheral"})
+            if not any(child["name"] == device_id for child in children):
+                break
+            await asyncio.sleep(0.1)
+        else:
+            raise TimeoutError(f"USB device {device_id} did not detach")
+        blocks = await self._qmp.execute("query-block")
+        if any(block["device"] == device_id for block in blocks):
+            response = await self._qmp.execute(
+                "human-monitor-command", {"command-line": f"drive_del {_check_spaces(device_id)}"}
+            )
+            if response.strip():
+                raise RuntimeError(f"Could not release detached image: {response}")
+        blocks = await self._qmp.execute("query-block")
+        if any(block["device"] == device_id for block in blocks):
+            raise RuntimeError(f"Detached image {device_id} is still open in QEMU")
 
     # noinspection PyShadowingBuiltins
     def add_usb_drive(
