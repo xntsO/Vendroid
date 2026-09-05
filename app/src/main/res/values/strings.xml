@@ -48,19 +48,23 @@
     <string name="ventoy_update_available">Ventoy %1$s installed · %2$s available</string>
     <string name="ventoy_ready_to_repair">Ventoy %1$s is installed and can be repaired.</string>
     <string name="ventoy_newer_than_bundled">This drive has Ventoy %1$s, newer than Vendroid’s %2$s. Downgrade is blocked.</string>
+    <string name="ventoy_unknown_version_blocked">The installed Ventoy version could not be determined. Update and repair are blocked to prevent a possible downgrade.</string>
+    <string name="ventoy_metadata_only_repair">Only damaged GPT partition metadata will be repaired. The installed Ventoy payload and your files will be preserved.</string>
     <string name="existing_partitions_use_force_install">This drive already has partitions. Return and choose Force install to erase it.</string>
     <string name="could_not_check_ventoy">Could not inspect this USB drive.</string>
     <string name="files_will_be_preserved">Your files will be preserved</string>
     <string name="updating_ventoy_preserves_files">Only Ventoy boot components will be refreshed. Keep the drive connected and back up irreplaceable files first.</string>
     <string name="ventoy_options_summary">%1$s · exFAT · Label: %2$s · Cluster: %3$s · Reserved: %4$s</string>
     <string name="partition_style">Partition style</string>
-    <string name="partition_style_description">MBR is the compatible default. GPT supports disks larger than 2 TiB and modern UEFI systems.</string>
+    <string name="partition_style_description">MBR is the recommended default. Drives larger than 2 TiB require GPT and V-Preview.</string>
     <string name="partition_style_mbr">MBR (Recommended)</string>
     <string name="partition_style_gpt" translatable="false">GPT</string>
     <string name="partition_style_gpt_preview" translatable="false">GPT (Preview)</string>
     <string name="gpt_preview_warning">Experimental: back up the USB drive before installing with GPT.</string>
     <string name="gpt_available_in_v_preview">GPT installation is available in the separately installable GitHub V-Preview.</string>
     <string name="drive_requires_v_preview">This drive requires the separately installable GitHub V-Preview until the GPT path passes physical testing.</string>
+    <string name="large_drive_requires_v_preview">Drives larger than 2 TiB require the separately installable GitHub V-Preview until large-drive support passes physical testing.</string>
+    <string name="large_drive_requires_gpt">This drive is larger than 2 TiB. Select GPT to continue; MBR cannot use this capacity.</string>
     <string name="get_v_preview">Get V-Preview from GitHub</string>
     <string name="check_online_ventoy_update">Check for online update</string>
     <string name="checking_online_ventoy_update">Checking Ventoy releases…</string>

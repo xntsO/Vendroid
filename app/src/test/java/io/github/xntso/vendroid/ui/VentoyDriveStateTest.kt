@@ -146,13 +146,226 @@ class VentoyDriveStateTest {
             diskSizeBytes = DISK_SIZE,
             bundledVersion = "1.1.16",
             supportsGpt = true,
+            supportsLargeDrives = true,
         )
 
         assertEquals(VentoyDriveState.ReadyToRepair, viewModel.state.value.ventoyDriveState)
     }
 
+    @Test
+    fun `stable accepts MBR at exactly 2 TiB`() {
+        val viewModel = ConfirmOperationActivityViewModel()
+
+        viewModel.setVentoyScanResult(
+            diskInfo = null,
+            hasAnyPartition = false,
+            diskSizeBytes = VentoyDiskLayout.MAX_MBR_DISK_BYTES,
+            bundledVersion = "1.1.16",
+        )
+
+        assertEquals(VentoyDriveState.ReadyToInstall, viewModel.state.value.ventoyDriveState)
+        assertEquals(VentoyPartitionStyle.Mbr, viewModel.state.value.ventoyOptions.partitionStyle)
+    }
+
+    @Test
+    fun `promoting stable GPT does not admit a new large drive`() {
+        val viewModel = ConfirmOperationActivityViewModel()
+
+        viewModel.setVentoyScanResult(
+            diskInfo = null,
+            hasAnyPartition = false,
+            diskSizeBytes = VentoyDiskLayout.MAX_MBR_DISK_BYTES + 512,
+            bundledVersion = "1.1.16",
+            supportsGpt = true,
+        )
+
+        assertEquals(VentoyDriveState.RequiresPreview, viewModel.state.value.ventoyDriveState)
+    }
+
+    @Test
+    fun `promoted stable GPT permits ordinary GPT maintenance`() {
+        val viewModel = ConfirmOperationActivityViewModel()
+
+        viewModel.setVentoyScanResult(
+            diskInfo = diskInfo("1.1.16", VentoyPartitionStyle.Gpt),
+            hasAnyPartition = true,
+            diskSizeBytes = DISK_SIZE,
+            bundledVersion = "1.1.16",
+            supportsGpt = true,
+            supportsLargeDrives = false,
+        )
+
+        assertEquals(VentoyDriveState.ReadyToRepair, viewModel.state.value.ventoyDriveState)
+    }
+
+    @Test
+    fun `large drive gate precedes maintenance and force install after GPT promotion`() {
+        for (forceInstall in listOf(false, true)) {
+            for (version in listOf("1.1.15", "1.1.16", "1.2.0")) {
+                for (style in VentoyPartitionStyle.entries) {
+                    val viewModel = ConfirmOperationActivityViewModel()
+                    viewModel.init(
+                        openedImage = null,
+                        selectedDevice = null,
+                        operation = Intents.OPERATION_VENTOY_INSTALL,
+                        forceInstall = forceInstall,
+                    )
+                    val largeDisk = diskInfo(version, style, needsRepair = true).copy(
+                        diskSizeBytes = VentoyDiskLayout.MAX_MBR_DISK_BYTES + 512,
+                    )
+
+                    viewModel.setVentoyScanResult(
+                        diskInfo = largeDisk,
+                        hasAnyPartition = true,
+                        diskSizeBytes = largeDisk.diskSizeBytes,
+                        bundledVersion = "1.1.16",
+                        supportsGpt = true,
+                        supportsLargeDrives = false,
+                    )
+
+                    assertEquals(
+                        VentoyDriveState.RequiresPreview,
+                        viewModel.state.value.ventoyDriveState,
+                        "forceInstall=$forceInstall, version=$version, style=$style",
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `large capacity permission does not bypass the GPT gate`() {
+        val viewModel = ConfirmOperationActivityViewModel()
+
+        viewModel.setVentoyScanResult(
+            diskInfo = diskInfo("1.1.16", VentoyPartitionStyle.Gpt),
+            hasAnyPartition = true,
+            diskSizeBytes = DISK_SIZE,
+            bundledVersion = "1.1.16",
+            supportsGpt = false,
+            supportsLargeDrives = true,
+        )
+
+        assertEquals(VentoyDriveState.RequiresPreview, viewModel.state.value.ventoyDriveState)
+    }
+
+    @Test
+    fun `each new installation starts with MBR including force install`() {
+        val viewModel = ConfirmOperationActivityViewModel()
+        for (forceInstall in listOf(false, true)) {
+            viewModel.setVentoyOptions(VentoyJobOptions(partitionStyle = VentoyPartitionStyle.Gpt))
+
+            viewModel.init(
+                openedImage = null,
+                selectedDevice = null,
+                operation = Intents.OPERATION_VENTOY_INSTALL,
+                forceInstall = forceInstall,
+            )
+
+            assertEquals(VentoyPartitionStyle.Mbr, viewModel.state.value.ventoyOptions.partitionStyle)
+        }
+    }
+
+    @Test
+    fun `unknown installed version blocks maintenance for both styles and payload sources`() {
+        for (version in listOf(null, "unreadable")) {
+            for (style in VentoyPartitionStyle.entries) {
+                for (onlineVersion in listOf(null, "1.1.17")) {
+                    val viewModel = ConfirmOperationActivityViewModel()
+                    viewModel.setState(
+                        viewModel.state.value.copy(
+                            ventoyOptions = VentoyJobOptions(onlinePayloadVersion = onlineVersion),
+                        ),
+                    )
+
+                    viewModel.setVentoyScanResult(
+                        diskInfo = diskInfo(version, style),
+                        hasAnyPartition = true,
+                        diskSizeBytes = DISK_SIZE,
+                        bundledVersion = "1.1.16",
+                        supportsGpt = true,
+                    )
+
+                    assertEquals(
+                        VentoyDriveState.UnknownVersion,
+                        viewModel.state.value.ventoyDriveState,
+                        "version=$version, style=$style, onlineVersion=$onlineVersion",
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `unknown version permits only damaged GPT metadata repair`() {
+        for (style in VentoyPartitionStyle.entries) {
+            val viewModel = ConfirmOperationActivityViewModel()
+
+            viewModel.setVentoyScanResult(
+                diskInfo = diskInfo(null, style, needsRepair = true),
+                hasAnyPartition = true,
+                diskSizeBytes = DISK_SIZE,
+                bundledVersion = "1.1.16",
+                supportsGpt = true,
+            )
+
+            assertEquals(
+                if (style == VentoyPartitionStyle.Gpt) {
+                    VentoyDriveState.ReadyToRepair
+                } else {
+                    VentoyDriveState.UnknownVersion
+                },
+                viewModel.state.value.ventoyDriveState,
+            )
+            assertEquals(
+                style == VentoyPartitionStyle.Gpt,
+                viewModel.state.value.canRepairVentoyMetadata,
+            )
+        }
+    }
+
+    @Test
+    fun `unknown GPT metadata repair cannot bypass stable support gates`() {
+        for (supportsGpt in listOf(false, true)) {
+            val viewModel = ConfirmOperationActivityViewModel()
+            val size = if (supportsGpt) VentoyDiskLayout.MAX_MBR_DISK_BYTES + 512 else DISK_SIZE
+
+            viewModel.setVentoyScanResult(
+                diskInfo = diskInfo(null, VentoyPartitionStyle.Gpt, needsRepair = true).copy(
+                    diskSizeBytes = size,
+                ),
+                hasAnyPartition = true,
+                diskSizeBytes = size,
+                bundledVersion = "1.1.16",
+                supportsGpt = supportsGpt,
+            )
+
+            assertEquals(VentoyDriveState.RequiresPreview, viewModel.state.value.ventoyDriveState)
+        }
+    }
+
+    @Test
+    fun `reconnecting repaired GPT with unknown version blocks payload replacement`() {
+        val viewModel = ConfirmOperationActivityViewModel()
+        for (needsRepair in listOf(true, false)) {
+            viewModel.setVentoyScanResult(
+                diskInfo = diskInfo(null, VentoyPartitionStyle.Gpt, needsRepair),
+                hasAnyPartition = true,
+                diskSizeBytes = DISK_SIZE,
+                bundledVersion = "1.1.16",
+                supportsGpt = true,
+            )
+
+            assertEquals(
+                if (needsRepair) VentoyDriveState.ReadyToRepair else VentoyDriveState.UnknownVersion,
+                viewModel.state.value.ventoyDriveState,
+            )
+            assertEquals(needsRepair, viewModel.state.value.canRepairVentoyMetadata)
+        }
+    }
+
     private fun diskInfo(
-        version: String,
+        version: String?,
         partitionStyle: VentoyPartitionStyle = VentoyPartitionStyle.Mbr,
         needsRepair: Boolean = false,
     ) = VentoyDiskInfo(
