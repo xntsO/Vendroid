@@ -479,6 +479,29 @@ class ExFatFormatterTest {
 
 class VentoyVersionTest {
     @Test
+    fun `accepts unsigned dotted versions with existing normalization`() {
+        for (version in listOf("1.1.16", "v1.1.16", "  v1.1.16\r\n", "01.01.016", "1.1.16.0")) {
+            assertEquals(VentoyVersionRelation.Same, VentoyVersion.compare(version, "1.1.16"), version)
+            assertTrue(VentoyVersion.isPayloadCompatible(version, "1.1.16"), version)
+        }
+        assertEquals(VentoyVersionRelation.Older, VentoyVersion.compare("1.1", "1.1.16"))
+    }
+
+    @Test
+    fun `malformed numeric versions are unknown and incompatible on either side`() {
+        for (version in listOf(
+            "-1.1.17", "1.-1.17", "1.1.-17", "+1.1.17", "1.+1.17", "1.1.+17",
+            "1.1.١٧", "1.1.１７", "1", "1..17", ".1.17", "1.1.", "1. 1.17",
+            "1.1.17-beta", "vv1.1.17", "1.1.2147483648", "", " ",
+        )) {
+            assertEquals(VentoyVersionRelation.Unknown, VentoyVersion.compare(version, "1.1.16"), version)
+            assertEquals(VentoyVersionRelation.Unknown, VentoyVersion.compare("1.1.16", version), version)
+            assertFalse(VentoyVersion.isPayloadCompatible(version, "1.1.16"), version)
+            assertFalse(VentoyVersion.isPayloadCompatible("1.1.16", version), version)
+        }
+    }
+
+    @Test
     fun `reads installed version from official grub config format`() {
         val config = """
             set timeout=10
@@ -503,9 +526,63 @@ class VentoyVersionTest {
 
 class VentoyInstallerTest {
     @Test
+    fun `nonforce install refuses unknown and newer Ventoy while explicit force reinstalls`() {
+        for (style in VentoyPartitionStyle.entries) {
+            for (version in listOf(null, "1.1.17")) {
+                val device = memoryDevice(40L * 1024 * 1024)
+                // A blank drive still accepts an ordinary, non-force installation.
+                val plan = VentoyInstaller(syntheticPayload("1.1.17")).install(
+                    device, VentoyInstallOptions(partitionStyle = style),
+                )
+                device.write(plan.partition2StartSector * 512, syntheticDiskImage(version))
+                assertEquals(version, VentoyDiskScanner().scan(device)?.installedVersion)
+                assertNotNull(VentoyDiskScanner().scan(device))
+                val writes = WriteTrackingDevice(device)
+                val installer = VentoyInstaller(syntheticPayload("1.1.16"))
+
+                val error = assertThrows<IllegalStateException> {
+                    installer.install(writes, VentoyInstallOptions(partitionStyle = style))
+                }
+
+                assertEquals(
+                    "The USB drive already has a partition table. Use force install to overwrite it.",
+                    error.message,
+                )
+                assertTrue(writes.writes.isEmpty(), "Unexpected writes for $style version '$version'")
+
+                installer.install(writes, VentoyInstallOptions(forceInstall = true, partitionStyle = style))
+
+                assertTrue(writes.writes.isNotEmpty())
+                val reinstalled = VentoyDiskScanner().scan(device)
+                assertEquals("1.1.16", reinstalled?.installedVersion)
+                assertEquals(style, reinstalled?.partitionStyle)
+                assertFalse(reinstalled?.needsRepair ?: true)
+            }
+        }
+    }
+
+    @Test
+    fun `nonforce install refuses an unrecognized partition without writes`() {
+        val device = memoryDevice(40L * 1024 * 1024)
+        val mbr = ByteArray(512)
+        mbr[510] = 0x55
+        mbr[511] = 0xAA.toByte()
+        mbr[446 + 4] = 0x83.toByte()
+        mbr.writeUInt32Le(446 + 8, 2048)
+        mbr.writeUInt32Le(446 + 12, 4096)
+        device.write(0, mbr)
+        assertNull(VentoyDiskScanner().scan(device))
+        val writes = WriteTrackingDevice(device)
+
+        assertThrows<IllegalStateException> { VentoyInstaller(syntheticPayload()).install(writes) }
+
+        assertTrue(writes.writes.isEmpty())
+    }
+
+    @Test
     fun `unknown or newer installed version refuses payload replacement before any write`() {
         for (style in VentoyPartitionStyle.entries) {
-            for (version in listOf(null, "", "dev", "1.1.17")) {
+            for (version in listOf(null, "", "dev", "1.1.17", "1.-1.17", "1.1.+16", "1.1.١٦", "1")) {
                 val device = memoryDevice(40L * 1024 * 1024)
                 VentoyInstaller(syntheticPayload()).install(
                     device, VentoyInstallOptions(forceInstall = true, partitionStyle = style),
