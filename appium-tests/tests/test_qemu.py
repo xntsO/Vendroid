@@ -283,6 +283,9 @@ def test_ventoy_lifecycle_and_firmware(
     app.tap_install_ventoy(driver)
     app.select_first_usb_device_if_multiple(driver)
     app.grant_usb_permission(driver)
+    selector = wait_for_element(driver, '//*[@resource-id="ventoyInstallPartitionStyleButton"]', timeout=30)
+    assert selector.is_displayed(), "Partition style must be shown before opening Advanced options"
+    wait_for_element(driver, '//*[@text="MBR (Recommended)"]', timeout=15)
     app.open_ventoy_advanced_options(driver)
     wait_for_element(driver, '//*[@text="MBR (Recommended)"]', timeout=15)
     app.configure_ventoy_options(

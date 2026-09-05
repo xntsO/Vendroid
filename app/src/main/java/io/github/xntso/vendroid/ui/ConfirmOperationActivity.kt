@@ -124,11 +124,14 @@ import io.github.xntso.vendroid.utils.ktexts.toHRSize
 import io.github.xntso.vendroid.utils.ktexts.toast
 import io.github.xntso.vendroid.utils.ktexts.usbDevice
 import io.github.xntso.vendroid.ventoy.BlockDeviceRawBlockDevice
+import io.github.xntso.vendroid.ventoy.VentoyDiskLayout
 import io.github.xntso.vendroid.ventoy.VentoyDiskScanner
 import io.github.xntso.vendroid.ventoy.VentoyClusterSize
 import io.github.xntso.vendroid.ventoy.VentoyPayload
 import io.github.xntso.vendroid.ventoy.VentoyOnlineUpdater
 import io.github.xntso.vendroid.ventoy.VentoyPartitionStyle
+import io.github.xntso.vendroid.ventoy.VentoyVersion
+import io.github.xntso.vendroid.ventoy.VentoyVersionRelation
 import io.github.xntso.vendroid.ventoy.VentoyPayloadCache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -473,6 +476,7 @@ class ConfirmOperationActivity : ActivityBase() {
                     diskSizeBytes = rawDevice.sizeBytes,
                     bundledVersion = bundledVersion,
                     supportsGpt = BuildConfig.GPT_ENABLED,
+                    supportsLargeDrives = BuildConfig.IS_PREVIEW,
                 )
             } catch (exception: Exception) {
                 Log.e(TAG, "Failed to inspect Ventoy drive", exception)
@@ -727,6 +731,16 @@ fun ConfirmationView(
                                 if (uiState.operation == Intents.OPERATION_VENTOY_INSTALL &&
                                     uiState.ventoyDriveState == VentoyDriveState.ReadyToInstall
                                 ) {
+                                    VentoyPartitionStyleSelector(
+                                        partitionStyle = uiState.ventoyOptions.partitionStyle,
+                                        diskSizeBytes = uiState.scannedDiskSizeBytes,
+                                        buttonTag = "ventoyInstallPartitionStyleButton",
+                                        onSelect = { style ->
+                                            viewModel.setVentoyOptions(
+                                                uiState.ventoyOptions.copy(partitionStyle = style),
+                                            )
+                                        },
+                                    )
                                     Text(
                                         text = ventoyOptionsSummary(uiState.ventoyOptions),
                                         style = MaterialTheme.typography.labelMedium,
@@ -891,7 +905,12 @@ fun ConfirmationView(
         },
         confirmButton = {
             val ventoyReady = when (uiState.ventoyDriveState) {
-                VentoyDriveState.ReadyToInstall,
+                VentoyDriveState.ReadyToInstall -> isVentoyInstallSelectionSupported(
+                    partitionStyle = uiState.ventoyOptions.partitionStyle,
+                    diskSizeBytes = uiState.scannedDiskSizeBytes,
+                    supportsGpt = BuildConfig.GPT_ENABLED,
+                    supportsLargeDrives = BuildConfig.IS_PREVIEW,
+                )
                 VentoyDriveState.UpdateAvailable,
                 VentoyDriveState.ReadyToRepair,
                 VentoyDriveState.NotApplicable -> true
@@ -911,7 +930,9 @@ fun ConfirmationView(
                 Text(
                     text = stringResource(
                         when (uiState.ventoyDriveState) {
-                            VentoyDriveState.UpdateAvailable -> R.string.update_ventoy
+                            VentoyDriveState.UpdateAvailable,
+                            VentoyDriveState.UnknownVersion,
+                            VentoyDriveState.NewerVersion -> R.string.update_ventoy
                             VentoyDriveState.ReadyToRepair -> R.string.repair_ventoy
                             else -> R.string.write_image
                         },
@@ -956,8 +977,21 @@ private fun VentoyDriveStatus(
             )
         }
         VentoyDriveState.ReadyToRepair -> Text(
-            stringResource(R.string.ventoy_ready_to_repair, installed),
+            if (state.canRepairVentoyMetadata && VentoyVersion.compare(
+                    state.installedVentoyVersion,
+                    target,
+                ) in setOf(VentoyVersionRelation.Unknown, VentoyVersionRelation.Newer)
+            ) {
+                stringResource(R.string.ventoy_metadata_only_repair)
+            } else {
+                stringResource(R.string.ventoy_ready_to_repair, installed)
+            },
             style = MaterialTheme.typography.labelLarge,
+        )
+        VentoyDriveState.UnknownVersion -> Text(
+            stringResource(R.string.ventoy_unknown_version_blocked),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.error,
         )
         VentoyDriveState.NewerVersion -> Text(
             stringResource(R.string.ventoy_newer_than_bundled, installed, target),
@@ -967,7 +1001,13 @@ private fun VentoyDriveStatus(
         VentoyDriveState.RequiresPreview -> {
             val uriHandler = LocalUriHandler.current
             Text(
-                stringResource(R.string.drive_requires_v_preview),
+                stringResource(
+                    if (state.scannedDiskSizeBytes > VentoyDiskLayout.MAX_MBR_DISK_BYTES) {
+                        R.string.large_drive_requires_v_preview
+                    } else {
+                        R.string.drive_requires_v_preview
+                    },
+                ),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -1119,6 +1159,75 @@ private fun partitionStyleLabel(style: VentoyPartitionStyle): String =
         )
     }
 
+@Composable
+private fun VentoyPartitionStyleSelector(
+    partitionStyle: VentoyPartitionStyle,
+    diskSizeBytes: Long,
+    buttonTag: String,
+    onSelect: (VentoyPartitionStyle) -> Unit,
+) {
+    val uriHandler = LocalUriHandler.current
+    var partitionStyleMenuOpen by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(stringResource(R.string.partition_style), fontWeight = FontWeight.Bold)
+        Text(
+            stringResource(R.string.partition_style_description),
+            style = MaterialTheme.typography.labelMedium,
+        )
+        Box {
+            OutlinedButton(
+                modifier = Modifier.appiumTag(buttonTag),
+                onClick = { partitionStyleMenuOpen = true },
+            ) {
+                Text(partitionStyleLabel(partitionStyle))
+            }
+            DropdownMenu(
+                expanded = partitionStyleMenuOpen,
+                onDismissRequest = { partitionStyleMenuOpen = false },
+            ) {
+                VentoyPartitionStyle.entries.forEach { style ->
+                    DropdownMenuItem(
+                        text = { Text(partitionStyleLabel(style)) },
+                        enabled = isVentoyInstallSelectionSupported(
+                            partitionStyle = style,
+                            diskSizeBytes = diskSizeBytes,
+                            supportsGpt = BuildConfig.GPT_ENABLED,
+                            supportsLargeDrives = BuildConfig.IS_PREVIEW,
+                        ),
+                        onClick = {
+                            onSelect(style)
+                            partitionStyleMenuOpen = false
+                        },
+                    )
+                }
+            }
+        }
+        if (diskSizeBytes > VentoyDiskLayout.MAX_MBR_DISK_BYTES) {
+            Text(
+                stringResource(R.string.large_drive_requires_gpt),
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
+        if (!BuildConfig.GPT_ENABLED) {
+            Text(
+                stringResource(R.string.gpt_available_in_v_preview),
+                style = MaterialTheme.typography.labelMedium,
+            )
+            TextButton(onClick = { uriHandler.openUri(V_PREVIEW_DOWNLOAD_URL) }) {
+                Text(stringResource(R.string.get_v_preview))
+            }
+        } else if (BuildConfig.IS_PREVIEW &&
+            partitionStyle == VentoyPartitionStyle.Gpt
+        ) {
+            Text(
+                stringResource(R.string.gpt_preview_warning),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VentoyAdvancedOptionsBottomSheet(
@@ -1127,7 +1236,6 @@ fun VentoyAdvancedOptionsBottomSheet(
     onApply: (VentoyJobOptions) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
-    val uriHandler = LocalUriHandler.current
     val mebibyte = 1024L * 1024L
     val gibibyte = 1024L * mebibyte
     val initialUnit = if (
@@ -1148,7 +1256,6 @@ fun VentoyAdvancedOptionsBottomSheet(
     var clusterSize by rememberSaveable(options) { mutableStateOf(options.clusterSize) }
     var partitionStyle by rememberSaveable(options) { mutableStateOf(options.partitionStyle) }
     var clusterMenuOpen by remember { mutableStateOf(false) }
-    var partitionStyleMenuOpen by remember { mutableStateOf(false) }
     var unitMenuOpen by remember { mutableStateOf(false) }
     val parsedReservedAmount = reservedAmount.toLongOrNull()
     val maximumReservedAmount = if (diskSizeBytes > 40L * mebibyte) {
@@ -1179,53 +1286,12 @@ fun VentoyAdvancedOptionsBottomSheet(
                 stringResource(R.string.advanced_options),
                 style = MaterialTheme.typography.titleLarge,
             )
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.partition_style), fontWeight = FontWeight.Bold)
-                Text(
-                    stringResource(R.string.partition_style_description),
-                    style = MaterialTheme.typography.labelMedium,
-                )
-                Box {
-                    OutlinedButton(
-                        modifier = Modifier.appiumTag("ventoyPartitionStyleButton"),
-                        onClick = { partitionStyleMenuOpen = true },
-                    ) {
-                        Text(partitionStyleLabel(partitionStyle))
-                    }
-                    DropdownMenu(
-                        expanded = partitionStyleMenuOpen,
-                        onDismissRequest = { partitionStyleMenuOpen = false },
-                    ) {
-                        VentoyPartitionStyle.entries.forEach { style ->
-                            DropdownMenuItem(
-                                text = { Text(partitionStyleLabel(style)) },
-                                enabled = style == VentoyPartitionStyle.Mbr || BuildConfig.GPT_ENABLED,
-                                onClick = {
-                                    partitionStyle = style
-                                    partitionStyleMenuOpen = false
-                                },
-                            )
-                        }
-                    }
-                }
-                if (!BuildConfig.GPT_ENABLED) {
-                    Text(
-                        stringResource(R.string.gpt_available_in_v_preview),
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                    TextButton(onClick = { uriHandler.openUri(V_PREVIEW_DOWNLOAD_URL) }) {
-                        Text(stringResource(R.string.get_v_preview))
-                    }
-                } else if (BuildConfig.IS_PREVIEW &&
-                    partitionStyle == VentoyPartitionStyle.Gpt
-                ) {
-                    Text(
-                        stringResource(R.string.gpt_preview_warning),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-            }
+            VentoyPartitionStyleSelector(
+                partitionStyle = partitionStyle,
+                diskSizeBytes = diskSizeBytes,
+                buttonTag = "ventoyPartitionStyleButton",
+                onSelect = { partitionStyle = it },
+            )
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth().appiumTag("ventoyVolumeLabelField"),
                 value = label,
@@ -1364,7 +1430,12 @@ fun VentoyAdvancedOptionsBottomSheet(
                 }
                 Button(
                     modifier = Modifier.appiumTag("ventoyApplyOptionsButton"),
-                    enabled = !labelError && !reservedError,
+                    enabled = !labelError && !reservedError && isVentoyInstallSelectionSupported(
+                        partitionStyle = partitionStyle,
+                        diskSizeBytes = diskSizeBytes,
+                        supportsGpt = BuildConfig.GPT_ENABLED,
+                        supportsLargeDrives = BuildConfig.IS_PREVIEW,
+                    ),
                     onClick = {
                         onApply(
                             options.copy(

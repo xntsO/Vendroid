@@ -173,6 +173,7 @@ enum class VentoyDriveState {
     UpdateAvailable,
     ReadyToRepair,
     NewerVersion,
+    UnknownVersion,
     RequiresPreview,
     ExistingPartitions,
     ScanFailed,
@@ -208,7 +209,7 @@ data class ConfirmOperationActivityState(
     val scanError: String? = null,
     val hasRecognizedVentoy: Boolean = false,
     val hasAnyPartition: Boolean = false,
-    val ventoyNeedsRepair: Boolean = false,
+    val canRepairVentoyMetadata: Boolean = false,
 ) : IThemeState {
     val targetVentoyVersion: String?
         get() = ventoyOptions.onlinePayloadVersion ?: bundledVentoyVersion
@@ -276,13 +277,16 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
         diskSizeBytes: Long,
         bundledVersion: String,
         supportsGpt: Boolean = false,
+        supportsLargeDrives: Boolean = false,
     ) {
         _state.update { state ->
             val targetVersion = state.ventoyOptions.onlinePayloadVersion ?: bundledVersion
-            val requiresPreview = !supportsGpt && (
-                diskSizeBytes > VentoyDiskLayout.MAX_MBR_DISK_BYTES ||
-                    diskInfo?.partitionStyle == VentoyPartitionStyle.Gpt
-                )
+            val canRepairMetadata = diskInfo?.partitionStyle == VentoyPartitionStyle.Gpt &&
+                diskInfo.needsRepair
+            // GPT promotion must not also promote unvalidated large-drive support.
+            val requiresPreview =
+                (!supportsLargeDrives && diskSizeBytes > VentoyDiskLayout.MAX_MBR_DISK_BYTES) ||
+                    (!supportsGpt && diskInfo?.partitionStyle == VentoyPartitionStyle.Gpt)
             if (requiresPreview) {
                 return@update state.copy(
                     ventoyDriveState = VentoyDriveState.RequiresPreview,
@@ -293,7 +297,7 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
                     scanError = null,
                     hasRecognizedVentoy = diskInfo != null,
                     hasAnyPartition = hasAnyPartition,
-                    ventoyNeedsRepair = diskInfo?.needsRepair == true,
+                    canRepairVentoyMetadata = canRepairMetadata,
                 )
             }
             if (state.forceInstall) {
@@ -307,7 +311,7 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
                     scanError = null,
                     hasRecognizedVentoy = diskInfo != null,
                     hasAnyPartition = hasAnyPartition,
-                    ventoyNeedsRepair = diskInfo?.needsRepair == true,
+                    canRepairVentoyMetadata = canRepairMetadata,
                 )
             }
 
@@ -326,23 +330,14 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
                     scanError = null,
                     hasRecognizedVentoy = false,
                     hasAnyPartition = hasAnyPartition,
-                    ventoyNeedsRepair = false,
+                    canRepairVentoyMetadata = false,
                 )
             }
 
             val relation = VentoyVersion.compare(diskInfo.installedVersion, targetVersion)
             state.copy(
                 operation = Intents.OPERATION_VENTOY_UPDATE,
-                ventoyDriveState = when (relation) {
-                    VentoyVersionRelation.Older -> VentoyDriveState.UpdateAvailable
-                    VentoyVersionRelation.Same, VentoyVersionRelation.Unknown ->
-                        VentoyDriveState.ReadyToRepair
-                    VentoyVersionRelation.Newer -> if (diskInfo.needsRepair) {
-                        VentoyDriveState.ReadyToRepair
-                    } else {
-                        VentoyDriveState.NewerVersion
-                    }
-                },
+                ventoyDriveState = ventoyMaintenanceState(relation, canRepairMetadata),
                 installedVentoyVersion = diskInfo.installedVersion,
                 bundledVentoyVersion = bundledVersion,
                 scannedDiskSizeBytes = diskSizeBytes,
@@ -350,7 +345,7 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
                 scanError = null,
                 hasRecognizedVentoy = true,
                 hasAnyPartition = hasAnyPartition,
-                ventoyNeedsRepair = diskInfo.needsRepair,
+                canRepairVentoyMetadata = canRepairMetadata,
             )
         }
     }
@@ -509,18 +504,10 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
         }
         return copy(
             operation = Intents.OPERATION_VENTOY_UPDATE,
-            ventoyDriveState = when (
-                VentoyVersion.compare(installedVentoyVersion, targetVersion)
-            ) {
-                VentoyVersionRelation.Older -> VentoyDriveState.UpdateAvailable
-                VentoyVersionRelation.Same,
-                VentoyVersionRelation.Unknown -> VentoyDriveState.ReadyToRepair
-                VentoyVersionRelation.Newer -> if (ventoyNeedsRepair) {
-                    VentoyDriveState.ReadyToRepair
-                } else {
-                    VentoyDriveState.NewerVersion
-                }
-            },
+            ventoyDriveState = ventoyMaintenanceState(
+                VentoyVersion.compare(installedVentoyVersion, targetVersion),
+                canRepairVentoyMetadata,
+            ),
         )
     }
 }
