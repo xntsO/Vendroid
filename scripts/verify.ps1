@@ -40,9 +40,9 @@ if ($RunId) {
 
 Write-Host "Validation runs on GitHub Actions. No local build or USB write is performed."
 Write-Host "https://github.com/$repository/actions/runs/$RunId"
+Write-Host "Download evidence when the run finishes: gh run download $RunId --repo $repository --dir validation-$RunId"
 if ($Wait) {
     & gh run watch $RunId --repo $repository --exit-status
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 Invoke-GitHub @('run', 'view', $RunId, '--repo', $repository)
-Write-Host "Download evidence: gh run download $RunId --repo $repository --dir validation-$RunId"
