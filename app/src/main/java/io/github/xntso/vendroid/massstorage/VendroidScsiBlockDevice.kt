@@ -12,7 +12,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package io.github.xntso.vendroid.massstorage
@@ -61,6 +61,9 @@ internal class VendroidScsiBlockDevice(private val usbCommunication: UsbCommunic
                 return
             } catch (e: InitRequired) {
                 Log.i(TAG, e.message ?: "Reinitializing device")
+                lastException = e
+            } catch (e: UnitAttention) {
+                Log.i(TAG, e.message ?: "Device reported unit attention during initialization")
                 lastException = e
             } catch (e: NotReadyTryAgain) {
                 Log.i(TAG, e.message ?: "Reinitializing device")
@@ -252,10 +255,10 @@ internal class VendroidScsiBlockDevice(private val usbCommunication: UsbCommunic
                     if (count <= 0) throw IOException("USB read made no progress")
                     read += count
                     if (command.bCbwDynamicSize && read >= 8) {
-                        transferLength = command.dynamicSizeFromPartialResponse(inBuffer)
-                        if (transferLength < read || transferLength > command.dCbwDataTransferLength) {
-                            throw IOException("Invalid dynamic SCSI response length")
-                        }
+                        // REQUEST SENSE can advertise more bytes than our allocation,
+                        // or return padding. Byte 7 is an unsigned additional length.
+                        val advertisedLength = 8 + (inBuffer.get(dataStart + 7).toInt() and 0xff)
+                        transferLength = minOf(command.dCbwDataTransferLength, maxOf(read, advertisedLength))
                         inBuffer.limit(dataStart + transferLength)
                     }
                 } while (read < transferLength)

@@ -2,6 +2,8 @@ package io.github.xntso.vendroid.massstorage
 
 import android.hardware.usb.UsbEndpoint
 import android.hardware.usb.UsbInterface
+import me.jahnen.libaums.core.driver.scsi.commands.sense.MediumError
+import me.jahnen.libaums.core.driver.scsi.commands.sense.UnitAttention
 import me.jahnen.libaums.core.usb.UsbCommunication
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -298,6 +300,57 @@ class VendroidScsiBlockDeviceTest {
     }
 
     @Test
+    fun `unsigned sense additional length is capped to the 18 byte allocation without a reset`() {
+        val usb = FakeUsbCommunication(4095)
+        val device = initialized(usb)
+        usb.fault = Fault.COMMAND_FAILED
+        usb.senseAdditionalLength = 0xf0.toByte()
+        usb.maxPacketBytes = 8 // Read the length field before receiving the rest of the response.
+        val destination = ByteBuffer.allocate(512)
+
+        val error = assertThrows<MediumError> { device.read(17, destination) }
+
+        assertEquals(3, error.senseKey.toInt())
+        assertEquals(0x11, error.additionalSenseCode.toInt())
+        assertEquals(listOf(0x28, 0x03), usb.commands.takeLast(2).map { it.opcode })
+        assertEquals(18, usb.commands.last().transferBytes)
+        assertEquals(1, usb.ioCommands.size)
+        assertEquals(0, destination.position())
+        assertEquals(0, usb.resetCount)
+    }
+
+    @Test
+    fun `unit attention retries initialization but aborts an ordinary write without replay`() {
+        val usb = FakeUsbCommunication(4095).apply {
+            fault = Fault.COMMAND_FAILED
+            faultOpcode = 0x12
+            faultsRemaining = 1
+            senseKey = 6
+            senseAsc = 0x29 // Power on or reset occurred.
+        }
+        val device = initialized(usb)
+
+        assertEquals(listOf(0x12, 0x03, 0x12, 0x00, 0x25), usb.commands.map { it.opcode })
+        assertEquals(4096L, device.blocks)
+        assertEquals(512, device.blockSize)
+        assertEquals(0, usb.resetCount)
+
+        usb.faultOpcode = 0x2a
+        usb.faultsRemaining = 1 // A replay would succeed, so assert that the first failure escapes.
+        val commandsBeforeWrite = usb.commands.size
+        val source = ByteBuffer.wrap(pattern(1024 * 1024 + 512, 131))
+
+        val error = assertThrows<UnitAttention> { device.write(17, source) }
+
+        assertEquals(6, error.senseKey.toInt())
+        assertEquals(0x29, error.additionalSenseCode.toInt())
+        assertEquals(listOf(0x2a, 0x03), usb.commands.drop(commandsBeforeWrite).map { it.opcode })
+        assertEquals(1, usb.ioCommands.size)
+        assertEquals(0, source.position())
+        assertEquals(0, usb.resetCount)
+    }
+
+    @Test
     fun `retry after a bad CSW resets the transaction and replays into the original buffer range`() {
         val usb = FakeUsbCommunication(4095)
         val device = initialized(usb)
@@ -349,7 +402,11 @@ class VendroidScsiBlockDeviceTest {
         val ioCommands: List<WireCommand> get() = commands.filter { it.isBlockIo }
         var maxPacketBytes = Int.MAX_VALUE
         var fault: Fault? = null
+        var faultOpcode: Int? = null
         var faultsRemaining = Int.MAX_VALUE
+        var senseAdditionalLength: Byte = 10
+        var senseKey: Byte = 3
+        var senseAsc: Byte = 0x11
         var resetCount = 0
             private set
         private val storage = mutableMapOf<Long, ByteArray>()
@@ -394,7 +451,8 @@ class VendroidScsiBlockDeviceTest {
                 transferred += length
                 return length
             }
-            val injected = if (command.isBlockIo && faultsRemaining > 0) fault else null
+            val matchesFault = faultOpcode?.let { command.opcode == it } ?: command.isBlockIo
+            val injected = if (matchesFault && faultsRemaining > 0) fault else null
             if (injected != null) faultsRemaining--
             val csw = ByteBuffer.allocate(13).order(ByteOrder.LITTLE_ENDIAN)
                 .putInt(if (injected == Fault.BAD_SIGNATURE) 0 else 0x53425355)
@@ -490,6 +548,9 @@ class VendroidScsiBlockDeviceTest {
                         else -> throw AssertionError("Unexpected opcode $opcode")
                     }
                     assertEquals(expectedBytes, transferBytes)
+                    if (opcode == 0x03) {
+                        assertEquals(18, cdb.get(4).toInt() and 0xff, "REQUEST SENSE allocation length")
+                    }
                     if (opcode == 0x9e) {
                         assertEquals(0x10, cdb.get(1).toInt() and 0xff, "READ CAPACITY16 service action")
                         assertEquals(0L, cdb.getLong(2))
@@ -518,9 +579,9 @@ class VendroidScsiBlockDeviceTest {
                 .putLong(lastLba).putInt(logicalBlockSize).array()
             0x03 -> ByteArray(18).apply {
                 this[0] = 0x70
-                this[2] = 0x03 // MEDIUM ERROR
-                this[7] = 10
-                this[12] = 0x11 // Unrecovered read error
+                this[2] = senseKey
+                this[7] = senseAdditionalLength
+                this[12] = senseAsc
             }
             else -> throw AssertionError("No response for opcode ${command.opcode}")
         }
