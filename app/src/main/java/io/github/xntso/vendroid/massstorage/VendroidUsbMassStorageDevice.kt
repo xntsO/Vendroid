@@ -34,7 +34,6 @@ import io.github.xntso.vendroid.utils.ktexts.vidpid
 import kotlinx.parcelize.Parcelize
 import me.jahnen.libaums.core.UsbMassStorageDevice
 import me.jahnen.libaums.core.driver.BlockDeviceDriver
-import me.jahnen.libaums.core.driver.BlockDeviceDriverFactory
 import me.jahnen.libaums.core.driver.scsi.commands.sense.MediaNotInserted
 import me.jahnen.libaums.core.usb.UsbCommunication
 import me.jahnen.libaums.core.usb.UsbCommunicationFactory
@@ -217,10 +216,10 @@ internal constructor(
 
         for (lun in 0..maxLun[0]) {
             val blockDevice =
-                BlockDeviceDriverFactory.createBlockDevice(usbCommunication, lun = lun.toByte())
+                VendroidScsiBlockDevice(usbCommunication, lun = lun.toByte())
             try {
                 blockDevice.init()
-                mutableBlockDevices[lun] = ScsiBlockCountAdapter(blockDevice)
+                mutableBlockDevices[lun] = blockDevice
             } catch (e: MediaNotInserted) {
                 // This LUN does not have media inserted. Ignore it.
                 continue
@@ -316,19 +315,6 @@ internal constructor(
                 .toTypedArray()
         }
     }
-}
-
-/**
- * libaums' SCSI driver exposes READ CAPACITY(10)'s last logical block address through
- * [BlockDeviceDriver.blocks], while the rest of its block-device API treats that value as a
- * block count. Convert the inclusive last address to a count at the USB boundary so every
- * consumer sees the drive's real capacity.
- */
-internal class ScsiBlockCountAdapter(
-    private val delegate: BlockDeviceDriver,
-) : BlockDeviceDriver by delegate {
-    override val blocks: Long
-        get() = Math.addExact(delegate.blocks, 1L)
 }
 
 private var libusbSetup = false
