@@ -12,7 +12,7 @@ def summarize(root: Path) -> tuple[str, bool]:
             "|---|---|---|---|"]
     passed = True
     required = {"install-and-file-copy", "boot-after-install", "idle-usb-reconnect-and-version-detection",
-                "healthy-repair", "old-to-bundled-update", "updated-version-detected",
+                "healthy-repair", "boot-after-healthy-repair", "old-to-bundled-update", "updated-version-detected",
                 "boot-after-update", "newer-version-blocked-with-zero-writes"}
     for channel in ("stable", "preview"):
         for controller in ("uhci", "xhci"):
@@ -24,7 +24,9 @@ def summarize(root: Path) -> tuple[str, bool]:
             large_result = "Not scheduled"
             try:
                 report = json.loads(lifecycle.read_text(encoding="utf-8"))
-                expected = required | ({"primary-gpt-repair", "backup-gpt-repair"} if channel == "preview" else set())
+                expected = required | ({"primary-gpt-repair", "backup-gpt-repair",
+                                        "boot-after-primary-gpt-repair", "boot-after-backup-gpt-repair"}
+                                       if channel == "preview" else set())
                 checkpoints = {item["name"] for item in report["checkpoints"] if item.get("passed") is True}
                 lifecycle_ok = (report.get("passed") is True and expected <= checkpoints and
                                 report["layout"] == ("mbr" if channel == "stable" else "gpt") and

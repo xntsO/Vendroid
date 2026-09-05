@@ -10,6 +10,7 @@ import json
 import os
 import shutil
 import signal
+import socket
 import stat
 import subprocess
 import tempfile
@@ -128,11 +129,33 @@ def _stop_process(process: subprocess.Popen) -> None:
         process.wait()
 
 
+def _capture_screen(qmp_path: Path, output: Path) -> None:
+    """Capture firmware errors visible only on VGA, before stopping a failed boot."""
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+        connection.settimeout(3)
+        connection.connect(str(qmp_path))
+        with connection.makefile("rwb") as stream:
+            json.loads(stream.readline())
+            for command in ({"execute": "qmp_capabilities"},
+                            {"execute": "screendump", "arguments": {"filename": str(output)}}):
+                stream.write(json.dumps(command).encode() + b"\n")
+                stream.flush()
+                while True:
+                    reply = json.loads(stream.readline())
+                    if "error" in reply:
+                        raise RuntimeError(str(reply["error"]))
+                    if "return" in reply:
+                        break
+
+
 def _boot_mode(image: Path, directory: Path, mode: str, qemu: str) -> dict:
     directory.mkdir()
     serial = directory / "serial.log"
     stderr = directory / "qemu.log"
     serial.touch()
+    # AF_UNIX paths are limited to roughly 108 bytes; evidence paths can be longer.
+    qmp_directory = tempfile.TemporaryDirectory(prefix="vendroid-qmp-")
+    qmp_path = Path(qmp_directory.name) / "monitor.sock"
     firmware = "SeaBIOS (QEMU default)" if mode == "bios" else "OVMF_CODE_4M.fd (Secure Boot disabled)"
     result = {
         "mode": mode, "firmware": firmware, "passed": False, "marker_seen": False,
@@ -143,6 +166,7 @@ def _boot_mode(image: Path, directory: Path, mode: str, qemu: str) -> dict:
         qemu, "-no-user-config", "-nodefaults", "-machine", "pc", "-accel", "tcg",
         "-m", "1024", "-smp", "1", "-vga", "std", "-display", "none",
         "-monitor", "none", "-serial", f"file:{serial}", "-nic", "none",
+        "-qmp", f"unix:{qmp_path},server=on,wait=off",
         "-no-reboot", "-snapshot", "-boot", "strict=on",
         "-drive", f"file={_qemu_path(image)},format=raw,if=none,id=candidate,media=disk",
         "-device", "usb-ehci,id=ehci",
@@ -192,6 +216,13 @@ def _boot_mode(image: Path, directory: Path, mode: str, qemu: str) -> dict:
                         break
                     time.sleep(0.2)
             finally:
+                if not result["passed"] and process.poll() is None:
+                    try:
+                        screenshot = directory / "screen.ppm"
+                        _capture_screen(qmp_path, screenshot)
+                        result["screenshot"] = str(screenshot)
+                    except (OSError, ValueError, RuntimeError) as error:
+                        result["screenshot_error"] = str(error)
                 _stop_process(process)
                 result["returncode"] = process.returncode
         if not result["passed"]:
@@ -201,6 +232,7 @@ def _boot_mode(image: Path, directory: Path, mode: str, qemu: str) -> dict:
         result["error"] = str(error)
     finally:
         result["elapsed_seconds"] = round(time.monotonic() - started, 3)
+        qmp_directory.cleanup()
     return result
 
 
