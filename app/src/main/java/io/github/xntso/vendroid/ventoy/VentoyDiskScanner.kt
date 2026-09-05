@@ -1,14 +1,15 @@
 package io.github.xntso.vendroid.ventoy
 
+import java.io.IOException
+
 class VentoyDiskScanner {
     fun scan(device: RawBlockDevice): VentoyDiskInfo? {
         if (device.blockSize != VentoyDiskLayout.SECTOR_SIZE) return null
         val mbr = device.readBytes(0, VentoyDiskLayout.SECTOR_SIZE)
         val entries = VentoyMbr.parse(mbr)
         val protectiveMbrHealthy = VentoyMbr.isProtective(mbr, device.sizeBytes)
-        val hasGptSignature = hasGptHeaderSignature(device)
         return when {
-            protectiveMbrHealthy || hasGptSignature ->
+            protectiveMbrHealthy || hasGptHeaderSignature(device) ->
                 scanGpt(device, protectiveMbrHealthy)
             VentoyMbr.hasBootSignature(mbr) -> scanMbr(device, entries)
             else -> null
@@ -104,9 +105,20 @@ class VentoyDiskScanner {
     private fun hasGptHeaderSignature(device: RawBlockDevice): Boolean {
         val totalSectors = device.sizeBytes / VentoyDiskLayout.SECTOR_SIZE
         if (totalSectors < 2) return false
-        return sequenceOf(1L, totalSectors - 1).any { sector ->
-            device.readBytes(sector * VentoyDiskLayout.SECTOR_SIZE, 8)
-                .contentEquals("EFI PART".encodeToByteArray())
+        var readFailure: IOException? = null
+        for (sector in listOf(1L, totalSectors - 1)) {
+            try {
+                if (device.readBytes(sector * VentoyDiskLayout.SECTOR_SIZE, 8)
+                        .contentEquals("EFI PART".encodeToByteArray())
+                ) {
+                    return true
+                }
+            } catch (exception: IOException) {
+                readFailure = readFailure ?: exception
+            }
         }
+        // Try both copies, but do not classify an unreadable disk as empty.
+        readFailure?.let { throw it }
+        return false
     }
 }

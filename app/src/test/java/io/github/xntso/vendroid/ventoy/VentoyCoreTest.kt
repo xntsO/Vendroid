@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.Mockito
 import org.robolectric.annotation.Config
 import tech.apter.junit.jupiter.robolectric.RobolectricExtension
 import org.tukaani.xz.LZMA2Options
@@ -161,6 +160,81 @@ class VentoyMbrTest {
 }
 
 class VentoyDiskScannerTest {
+    @Test
+    fun `recovers from primary header read failure with healthy or damaged protective MBR`() {
+        for (damagedMbr in listOf(false, true)) {
+            val device = installedGptDevice()
+            if (damagedMbr) device.write(510, byteArrayOf(0, 0))
+            for (failure in listOf(IOException("primary unreadable"), UsbCommunicationException())) {
+                val unreadable = ReadFailureDevice(device, 512L until 1024L, failure)
+
+                val info = VentoyDiskScanner().scan(unreadable)
+
+                assertEquals(VentoyPartitionStyle.Gpt, info?.partitionStyle)
+                assertTrue(info?.needsRepair == true)
+                assertTrue(VentoyDiskScanner().hasAnyPartition(unreadable))
+                assertFalse(VentoyGpt.readRecoverable(unreadable).redundancyHealthy)
+                assertThrows<IllegalArgumentException> { VentoyGpt.read(unreadable) }
+            }
+        }
+    }
+
+    @Test
+    fun `unreadable primary without a backup signature is not reported as an empty drive`() {
+        val device = ReadFailureDevice(
+            memoryDevice(40L * 1024 * 1024),
+            512L until 1024L,
+            IOException("primary unreadable"),
+        )
+
+        assertThrows<IOException> { VentoyDiskScanner().scan(device) }
+        assertThrows<IOException> { VentoyDiskScanner().hasAnyPartition(device) }
+    }
+
+    @Test
+    fun `backup signature alone cannot recover an unreadable primary with invalid backup CRC`() {
+        val device = installedGptDevice()
+        device.write(device.sizeBytes - 512 + 16, ByteArray(4))
+        val unreadable = ReadFailureDevice(device, 512L until 1024L, IOException("primary"))
+
+        assertNull(VentoyDiskScanner().scan(unreadable))
+        assertThrows<IllegalArgumentException> { VentoyGpt.readRecoverable(unreadable) }
+    }
+
+    @Test
+    fun `editable GPT names do not replace geometry and type validation`() {
+        val device = installedGptDevice()
+        rewriteGptTables(device, ::renameGptPartitions)
+        assertNotNull(VentoyDiskScanner().scan(device))
+        assertEquals("بيانات", VentoyGpt.read(device).partition1.name)
+        assertEquals("", VentoyGpt.read(device).partition2.name)
+
+        rewriteGptTables(device) { table -> table.writeUInt64Le(32, 2049) }
+        assertNull(VentoyDiskScanner().scan(device))
+        rewriteGptTables(device) { table ->
+            table.writeUInt64Le(32, 2048)
+            table[128] = (table[128].toInt() xor 1).toByte()
+        }
+        assertNull(VentoyDiskScanner().scan(device))
+        rewriteGptTables(device) { table ->
+            table[128] = (table[128].toInt() xor 1).toByte()
+            table.writeUInt64Le(48, 1)
+        }
+        assertNull(VentoyDiskScanner().scan(device))
+    }
+
+    @Test
+    fun `rejects GPT copies with conflicting editable names and valid checksums`() {
+        val device = installedGptDevice()
+        var copyIndex = 0
+        rewriteGptTables(device) { table ->
+            if (copyIndex++ == 0) renameGptPartitions(table)
+        }
+
+        assertNull(VentoyDiskScanner().scan(device))
+        assertThrows<IllegalArgumentException> { VentoyGpt.repair(device) }
+    }
+
     @Test
     fun `recognizes standard Ventoy layout after partition type bytes change`() {
         val device = memoryDevice(40L * 1024 * 1024)
@@ -429,6 +503,127 @@ class VentoyVersionTest {
 
 class VentoyInstallerTest {
     @Test
+    fun `unknown or newer installed version refuses payload replacement before any write`() {
+        for (style in VentoyPartitionStyle.entries) {
+            for (version in listOf(null, "", "dev", "1.1.17")) {
+                val device = memoryDevice(40L * 1024 * 1024)
+                VentoyInstaller(syntheticPayload()).install(
+                    device, VentoyInstallOptions(forceInstall = true, partitionStyle = style),
+                )
+                val info = VentoyDiskScanner().scan(device)!!
+                device.write(info.partition2StartSector * 512, syntheticDiskImage(version))
+                val writes = WriteTrackingDevice(device)
+
+                assertThrows<IllegalArgumentException> {
+                    VentoyInstaller(syntheticPayload()).upgrade(writes)
+                }
+
+                assertTrue(writes.writes.isEmpty(), "Unexpected writes for $style version '$version'")
+            }
+        }
+    }
+
+    @Test
+    fun `version read failure refuses update without writes`() {
+        val device = installedGptDevice()
+        val info = VentoyDiskScanner().scan(device)!!
+        val unreadable = ReadFailureDevice(
+            device,
+            info.partition2StartSector * 512 until (info.partition2EndSector + 1) * 512,
+            IOException("version unreadable"),
+        )
+        val writes = WriteTrackingDevice(unreadable)
+
+        assertThrows<IllegalArgumentException> {
+            VentoyInstaller(syntheticPayload()).upgrade(writes)
+        }
+        assertTrue(writes.writes.isEmpty())
+    }
+
+    @Test
+    fun `persistent primary read failure aborts repair before boot and payload writes`() {
+        val device = installedGptDevice()
+        val before = device.readBytes(0, device.sizeBytes.toInt())
+        val unreadable = ReadFailureDevice(device, 512L until 1024L, IOException("primary"))
+        val writes = WriteTrackingDevice(unreadable)
+
+        assertThrows<IOException> { VentoyInstaller(syntheticPayload()).upgrade(writes) }
+
+        assertTrue(writes.writes.isNotEmpty())
+        assertTrue(writes.writes.all { it.first >= 512 && it.last < 34L * 512 })
+        assertArrayEquals(before, device.readBytes(0, before.size))
+    }
+
+    @Test
+    fun `unknown version permits only GPT metadata repair and preserves edited names`() {
+        val device = installedGptDevice()
+        val info = VentoyDiskScanner().scan(device)!!
+        device.write(info.partition2StartSector * 512, syntheticDiskImage("dev"))
+        rewriteGptTables(device, ::renameGptPartitions)
+        val before = device.readBytes(0, device.sizeBytes.toInt())
+        device.write(512 + 24, byteArrayOf(0x7F))
+        val writes = WriteTrackingDevice(device)
+
+        val repaired = VentoyInstaller(syntheticPayload()).upgrade(writes)
+
+        assertEquals("dev", repaired.installedVersion)
+        assertFalse(repaired.needsRepair)
+        assertArrayEquals(before, device.readBytes(0, before.size))
+        assertTrue(writes.writes.all { it.last < 34L * 512 })
+    }
+
+    @Test
+    fun `update accepts and preserves edited GPT names`() {
+        val device = installedGptDevice()
+        rewriteGptTables(device, ::renameGptPartitions)
+        val primary = device.readBytes(512, 33 * 512)
+        val backup = device.readBytes(device.sizeBytes - 33L * 512, 33 * 512)
+
+        VentoyInstaller(syntheticPayload()).upgrade(device)
+
+        assertArrayEquals(primary, device.readBytes(512, primary.size))
+        assertArrayEquals(backup, device.readBytes(device.sizeBytes - backup.size, backup.size))
+    }
+
+    @Test
+    fun `updates never write tail sectors even when interrupted during core write`() {
+        for (style in VentoyPartitionStyle.entries) {
+            for (interrupt in listOf(false, true)) {
+                val device = memoryDevice(40L * 1024 * 1024)
+                VentoyInstaller(syntheticPayload("1.1.15")).install(
+                    device, VentoyInstallOptions(forceInstall = true, partitionStyle = style),
+                )
+                val tail = ByteArray(8 * 512) { (it % 197).toByte() }
+                val tailOffset = 2040L * 512
+                val coreStart = if (style == VentoyPartitionStyle.Mbr) 1L else 34L
+                val installedTail = ByteArray(tail.size) {
+                    (((2040 - coreStart) * 512 + it) % 251).toByte()
+                }
+                assertArrayEquals(installedTail, device.readBytes(tailOffset, tail.size))
+                device.write(tailOffset, tail)
+                // Sector 2039 must still be replaced, right up to the preservation boundary.
+                device.write(2039L * 512, ByteArray(512))
+                val writes = WriteTrackingDevice(
+                    device,
+                    interruptAfterWritingOffset = if (interrupt) 2039L * 512 else null,
+                )
+                val installer = VentoyInstaller(syntheticPayload())
+
+                if (interrupt) {
+                    assertThrows<IOException> { installer.upgrade(writes) }
+                } else {
+                    assertEquals("1.1.16", installer.upgrade(writes).installedVersion)
+                }
+
+                assertArrayEquals(tail, device.readBytes(tailOffset, tail.size))
+                assertTrue(writes.writes.none { it.first < 2048L * 512 && it.last >= tailOffset })
+                val expected = ByteArray(512) { (((2039 - coreStart) * 512 + it) % 251).toByte() }
+                assertArrayEquals(expected, device.readBytes(2039L * 512, 512))
+            }
+        }
+    }
+
+    @Test
     fun `streams xz payload into a memory block device`() {
         val device = memoryDevice(40L * 1024 * 1024)
         val payload = syntheticPayload()
@@ -633,25 +828,17 @@ class VentoyInstallerTest {
                 partitionStyle = VentoyPartitionStyle.Gpt,
             ),
         )
-        val scanner = Mockito.mock(VentoyDiskScanner::class.java)
-        val detected = VentoyDiskScanner().scan(device)!!.copy(
-            installedVersion = "1.1.17",
-            needsRepair = true,
-        )
-        Mockito.`when`(scanner.scan(device)).thenReturn(
-            detected,
-            detected.copy(needsRepair = false),
-        )
+        assertEquals("1.1.17", VentoyDiskScanner().scan(device)?.installedVersion)
         val coreBefore = device.readBytes(34L * 512, 2014 * 512)
         val payloadBefore = device.readBytes(plan.partition2StartSector * 512, 1024 * 1024)
         device.write(512 + 24, byteArrayOf(0x7F))
 
         val repaired = VentoyInstaller(
             payload = syntheticPayload("1.1.16"),
-            scanner = scanner,
         ).upgrade(device)
 
         assertFalse(repaired.needsRepair)
+        assertEquals("1.1.17", repaired.installedVersion)
         assertTrue(VentoyGpt.read(device).redundancyHealthy)
         assertArrayEquals(coreBefore, device.readBytes(34L * 512, coreBefore.size))
         assertArrayEquals(
@@ -787,7 +974,7 @@ private fun syntheticPayload(version: String = "1.1.16"): VentoyPayload =
 
 private fun syntheticPayloadFiles(version: String = "1.1.16"): Map<String, ByteArray> {
     val core = ByteArray(1024 * 1024 - 512) { (it % 251).toByte() }
-    val disk = ByteArray(32 * 1024 * 1024) { if (it == 0) 0xEB.toByte() else 0 }
+    val disk = syntheticDiskImage(version)
     return mapOf(
         "boot/boot.img" to ByteArray(512) { 0x42 },
         "boot/core.img.xz" to xz(core),
@@ -861,6 +1048,94 @@ private class CorruptingRawBlockDevice(
             byte[0] = (byte[0].toInt() xor 0x01).toByte()
             delegate.write(targetOffset, byte)
             corrupted = true
+        }
+    }
+}
+
+// A FAT16 filesystem with /ventoy/version, so updates exercise real version detection.
+private fun syntheticDiskImage(version: String?): ByteArray {
+    val disk = ByteArray(32 * 1024 * 1024)
+    disk[0] = 0xEB.toByte()
+    disk.writeUInt16Le(11, 512)
+    disk[13] = 4
+    disk.writeUInt16Le(14, 1)
+    disk[16] = 2
+    disk.writeUInt16Le(17, 512)
+    disk[21] = 0xF8.toByte()
+    disk.writeUInt16Le(22, 128)
+    disk.writeUInt32Le(32, 65536)
+    disk[510] = 0x55
+    disk[511] = 0xAA.toByte()
+    for (fatSector in listOf(1, 129)) {
+        disk.writeUInt16Le(fatSector * 512, 0xFFF8)
+        for (cluster in 1..3) disk.writeUInt16Le(fatSector * 512 + cluster * 2, 0xFFFF)
+    }
+    val root = 257 * 512
+    "VENTOY     ".encodeToByteArray().copyInto(disk, root)
+    disk[root + 11] = 0x10
+    disk.writeUInt16Le(root + 26, 2)
+    if (version == null) return disk
+    val directory = 289 * 512
+    "VERSION    ".encodeToByteArray().copyInto(disk, directory)
+    disk[directory + 11] = 0x20
+    disk.writeUInt16Le(directory + 26, 3)
+    val versionBytes = version.encodeToByteArray()
+    disk.writeUInt32Le(directory + 28, versionBytes.size.toLong())
+    versionBytes.copyInto(disk, 293 * 512)
+    return disk
+}
+
+private fun renameGptPartitions(table: ByteArray) {
+    table.fill(0, 56, 128)
+    "بيانات".toByteArray(Charsets.UTF_16LE).copyInto(table, 56)
+    table.fill(0, 128 + 56, 256)
+}
+
+private fun rewriteGptTables(device: RawBlockDevice, edit: (ByteArray) -> Unit) {
+    for (headerSector in listOf(1L, device.sizeBytes / 512 - 1)) {
+        val header = device.readBytes(headerSector * 512, 512)
+        val tableOffset = header.readUInt64Le(72) * 512
+        val table = device.readBytes(tableOffset, 32 * 512)
+        edit(table)
+        device.write(tableOffset, table)
+        val tableCrc = CRC32().run {
+            update(table)
+            value
+        }
+        header.writeUInt32Le(88, tableCrc)
+        header.writeUInt32Le(16, 0)
+        val headerCrc = CRC32().run {
+            update(header, 0, header.readUInt32Le(12).toInt())
+            value
+        }
+        header.writeUInt32Le(16, headerCrc)
+        device.write(headerSector * 512, header)
+    }
+}
+
+private class ReadFailureDevice(
+    private val delegate: RawBlockDevice,
+    private val unreadable: LongRange,
+    private val failure: Exception,
+) : RawBlockDevice by delegate {
+    override fun read(offset: Long, destination: ByteArray, destinationOffset: Int, length: Int) {
+        if (offset <= unreadable.last && offset + length > unreadable.first) throw failure
+        delegate.read(offset, destination, destinationOffset, length)
+    }
+}
+
+private class WriteTrackingDevice(
+    private val delegate: RawBlockDevice,
+    private val interruptAfterWritingOffset: Long? = null,
+) : RawBlockDevice by delegate {
+    val writes = mutableListOf<LongRange>()
+
+    override fun write(offset: Long, source: ByteArray, sourceOffset: Int, length: Int) {
+        val range = offset until offset + length
+        writes += range
+        delegate.write(offset, source, sourceOffset, length)
+        if (interruptAfterWritingOffset != null && interruptAfterWritingOffset in range) {
+            throw IOException("Disconnected after core write")
         }
     }
 }

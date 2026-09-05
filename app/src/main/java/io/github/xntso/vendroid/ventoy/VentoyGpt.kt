@@ -225,12 +225,12 @@ internal object VentoyGpt {
         require(!partition1.uniqueGuid.contentEquals(partition2.uniqueGuid)) {
             "Ventoy GPT partitions share a unique GUID."
         }
-        require(partition1.name == "Ventoy" && partition1.attributes == 0L) {
+        // GPT names are editable labels, not Ventoy identity. Keep validating types,
+        // ranges, attributes and the agreement between the two partition tables.
+        require(partition1.attributes == 0L) {
             "Ventoy data partition metadata mismatch."
         }
-        require(partition2.name == "VTOYEFI" &&
-            partition2.attributes == VENTOY_EFI_PARTITION_ATTRIBUTES
-        ) {
+        require(partition2.attributes == VENTOY_EFI_PARTITION_ATTRIBUTES) {
             "VTOYEFI GPT metadata mismatch."
         }
         return GptState(

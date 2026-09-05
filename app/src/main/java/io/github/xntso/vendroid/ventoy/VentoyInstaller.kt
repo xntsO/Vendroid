@@ -97,9 +97,18 @@ class VentoyInstaller(
             partitionStyle = diskInfo.partitionStyle,
         )
         val versionRelation = VentoyVersion.compare(diskInfo.installedVersion, payload.version)
-        if (versionRelation == VentoyVersionRelation.Newer) {
+        val canReplacePayload = when (versionRelation) {
+            VentoyVersionRelation.Older, VentoyVersionRelation.Same -> true
+            VentoyVersionRelation.Newer, VentoyVersionRelation.Unknown -> false
+        }
+        if (!canReplacePayload) {
             require(diskInfo.partitionStyle == VentoyPartitionStyle.Gpt && diskInfo.needsRepair) {
-                "Downgrading Ventoy is not supported."
+                if (versionRelation == VentoyVersionRelation.Unknown) {
+                    "The installed Ventoy version could not be determined. " +
+                        "Updating is blocked to avoid a possible downgrade."
+                } else {
+                    "Downgrading Ventoy is not supported."
+                }
             }
             onProgress(VentoyInstallProgress(VentoyInstallStage.WritingBootloader))
             repairGptMetadata(
@@ -114,7 +123,10 @@ class VentoyInstaller(
             onProgress(VentoyInstallProgress(VentoyInstallStage.Complete))
             return scanner.scan(device) ?: diskInfo.copy(needsRepair = false)
         }
-        var preservedGptCoreTail: ByteArray? = null
+        val preservedCoreTail = device.readBytes(
+            CORE_TAIL_START_SECTOR * VentoyDiskLayout.SECTOR_SIZE,
+            CORE_TAIL_SECTOR_COUNT * VentoyDiskLayout.SECTOR_SIZE,
+        )
 
         onProgress(VentoyInstallProgress(VentoyInstallStage.WritingBootloader))
         if (plan.partitionStyle == VentoyPartitionStyle.Mbr) {
@@ -125,7 +137,6 @@ class VentoyInstaller(
                 preservedDiskSignature,
                 preservedExtraPartitionEntries,
             )
-            writeCoreImage(device, plan, onProgress)
         } else {
             repairGptMetadata(
                 device = device,
@@ -134,24 +145,15 @@ class VentoyInstaller(
                 preservedVentoyUuid = preservedUuid,
                 preservedDiskSignature = preservedDiskSignature,
             )
-            val coreTail = device.readBytes(
-                CORE_TAIL_START_SECTOR * VentoyDiskLayout.SECTOR_SIZE,
-                CORE_TAIL_SECTOR_COUNT * VentoyDiskLayout.SECTOR_SIZE,
-            )
-            preservedGptCoreTail = coreTail
-            writeCoreImage(device, plan, onProgress)
-            device.write(
-                CORE_TAIL_START_SECTOR * VentoyDiskLayout.SECTOR_SIZE,
-                coreTail,
-            )
         }
+        writeCoreImage(device, plan, onProgress, preserveTail = true)
 
         onProgress(VentoyInstallProgress(VentoyInstallStage.WritingVentoyPayload))
         writeVentoyDiskImage(device, plan, onProgress)
 
         onProgress(VentoyInstallProgress(VentoyInstallStage.Verifying))
         verifyPartitionLayout(device, plan)
-        verifyWrittenPayloads(device, plan, onProgress, preservedGptCoreTail)
+        verifyWrittenPayloads(device, plan, onProgress, preservedCoreTail)
         onProgress(VentoyInstallProgress(VentoyInstallStage.Complete))
         return scanner.scan(device) ?: diskInfo.copy(installedVersion = payload.version)
     }
@@ -222,6 +224,7 @@ class VentoyInstaller(
         device: RawBlockDevice,
         plan: VentoyInstallPlan,
         onProgress: (VentoyInstallProgress) -> Unit,
+        preserveTail: Boolean = false,
     ) {
         val startSector: Long
         val sectorCount: Long
@@ -238,7 +241,10 @@ class VentoyInstaller(
                 requireEndOfStream = false
             }
         }
-        val expectedBytes = sectorCount * VentoyDiskLayout.SECTOR_SIZE
+        // Stop before the preserved sectors. Restoring them after a write cannot
+        // protect them from a disconnect or partial write during the update.
+        val sectorsToWrite = if (preserveTail) CORE_TAIL_START_SECTOR - startSector else sectorCount
+        val expectedBytes = sectorsToWrite * VentoyDiskLayout.SECTOR_SIZE
         payload.openCoreImage().use { compressed ->
             XZInputStream(compressed).use { input ->
                 copyExactToDevice(
@@ -248,7 +254,7 @@ class VentoyInstaller(
                     expectedBytes = expectedBytes,
                     stage = VentoyInstallStage.WritingBootloader,
                     onProgress = onProgress,
-                    requireEndOfStream = requireEndOfStream,
+                    requireEndOfStream = requireEndOfStream && !preserveTail,
                 )
             }
         }
@@ -343,7 +349,7 @@ class VentoyInstaller(
         device: RawBlockDevice,
         plan: VentoyInstallPlan,
         onProgress: (VentoyInstallProgress) -> Unit,
-        preservedGptCoreTail: ByteArray? = null,
+        preservedCoreTail: ByteArray? = null,
     ) {
         val coreStartSector = when (plan.partitionStyle) {
             VentoyPartitionStyle.Mbr -> 1L
@@ -370,7 +376,7 @@ class VentoyInstaller(
                     } else {
                         null
                     },
-                    replacement = preservedGptCoreTail?.let { bytes ->
+                    replacement = preservedCoreTail?.let { bytes ->
                         PayloadReplacement(
                             byteOffset = CORE_TAIL_START_SECTOR *
                                 VentoyDiskLayout.SECTOR_SIZE -
@@ -492,7 +498,7 @@ class VentoyInstaller(
         require(gpt.partition2.sectorCount == plan.partition2SectorCount) {
             "VTOYEFI partition size mismatch."
         }
-        require(gpt.partition2.name == "VTOYEFI" && gpt.partition2.attributes == Long.MIN_VALUE) {
+        require(gpt.partition2.attributes == Long.MIN_VALUE) {
             "VTOYEFI GPT metadata mismatch."
         }
     }
