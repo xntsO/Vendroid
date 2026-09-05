@@ -214,7 +214,7 @@ class QEMUController:
             raise RuntimeError(f"Failed to delete device: {self._monitor.after}")
 
     @async_to_sync_with_loop
-    async def detach_usb_drive(self, device_id: str):
+    async def detach_usb_drive(self, device_id: str, *, managed_node: bool = False):
         """Wait for guest removal, then release the image before host inspection/writes."""
         await self._qmp.execute("device_del", {"id": device_id})
         deadline = time.monotonic() + 15
@@ -225,6 +225,25 @@ class QEMUController:
             await asyncio.sleep(0.1)
         else:
             raise TimeoutError(f"USB device {device_id} did not detach")
+        if managed_node:
+            node_name = f"{device_id}-image"
+            deadline = time.monotonic() + 15
+            while True:
+                try:
+                    await self._qmp.execute("blockdev-del", {"node-name": node_name})
+                    break
+                except Exception as error:
+                    # QEMU may still be releasing the detached device's last
+                    # reference. Retry only that specific, temporary condition.
+                    if not any(message in str(error) for message in (
+                        f"Node {node_name} is in use", f"Block device {node_name} is in use"
+                    )) or time.monotonic() >= deadline:
+                        raise
+                    await asyncio.sleep(0.1)
+            nodes = await self._qmp.execute("query-named-block-nodes")
+            if any(node.get("node-name") == node_name for node in nodes):
+                raise RuntimeError(f"Detached image node {node_name} is still open")
+            return
         blocks = await self._qmp.execute("query-block")
         if any(block["device"] == device_id for block in blocks):
             response = await self._qmp.execute(
@@ -235,6 +254,23 @@ class QEMUController:
         blocks = await self._qmp.execute("query-block")
         if any(block["device"] == device_id for block in blocks):
             raise RuntimeError(f"Detached image {device_id} is still open in QEMU")
+
+    @async_to_sync_with_loop
+    async def add_managed_usb_drive(self, device_id: str, *, file: str | Path, bus: str):
+        """Own the image node explicitly; avoid legacy drive auto-deletion races."""
+        node_name = f"{device_id}-image"
+        await self._qmp.execute("blockdev-add", {
+            "driver": "raw", "node-name": node_name,
+            "file": {"driver": "file", "filename": str(file)},
+        })
+        try:
+            await self._qmp.execute("device_add", {
+                "driver": "usb-storage", "id": device_id, "bus": bus,
+                "drive": node_name, "removable": True,
+            })
+        except Exception:
+            await self._qmp.execute("blockdev-del", {"node-name": node_name})
+            raise
 
     # noinspection PyShadowingBuiltins
     def add_usb_drive(

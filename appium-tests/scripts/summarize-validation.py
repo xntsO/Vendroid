@@ -37,14 +37,16 @@ def summarize(root: Path) -> tuple[str, bool]:
                         lifecycle_ok = lifecycle_ok and boot.get("passed") is True and all(
                             boot["modes"][mode].get("passed") is True for mode in ("bios", "uefi")
                         )
-                if controller == "xhci":
-                    large_ok = json.loads(large.read_text(encoding="utf-8")).get("passed") is True
-                    large_result = "Pass" if large_ok else "FAIL"
-                    passed = passed and large_ok
             except (OSError, ValueError, KeyError, TypeError):
                 lifecycle_ok = False
-                if controller == "xhci":
+            if controller == "xhci":
+                try:
+                    large_ok = json.loads(large.read_text(encoding="utf-8")).get("passed") is True
+                    large_result = "Pass" if large_ok else "FAIL"
+                except (OSError, ValueError, KeyError, TypeError):
+                    large_ok = False
                     large_result = "Missing or incomplete"
+                passed = passed and large_ok
             passed = passed and lifecycle_ok
             rows.append(f"| {channel} | {controller} | {'Pass' if lifecycle_ok else 'FAIL / incomplete'} | {large_result} |")
     rows.extend(["", f"Overall: {'PASS' if passed else 'FAIL / incomplete evidence'}", "",

@@ -39,11 +39,15 @@ jobs:
       - name: Test independent disk inspector
         working-directory: appium-tests
         run: python3 -m unittest discover -s tests -p test_disk_validation.py -v
+      - uses: astral-sh/setup-uv@v5
       - name: Install boot probe tools
         run: |
           sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
           sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
-            grub-pc-bin grub-efi-amd64-bin grub-common xorriso mtools
+            grub-pc-bin grub-efi-amd64-bin grub-common xorriso mtools qemu-system-x86
+      - name: Verify repeated QMP image lifecycle
+        working-directory: appium-tests
+        run: uv run python -m scripts.check_qmp_lifecycle
       - name: Build boot probe
         run: bash appium-tests/scripts/build-boot-probe.sh vm-outputs/boot-probe.iso
       - uses: actions/upload-artifact@v5

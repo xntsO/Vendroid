@@ -193,13 +193,13 @@ class ValidationDrive:
         self.attached = False
 
     def attach(self):
-        self.qemu.add_usb_drive(self.device_id, bus=self.bus, file=self.path, format="raw")
+        self.qemu.add_managed_usb_drive(self.device_id, bus=self.bus, file=self.path)
         self.attached = True
         sleep(3)
 
     def detach(self):
         if self.attached:
-            self.qemu.detach_usb_drive(self.device_id)
+            self.qemu.detach_usb_drive(self.device_id, managed_node=True)
             self.attached = False
 
 
