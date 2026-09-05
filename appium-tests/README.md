@@ -18,7 +18,9 @@ GitHub Actions is the authoritative test environment. It:
 2. Restores or prepares a Bliss OS VM.
 3. Starts QEMU with an emulated USB drive.
 4. Installs the APK through ADB.
-5. Runs the applicable pytest suite and uploads diagnostic output after failures.
+5. Runs the applicable pytest suite and retains successful and failed evidence for 30 days.
+
+See [the validation guide](../docs/validation.md) for automated layout, preservation, update, reconnect, repair, large-capacity and firmware boot coverage, the PowerShell command that starts it remotely, and the minimal one-USB physical check.
 
 ## Requirements for another environment
 
