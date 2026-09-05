@@ -30,6 +30,29 @@ env:
   VM_DIR: /appium-vm
 
 jobs:
+  validation-tools:
+    name: Verify disk inspector and build boot probe
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Test independent disk inspector
+        working-directory: appium-tests
+        run: python3 -m unittest discover -s tests -p test_disk_validation.py -v
+      - name: Install boot probe tools
+        run: |
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
+            grub-pc-bin grub-efi-amd64-bin grub-common xorriso mtools
+      - name: Build boot probe
+        run: bash appium-tests/scripts/build-boot-probe.sh vm-outputs/boot-probe.iso
+      - uses: actions/upload-artifact@v5
+        with:
+          name: vendroid-ci-boot-probe
+          path: vm-outputs/boot-probe.iso
+          retention-days: 30
+          if-no-files-found: error
+
   verify:
     name: Build, unit tests, and lint
     runs-on: ubuntu-24.04
@@ -94,12 +117,12 @@ jobs:
 
   qemu-tests:
     name: Appium tests in QEMU (${{ matrix.channel }}, ${{ matrix.controller }})
-    needs: verify
+    needs: [verify, validation-tools]
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     strategy:
       fail-fast: false
-      max-parallel: 1
+      max-parallel: 2
       matrix:
         controller: [uhci, xhci]
         channel: [stable, preview]
@@ -136,26 +159,26 @@ jobs:
           name: ${{ matrix.artifact }}
           path: apk
 
+      - name: Download boot probe
+        uses: actions/download-artifact@v5
+        with:
+          name: vendroid-ci-boot-probe
+          path: vm-outputs
+
       - name: Install QEMU
         run: |
           sudo sed -i \
             's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' \
             /etc/apt/apt-mirrors.txt
           sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
-            qemu-system-x86 qemu-utils ovmf grub-pc-bin grub-efi-amd64-bin \
-            grub-common xorriso mtools exfatprogs
+            qemu-system-x86 qemu-utils ovmf exfatprogs exfat-fuse
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Verify independent disk inspector
-        working-directory: appium-tests
-        run: uv run pytest -q tests/test_disk_validation.py
-
-      - name: Build firmware boot probe and fetch version fixtures
+      - name: Fetch pinned version fixtures
         run: |
           mkdir -p vm-outputs/validation .vendroid-cache
-          bash appium-tests/scripts/build-boot-probe.sh "$VENDROID_BOOT_PROBE_ISO"
           curl --fail --location --retry 3 --output .vendroid-cache/ventoy-1.1.15-linux.tar.gz \
             https://github.com/ventoy/Ventoy/releases/download/v1.1.15/ventoy-1.1.15-linux.tar.gz
           curl --fail --location --retry 3 --output .vendroid-cache/ventoy-1.1.17-linux.tar.gz \
@@ -266,7 +289,7 @@ jobs:
   validation-summary:
     name: Validate collected evidence
     if: always()
-    needs: [verify, qemu-tests]
+    needs: [verify, validation-tools, qemu-tests]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
@@ -280,7 +303,8 @@ jobs:
         env:
           BUILD_RESULT: ${{ needs.verify.result }}
           TEST_RESULT: ${{ needs.qemu-tests.result }}
-        run: test "$BUILD_RESULT" = success && test "$TEST_RESULT" = success
+          TOOLS_RESULT: ${{ needs.validation-tools.result }}
+        run: test "$BUILD_RESULT" = success && test "$TEST_RESULT" = success && test "$TOOLS_RESULT" = success
 
   signed-apk:
     name: Signed Vendroid release

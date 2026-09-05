@@ -286,8 +286,8 @@ def image_snapshot(path, expected_style: str) -> dict:
 def mounted_data_partition(path, writable=False):
     """Yield a Path for partition 1, only after the caller detached QEMU.
 
-    Linux requires sudo -n access to losetup, mount and umount and an exFAT
-    driver. The loop device is read-only unless writable=True. Cleanup always
+    Linux requires sudo -n access to losetup, mount.exfat-fuse and umount.
+    The loop device is read-only unless writable=True. Cleanup always
     attempts unmount and detach, including when the context body raises.
     """
     _require(sys.platform.startswith("linux"), "Image mounting requires Linux")
@@ -311,9 +311,8 @@ def mounted_data_partition(path, writable=False):
             _require(re.fullmatch(r"/dev/loop[0-9]+", loop) is not None, "Unexpected losetup device output")
             cleanup.callback(subprocess.run, ["sudo", "-n", "losetup", "--detach", loop], check=True)
             options = "rw" if writable else "ro"
-            if writable:
-                options += f",uid={os.getuid()},gid={os.getgid()},umask=077"
-            subprocess.run(["sudo", "-n", "mount", "-t", "exfat", "-o", options,
+            options += f",uid={os.getuid()},gid={os.getgid()},umask=077,allow_other,default_permissions"
+            subprocess.run(["sudo", "-n", "mount.exfat-fuse", "-o", options,
                             loop, str(root)], check=True)
             cleanup.callback(subprocess.run, ["sudo", "-n", "umount", str(root)], check=True)
             yield root
