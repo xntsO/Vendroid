@@ -48,6 +48,8 @@ def driver(appium_service, request) -> Generator[appium.webdriver.Remote, None, 
     options = UiAutomator2Options()
     options.app_package = package_name
     options.app_activity = activity_name
+    # The host performs two bounded firmware boots while Android is idle.
+    options.new_command_timeout = 900
     client_config = AppiumClientConfig(remote_server_addr=f"http://{Config.APPIUM_HOST}:{Config.APPIUM_PORT}")
     print("[DEBUG] Connecting to Appium...")
     _driver = appium.webdriver.Remote(

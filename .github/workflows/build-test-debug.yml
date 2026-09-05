@@ -1,4 +1,5 @@
 name: Build and test
+run-name: Build and test ${{ inputs.validation_id || github.sha }}
 
 on:
   push:
@@ -7,6 +8,11 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      validation_id:
+        description: Optional identifier used by scripts/verify.ps1
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -66,17 +72,17 @@ jobs:
         with:
           name: vendroid-e2e-stable-apk
           path: app/build/outputs/apk/foss/optimized/app-foss-optimized.apk
-          retention-days: 3
+          retention-days: 30
 
       - name: Upload Preview APK for end-to-end tests
         uses: actions/upload-artifact@v5
         with:
           name: vendroid-e2e-preview-apk
           path: app/build/outputs/apk/foss/preview/app-foss-preview.apk
-          retention-days: 3
+          retention-days: 30
 
-      - name: Upload verification reports after failure
-        if: failure()
+      - name: Upload verification reports
+        if: always()
         uses: actions/upload-artifact@v5
         with:
           name: android-verification-reports
@@ -84,17 +90,19 @@ jobs:
             app/build/reports/
             app/build/test-results/
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 30
 
   qemu-tests:
-    name: Appium tests in QEMU (${{ matrix.channel }})
+    name: Appium tests in QEMU (${{ matrix.channel }}, ${{ matrix.controller }})
     needs: verify
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       max-parallel: 1
       matrix:
+        controller: [uhci, xhci]
+        channel: [stable, preview]
         include:
           - channel: stable
             app_name: Vendroid
@@ -113,6 +121,10 @@ jobs:
       VENDROID_PACKAGE_NAME: ${{ matrix.package }}
       VENDROID_PARTITION_STYLE: ${{ matrix.partition_style }}
       VENDROID_EXPECTED_VERSION: ${{ matrix.version }}
+      VENDROID_TEST_USB_BUS: ${{ matrix.controller }}.0
+      VENDROID_EVIDENCE_DIR: ${{ github.workspace }}/vm-outputs/validation
+      VENDROID_BOOT_PROBE_ISO: ${{ github.workspace }}/vm-outputs/boot-probe.iso
+      VENDROID_PAYLOAD_FIXTURES: ${{ github.workspace }}/.vendroid-cache
 
     steps:
       - name: Checkout
@@ -130,10 +142,26 @@ jobs:
             's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' \
             /etc/apt/apt-mirrors.txt
           sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
-            qemu-system-x86 qemu-utils
+            qemu-system-x86 qemu-utils ovmf grub-pc-bin grub-efi-amd64-bin \
+            grub-common xorriso mtools exfatprogs
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
+
+      - name: Verify independent disk inspector
+        working-directory: appium-tests
+        run: uv run pytest -q tests/test_disk_validation.py
+
+      - name: Build firmware boot probe and fetch version fixtures
+        run: |
+          mkdir -p vm-outputs/validation .vendroid-cache
+          bash appium-tests/scripts/build-boot-probe.sh "$VENDROID_BOOT_PROBE_ISO"
+          curl --fail --location --retry 3 --output .vendroid-cache/ventoy-1.1.15-linux.tar.gz \
+            https://github.com/ventoy/Ventoy/releases/download/v1.1.15/ventoy-1.1.15-linux.tar.gz
+          curl --fail --location --retry 3 --output .vendroid-cache/ventoy-1.1.17-linux.tar.gz \
+            https://github.com/ventoy/Ventoy/releases/download/v1.1.17/ventoy-1.1.17-linux.tar.gz
+          echo 'dfed601b689fa4f552bc4c44dc0a45ef893226630fb11f43ca3ab618ff429279  .vendroid-cache/ventoy-1.1.15-linux.tar.gz' | sha256sum -c -
+          echo '7fb4ed08cef6a6b4d39dd19260d8c80291a78dfdf9af7d461571e23cbbc43805  .vendroid-cache/ventoy-1.1.17-linux.tar.gz' | sha256sum -c -
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
@@ -213,25 +241,51 @@ jobs:
             export LOGCAT_DIR="$PWD/../vm-outputs/logcat"
             ./scripts/wait-vm-startup.sh
             adb install -r ../apk/*.apk
-            adb install -r ../apk/*.apk
+            sha256sum ../apk/*.apk > ../vm-outputs/apk.sha256
+            git rev-parse HEAD > ../vm-outputs/commit.txt
             adb shell dumpsys package "$VENDROID_PACKAGE_NAME" | tee ../vm-outputs/package.txt
             grep -q "versionName=${VENDROID_EXPECTED_VERSION}$" ../vm-outputs/package.txt
             adb logcat -d > "$LOGCAT_DIR/0_before.log" 2>&1
             uv run pytest -sv --tb=native --junit-xml=../vm-outputs/junit.xml
 
-      - name: Upload QEMU diagnostics after failure
-        if: failure()
+      - name: Upload QEMU validation evidence
+        if: always()
         uses: actions/upload-artifact@v5
         with:
-          name: qemu-diagnostics-${{ matrix.channel }}
-          path: vm-outputs/
+          name: qemu-diagnostics-${{ matrix.channel }}-${{ matrix.controller }}
+          path: |
+            vm-outputs/validation/
+            vm-outputs/*.txt
+            vm-outputs/*.sha256
+            vm-outputs/*.xml
+            vm-outputs/*.log
+            vm-outputs/logcat/
           if-no-files-found: ignore
-          retention-days: 7
+          retention-days: 30
+
+  validation-summary:
+    name: Validate collected evidence
+    if: always()
+    needs: [verify, qemu-tests]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: qemu-diagnostics-*
+          path: validation-evidence
+      - name: Require complete results for every channel and controller
+        run: python3 appium-tests/scripts/summarize-validation.py validation-evidence
+      - name: Require successful build and test jobs
+        env:
+          BUILD_RESULT: ${{ needs.verify.result }}
+          TEST_RESULT: ${{ needs.qemu-tests.result }}
+        run: test "$BUILD_RESULT" = success && test "$TEST_RESULT" = success
 
   signed-apk:
     name: Signed Vendroid release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: qemu-tests
+    needs: validation-summary
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     permissions:

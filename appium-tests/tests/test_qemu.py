@@ -2,6 +2,8 @@ import base64
 import os
 import tempfile
 import struct
+import hashlib
+import json
 from pathlib import Path
 from time import sleep
 from typing import Generator
@@ -14,6 +16,11 @@ from vendroid import package_name
 from vendroid.config import Config
 from vendroid.fixtures import appium_service, driver, qemu
 from vendroid.qemu import QEMUController
+from vendroid.disk_validation import (
+    inspect_image, mounted_data_partition, create_preservation_files,
+    verify_preservation_files, damage_gpt_header, seed_payload,
+)
+from vendroid.firmware_validation import prepare_boot_files, verify_firmware_boot
 from vendroid.utils import (
     used,
     device_temp_sparse_file,
@@ -180,44 +187,201 @@ def test_unplug_xhci(driver: appium.webdriver.Remote, qemu: QEMUController):
         app.wait_for_success(driver)
 
 
-@pytest.mark.qemu
-def test_ventoy_install_options_and_repair(
-    driver: appium.webdriver.Remote,
-    raw_usb_drive: tuple[str, Path],
-):
-    _, raw_disk_image_path = raw_usb_drive
+class ValidationDrive:
+    def __init__(self, qemu, path, device_id, bus):
+        self.qemu, self.path, self.device_id, self.bus = qemu, path, device_id, bus
+        self.attached = False
 
-    app.tap_install_ventoy(driver)
-    app.select_first_usb_device_if_multiple(driver)
-    app.grant_usb_permission(driver)
-    app.open_ventoy_advanced_options(driver)
-    app.configure_ventoy_options(
-        driver,
-        "TOOLS",
-        1,
-        "64 KiB",
-        partition_style=os.environ.get("VENDROID_PARTITION_STYLE"),
-    )
-    app.confirm_write_image(driver)
-    app.skip_lay_flat_sheet(driver)
-    app.wait_for_success(driver, timeout=180)
+    def attach(self):
+        self.qemu.add_usb_drive(self.device_id, bus=self.bus, file=self.path, format="raw")
+        self.attached = True
+        sleep(3)
 
-    sleep(1)
-    verify_ventoy_options(raw_disk_image_path, "TOOLS", 1, 64 * 1024)
+    def detach(self):
+        if self.attached:
+            self.qemu.detach_usb_drive(self.device_id)
+            self.attached = False
 
+
+@pytest.fixture
+def validation_drive(qemu, request):
+    original = qemu.get_block_device(Config.QEMU_USB_DEV_ID)["inserted"]["image"]
+    qemu.detach_usb_drive(Config.QEMU_USB_DEV_ID)
+    try:
+        with tempfile.TemporaryDirectory(prefix="vendroid-validation-") as directory:
+            path = Path(directory) / "usb.img"
+            with path.open("wb") as image:
+                image.truncate(getattr(request, "param", 256 * 1024 * 1024))
+            drive = ValidationDrive(qemu, path, "validation-usb", os.environ.get("VENDROID_TEST_USB_BUS", "uhci.0"))
+            try:
+                drive.attach()
+                yield drive
+            finally:
+                drive.detach()
+    finally:
+        qemu.add_usb_drive(Config.QEMU_USB_DEV_ID, bus=Config.QEMU_USB_BUS,
+                           file=original["filename"], format=original["format"])
+        sleep(3)
+
+
+def restart_and_scan(driver):
     driver.terminate_app(package_name)
     driver.activate_app(package_name)
     app.tap_install_ventoy(driver)
     app.select_first_usb_device_if_multiple(driver)
     app.grant_usb_permission(driver)
-    repair_button = wait_for_element(driver, '//*[@resource-id="writeImageButton"]', timeout=30)
-    wait_for_element(driver, '//*[@text="Repair"]', timeout=30)
-    repair_button.click()
-    app.skip_lay_flat_sheet(driver)
-    app.wait_for_success(driver, timeout=180)
 
-    sleep(1)
-    verify_ventoy_options(raw_disk_image_path, "TOOLS", 1, 64 * 1024)
+
+def assert_detected_version(driver, version):
+    wait_for_element(driver, f'//*[contains(@text,"Ventoy {version} is installed") or '
+                     f'contains(@text,"Ventoy {version} installed") or '
+                     f'contains(@text,"has Ventoy {version},")]', timeout=30)
+
+
+def complete_operation(driver, action):
+    wait_for_element(driver, f'//*[@text="{action}"]', timeout=30)
+    wait_for_element(driver, '//*[@resource-id="writeImageButton"]', timeout=30).click()
+    app.skip_lay_flat_sheet(driver)
+    app.wait_for_success(driver, timeout=240)
+
+
+def file_digest(path):
+    with path.open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+@pytest.mark.qemu
+def test_ventoy_lifecycle_and_firmware(
+    driver: appium.webdriver.Remote,
+    validation_drive,
+):
+    drive = validation_drive
+    style = "gpt" if os.environ.get("VENDROID_PARTITION_STYLE", "MBR").startswith("GPT") else "mbr"
+    evidence = Path(os.environ["VENDROID_EVIDENCE_DIR"])
+    evidence.mkdir(parents=True, exist_ok=True)
+    report = {"layout": style, "usb_bus": drive.bus, "checkpoints": []}
+    report_path = evidence / "lifecycle.json"
+
+    def record(name, details=None):
+        report["checkpoints"].append({"name": name, "passed": True, "details": details})
+        report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+
+    def verify_preserved(name):
+        snapshot = inspect_image(drive.path, style)
+        assert snapshot == baseline, f"Disk identity/layout changed during {name}"
+        with mounted_data_partition(drive.path) as root:
+            verify_preservation_files(root, manifest)
+        record(name, snapshot)
+
+    app.tap_install_ventoy(driver)
+    app.select_first_usb_device_if_multiple(driver)
+    app.grant_usb_permission(driver)
+    app.open_ventoy_advanced_options(driver)
+    wait_for_element(driver, '//*[@text="MBR (Recommended)"]', timeout=15)
+    app.configure_ventoy_options(
+        driver, "TOOLS", 1, "64 KiB",
+        partition_style=os.environ.get("VENDROID_PARTITION_STYLE"),
+    )
+    app.confirm_write_image(driver)
+    app.skip_lay_flat_sheet(driver)
+    app.wait_for_success(driver, timeout=240)
+    drive.detach()
+    baseline = inspect_image(drive.path, style)
+    verify_ventoy_options(drive.path, "TOOLS", 1, 64 * 1024)
+    with mounted_data_partition(drive.path, writable=True) as root:
+        manifest = create_preservation_files(root)
+        prepare_boot_files(root, Path(os.environ["VENDROID_BOOT_PROBE_ISO"]))
+    record("install-and-file-copy", baseline)
+    record("boot-after-install", verify_firmware_boot(drive.path, evidence / "boot-install"))
+
+    drive.attach()
+    restart_and_scan(driver)
+    assert_detected_version(driver, os.environ["VENTOY_VERSION"])
+    record("idle-usb-reconnect-and-version-detection")
+    complete_operation(driver, "Repair")
+    drive.detach()
+    verify_preserved("healthy-repair")
+
+    if style == "gpt":
+        for damaged_copy in ("primary", "backup"):
+            damage_gpt_header(drive.path, damaged_copy)
+            drive.attach()
+            restart_and_scan(driver)
+            assert_detected_version(driver, os.environ["VENTOY_VERSION"])
+            complete_operation(driver, "Repair")
+            drive.detach()
+            verify_preserved(f"{damaged_copy}-gpt-repair")
+
+    fixtures = Path(os.environ["VENDROID_PAYLOAD_FIXTURES"])
+    seed_payload(drive.path, fixtures / "ventoy-1.1.15-linux.tar.gz", style)
+    drive.attach()
+    restart_and_scan(driver)
+    assert_detected_version(driver, "1.1.15")
+    complete_operation(driver, "Update")
+    drive.detach()
+    verify_preserved("old-to-bundled-update")
+    drive.attach()
+    restart_and_scan(driver)
+    assert_detected_version(driver, os.environ["VENTOY_VERSION"])
+    drive.detach()
+    record("updated-version-detected")
+    record("boot-after-update", verify_firmware_boot(drive.path, evidence / "boot-update"))
+
+    seed_payload(drive.path, fixtures / "ventoy-1.1.17-linux.tar.gz", style)
+    before_downgrade = file_digest(drive.path)
+    drive.attach()
+    restart_and_scan(driver)
+    assert_detected_version(driver, "1.1.17")
+    wait_for_element(driver, '//*[contains(@text,"Downgrade is blocked")]', timeout=30)
+    button = wait_for_element(driver, '//*[@resource-id="writeImageButton"]', timeout=15)
+    assert button.get_attribute("enabled") == "false"
+    driver.terminate_app(package_name)
+    drive.detach()
+    assert file_digest(drive.path) == before_downgrade, "Downgrade rejection wrote to the disk"
+    verify_preserved("newer-version-blocked-with-zero-writes")
+    report["passed"] = True
+    report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+
+
+@pytest.mark.qemu
+@pytest.mark.parametrize("validation_drive", [3 * 1024**4], indirect=True)
+def test_large_sparse_drive_policy(driver, validation_drive):
+    if os.environ.get("VENDROID_TEST_USB_BUS") != "xhci.0":
+        pytest.skip("Large-capacity case runs once per channel on xHCI")
+    drive = validation_drive
+    app.tap_install_ventoy(driver)
+    app.select_first_usb_device_if_multiple(driver)
+    app.grant_usb_permission(driver)
+    evidence = Path(os.environ["VENDROID_EVIDENCE_DIR"])
+    if os.environ.get("VENDROID_APP_NAME") == "Vendroid":
+        wait_for_element(driver, '//*[contains(@text,"requires the separately installable GitHub V-Preview")]', timeout=30)
+        button = wait_for_element(driver, '//*[@resource-id="writeImageButton"]', timeout=15)
+        assert button.get_attribute("enabled") == "false"
+        driver.terminate_app(package_name)
+        drive.detach()
+        assert drive.path.stat().st_blocks == 0, "Stable wrote to a blocked sparse drive"
+        result = {"passed": True, "bytes": drive.path.stat().st_size, "stable_blocked_without_writes": True}
+    else:
+        app.open_ventoy_advanced_options(driver)
+        app.configure_ventoy_options(driver, "LARGE", 1, "64 KiB", partition_style="GPT (Preview)")
+        app.confirm_write_image(driver)
+        app.skip_lay_flat_sheet(driver)
+        app.wait_for_success(driver, timeout=300)
+        drive.detach()
+        result = inspect_image(drive.path, "gpt")
+        with mounted_data_partition(drive.path, writable=True) as root:
+            manifest = create_preservation_files(root)
+        drive.attach()
+        restart_and_scan(driver)
+        assert_detected_version(driver, os.environ["VENTOY_VERSION"])
+        driver.terminate_app(package_name)
+        drive.detach()
+        assert inspect_image(drive.path, "gpt") == result
+        with mounted_data_partition(drive.path) as root:
+            verify_preservation_files(root, manifest)
+        result = {"passed": True, "simulated_large_drive": result}
+    evidence.mkdir(parents=True, exist_ok=True)
+    (evidence / "large-drive.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
 
 
 @pytest.mark.qemu
