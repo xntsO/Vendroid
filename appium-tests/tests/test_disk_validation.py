@@ -159,7 +159,8 @@ def make_image(path, style="gpt"):
 
 
 def make_archive(path, *, core_length=2047 * SECTOR, efi_length=EFI_LENGTH * SECTOR,
-                 duplicate=False, missing=False, symlink=False, bad_xz=False):
+                 duplicate=False, missing=False, symlink=False, bad_xz=False,
+                 prefix="./"):
     boot = bytearray(b"B" * SECTOR)
     boot[510:512] = b"\x55\xaa"
     members = [("boot/boot.img", bytes(boot)),
@@ -170,7 +171,7 @@ def make_archive(path, *, core_length=2047 * SECTOR, efi_length=EFI_LENGTH * SEC
         members.append(members[0])
     with tarfile.open(path, "w:gz") as bundle:
         for suffix, data in members:
-            member = tarfile.TarInfo("ventoy-1.1.15/" + suffix)
+            member = tarfile.TarInfo(prefix + "ventoy-1.1.15/" + suffix)
             member.size = len(data)
             if symlink and suffix == "boot/boot.img":
                 member.type = tarfile.SYMTYPE
@@ -569,7 +570,7 @@ class PayloadSeedTests(unittest.TestCase):
         cases = ({"missing": True}, {"duplicate": True}, {"symlink": True},
                  {"core_length": 2047 * SECTOR - 1}, {"core_length": 2047 * SECTOR + 1},
                  {"efi_length": EFI_LENGTH * SECTOR - 1}, {"efi_length": EFI_LENGTH * SECTOR + 1},
-                 {"bad_xz": True})
+                 {"bad_xz": True}, {"prefix": "../"}, {"prefix": "/"})
         for options in cases:
             with self.subTest(options=options):
                 make_image(self.image)
@@ -593,6 +594,11 @@ class PayloadSeedTests(unittest.TestCase):
                         dv.seed_payload(self.image, invalid, "gpt")
                 self.assertEqual(writes, [])
                 self.assertEqual(dv.inspect_image(self.image, "gpt")["identity"]["ventoy_uuid"], bytes(range(16)).hex())
+
+    def test_seed_accepts_archive_without_dot_prefix(self):
+        make_image(self.image)
+        archive = make_archive(self.root / "plain.tar.gz", prefix="")
+        self.assertEqual(dv.seed_payload(self.image, archive, "gpt")["version"], "1.1.15")
 
     def test_seed_refuses_damaged_baseline(self):
         make_image(self.image)
