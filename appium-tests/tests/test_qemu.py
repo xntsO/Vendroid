@@ -292,6 +292,7 @@ def test_ventoy_lifecycle_and_firmware(
         driver, "TOOLS", 1, "64 KiB",
         partition_style=os.environ.get("VENDROID_PARTITION_STYLE"),
     )
+    driver.save_screenshot(str(evidence / "install-confirmation.png"))
     app.confirm_write_image(driver)
     app.skip_lay_flat_sheet(driver)
     app.wait_for_success(driver, timeout=240)

@@ -508,40 +508,46 @@ fun ConfirmationViewLayout(
                     .widthIn(max = CONTENT_WIDTH)
                     .align(Alignment.Center)
                     .fillMaxSize()
-                    .safeDrawingPadding()
-                    .verticalScroll(rememberScrollState()),
+                    .safeDrawingPadding(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
 
-                Box(
-                    Modifier
-                        .padding(24.dp)
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    title()
-                }
-
                 Column(
                     modifier = Modifier
+                        .weight(1f)
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                        .verticalScroll(rememberScrollState()),
                 ) {
-                    sourceCard(Modifier.fillMaxWidth(), false)
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
+                    Box(
+                        Modifier
+                            .padding(24.dp)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            modifier = Modifier.size(48.dp),
-                            imageVector = Icons.TwoTone.ArrowDownward,
-                            contentDescription = null
-                        )
+                        title()
                     }
 
-                    destinationCard(Modifier.fillMaxWidth())
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        sourceCard(Modifier.fillMaxWidth(), false)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Icon(
+                                modifier = Modifier.size(48.dp),
+                                imageVector = Icons.TwoTone.ArrowDownward,
+                                contentDescription = null
+                            )
+                        }
+
+                        destinationCard(Modifier.fillMaxWidth())
+                    }
                 }
 
                 Column {
@@ -565,67 +571,73 @@ fun ConfirmationViewLayout(
             Column(
                 Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
                     .safeDrawingPadding()
             ) {
-                Box(
-                    Modifier
-                        .padding(8.dp)
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.Center
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
                 ) {
-                    title()
-                }
-
-                ConstraintLayout(Modifier.fillMaxWidth()) {
-                    val (sourceCardRef, arrowRef, destinationCardRef) = createRefs()
-                    val chain =
-                        if (LocalLayoutDirection.current == LayoutDirection.Ltr) createHorizontalChain(
-                            sourceCardRef, arrowRef, destinationCardRef,
-                            chainStyle = ChainStyle.Packed
-                        ) else createHorizontalChain(
-                            destinationCardRef, arrowRef, sourceCardRef,
-                            chainStyle = ChainStyle.Packed
-                        )
-                    constrain(chain) {
-                        start.linkTo(parent.start, 16.dp)
-                        end.linkTo(parent.end, 16.dp)
+                    Box(
+                        Modifier
+                            .padding(8.dp)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        title()
                     }
 
-                    sourceCard(
-                        Modifier
-                            .constrainAs(sourceCardRef) {
-                                top.linkTo(parent.top, 16.dp)
-                                bottom.linkTo(parent.bottom, 16.dp)
-                                height = Dimension.fillToConstraints.atLeastWrapContent
-                                width = Dimension.fillToConstraints
-                                horizontalChainWeight = 1f
-                            },
-                        true
-                    )
+                    ConstraintLayout(Modifier.fillMaxWidth()) {
+                        val (sourceCardRef, arrowRef, destinationCardRef) = createRefs()
+                        val chain =
+                            if (LocalLayoutDirection.current == LayoutDirection.Ltr) createHorizontalChain(
+                                sourceCardRef, arrowRef, destinationCardRef,
+                                chainStyle = ChainStyle.Packed
+                            ) else createHorizontalChain(
+                                destinationCardRef, arrowRef, sourceCardRef,
+                                chainStyle = ChainStyle.Packed
+                            )
+                        constrain(chain) {
+                            start.linkTo(parent.start, 16.dp)
+                            end.linkTo(parent.end, 16.dp)
+                        }
 
-                    Icon(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .constrainAs(arrowRef) {
-                                centerVerticallyTo(parent)
-                                width = Dimension.value(48.dp)
-                                horizontalChainWeight = 0f
-                            },
-                        imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
-                        contentDescription = null
-                    )
+                        sourceCard(
+                            Modifier
+                                .constrainAs(sourceCardRef) {
+                                    top.linkTo(parent.top, 16.dp)
+                                    bottom.linkTo(parent.bottom, 16.dp)
+                                    height = Dimension.fillToConstraints.atLeastWrapContent
+                                    width = Dimension.fillToConstraints
+                                    horizontalChainWeight = 1f
+                                },
+                            true
+                        )
 
-                    destinationCard(
-                        Modifier
-                            .constrainAs(destinationCardRef) {
-                                top.linkTo(parent.top, 16.dp)
-                                bottom.linkTo(parent.bottom, 16.dp)
-                                height = Dimension.wrapContent
-                                width = Dimension.fillToConstraints
-                                horizontalChainWeight = 1f
-                            }
-                    )
+                        Icon(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .constrainAs(arrowRef) {
+                                    centerVerticallyTo(parent)
+                                    width = Dimension.value(48.dp)
+                                    horizontalChainWeight = 0f
+                                },
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
+                            contentDescription = null
+                        )
+
+                        destinationCard(
+                            Modifier
+                                .constrainAs(destinationCardRef) {
+                                    top.linkTo(parent.top, 16.dp)
+                                    bottom.linkTo(parent.bottom, 16.dp)
+                                    height = Dimension.wrapContent
+                                    width = Dimension.fillToConstraints
+                                    horizontalChainWeight = 1f
+                                }
+                        )
+                    }
                 }
 
                 warningCard()
@@ -735,6 +747,7 @@ fun ConfirmationView(
                                         partitionStyle = uiState.ventoyOptions.partitionStyle,
                                         diskSizeBytes = uiState.scannedDiskSizeBytes,
                                         buttonTag = "ventoyInstallPartitionStyleButton",
+                                        showDetails = false,
                                         onSelect = { style ->
                                             viewModel.setVentoyOptions(
                                                 uiState.ventoyOptions.copy(partitionStyle = style),
@@ -1165,16 +1178,19 @@ private fun VentoyPartitionStyleSelector(
     partitionStyle: VentoyPartitionStyle,
     diskSizeBytes: Long,
     buttonTag: String,
+    showDetails: Boolean = true,
     onSelect: (VentoyPartitionStyle) -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
     var partitionStyleMenuOpen by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.partition_style), fontWeight = FontWeight.Bold)
-        Text(
-            stringResource(R.string.partition_style_description),
-            style = MaterialTheme.typography.labelMedium,
-        )
+        if (showDetails) {
+            Text(
+                stringResource(R.string.partition_style_description),
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
         Box {
             OutlinedButton(
                 modifier = Modifier.appiumTag(buttonTag),
@@ -1203,13 +1219,13 @@ private fun VentoyPartitionStyleSelector(
                 }
             }
         }
-        if (diskSizeBytes > VentoyDiskLayout.MAX_MBR_DISK_BYTES) {
+        if (showDetails && diskSizeBytes > VentoyDiskLayout.MAX_MBR_DISK_BYTES) {
             Text(
                 stringResource(R.string.large_drive_requires_gpt),
                 style = MaterialTheme.typography.labelMedium,
             )
         }
-        if (!BuildConfig.GPT_ENABLED) {
+        if (showDetails && !BuildConfig.GPT_ENABLED) {
             Text(
                 stringResource(R.string.gpt_available_in_v_preview),
                 style = MaterialTheme.typography.labelMedium,
@@ -1217,7 +1233,7 @@ private fun VentoyPartitionStyleSelector(
             TextButton(onClick = { uriHandler.openUri(V_PREVIEW_DOWNLOAD_URL) }) {
                 Text(stringResource(R.string.get_v_preview))
             }
-        } else if (BuildConfig.IS_PREVIEW &&
+        } else if (showDetails && BuildConfig.IS_PREVIEW &&
             partitionStyle == VentoyPartitionStyle.Gpt
         ) {
             Text(
