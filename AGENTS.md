@@ -32,6 +32,12 @@ Do not run Gradle builds, lint, unit tests, or Appium/QEMU tests on this worksta
 - Appium tests in Bliss OS/QEMU.
 - Signed release APK metadata and signature checks.
 
+For feature work, storage fixes, CI changes, or release preparation, read [docs/validation.md](docs/validation.md) before implementation. Extend the automated coverage for each changed behavior and upcoming phase in the same PR, without waiting for the owner to request tests. Add regression cases for storage bugs; documentation-only and wording-only changes need no new tests.
+
+Keep automatic verification enabled for PRs targeting `main`, including opening, reopening, and subsequent commits. Before merging, inspect the checks and collected evidence for the current PR revision. Failed, missing, cancelled, or incomplete required validation blocks merge; report the concrete blocker and keep the PR open. Signed release checks run at the release stage, not on ordinary PRs.
+
+The owner has one USB drive and a 1 TB laptop. Run routine validation on virtual drives in GitHub Actions, including sparse large-drive images. Follow the guide's limited physical release checks, reuse applicable evidence, and state hardware coverage gaps explicitly.
+
 ## Release signing
 
 Release credentials must never be committed. GitHub Actions expects these secrets:

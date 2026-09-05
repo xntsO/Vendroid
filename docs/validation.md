@@ -56,7 +56,20 @@ Reuse evidence for changes that do not affect storage, USB handling, payloads, o
 
 If no boot-capable computer or prior signed APK is available, record that check as untested. Seek additional device reports from Preview users; do not describe the one-device result as universal compatibility. Drives above 2 TiB remain Preview-only until real large-drive evidence is available. Ordinary GPT promotion must have a separate capacity gate.
 
-## Remaining work outside this automation change
+## Coverage for upcoming releases
+
+When implementing a phase, add its validation to the existing PR workflow in the same change. Keep earlier lifecycle checks running. Record the tested commit, expected outcomes, and supporting artifacts; a new feature is not validated merely because the existing suite passes. Update pinned payload fixtures when the bundled version changes, and test the stable package when a Preview feature is promoted.
+
+| Release | Required additions to automated validation |
+| --- | --- |
+| 2: GPT | Cover the remaining scanner, downgrade, interrupted-update, and capacity issues listed below. Validate stable GPT in the optimized package before promotion. |
+| 3: Secure Boot and Clear Ventoy | Test enabled and disabled Secure Boot states, detection, update and repair preservation, and boot with Secure Boot enforcement. Test Clear Ventoy recognition and confirmation, refusal of unsupported layouts, and both full-drive exFAT and unallocated outcomes. |
+| 4: FAT32, NTFS, and UDF | Independently check each formatter's output, mountability, file copying, update preservation, and BIOS/UEFI boot. Exercise format selection, allocation settings, and FAT32 file-size limits. Gate each format on its own results. |
+| 5: Non-destructive installation and shrinking | Start with read-only eligibility and installation using existing trailing free space. Test unhealthy and unsupported layouts, file hashes, write boundaries, cache synchronization, interrupted writes, disconnects, durable recovery, and Android battery/wake/cancellation behavior. Add filesystem-checker comparisons and fuzzing. Validate each shrinking engine separately as it is introduced. |
+
+Release 3 retains the agreed check on two different real UEFI firmware implementations, including enrollment and reboot behavior. A second tester can supply the additional firmware evidence; one USB can be reused. Emulation does not satisfy that hardware gate. Release 5 custom shrinking engines also require review by a human filesystem or storage expert. Record outstanding evidence and keep the affected feature in Preview until its gate is met.
+
+## Known gaps
 
 The first expanded CI run exposed a real large-drive failure: the 3 TiB virtual USB is reported as zero bytes, so scanning fails before the intended capacity policy appears. In pinned libaums 0.10.0, READ CAPACITY(10)'s unsigned `0xFFFFFFFF` sentinel becomes `-1`; Vendroid's block-count adapter adds one. The driver also truncates read/write LBAs to 32 bits. Full support therefore needs READ CAPACITY(16) plus READ(16)/WRITE(16), not just a capacity arithmetic change. Until then, reject unsupported capacity explicitly and do not claim large-drive support. The 3 TiB checks remain enabled and failing to keep this gap visible. Sources: [capacity parser](https://github.com/magnusja/libaums/blob/af89120aa434ccd97b985a6d66420c1b7e30a1ad/libaums/src/main/java/me/jahnen/libaums/core/driver/scsi/commands/ScsiReadCapacityResponse.kt#L62), [SCSI driver](https://github.com/magnusja/libaums/blob/af89120aa434ccd97b985a6d66420c1b7e30a1ad/libaums/src/main/java/me/jahnen/libaums/core/driver/scsi/ScsiBlockDevice.kt#L117), [CI reproduction](https://github.com/xntsO/Vendroid/actions/runs/33950982930/job/101266912346).
 
