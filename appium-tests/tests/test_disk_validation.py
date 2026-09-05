@@ -445,6 +445,8 @@ class PreservationTests(unittest.TestCase):
 
 class MountTests(unittest.TestCase):
     def setUp(self):
+        self.enterContext(mock.patch.object(dv.os, "getuid", return_value=1001, create=True))
+        self.enterContext(mock.patch.object(dv.os, "getgid", return_value=1002, create=True))
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.image = make_image(Path(self.temp.name) / "disk.img")
@@ -472,7 +474,9 @@ class MountTests(unittest.TestCase):
         self.assertEqual(setup[setup.index("--sizelimit") + 1], str(DATA_LENGTH * SECTOR))
         self.assertIn("--read-only", setup)
         self.assertIn("/proc/", setup[-1])
-        self.assertEqual(mount[3:8], ["-t", "exfat", "-o", "ro", "/dev/loop7"])
+        self.assertEqual(mount[:4], ["sudo", "-n", "mount.exfat-fuse", "-o"])
+        self.assertEqual(mount[4], "ro,uid=1001,gid=1002,umask=077,allow_other,default_permissions")
+        self.assertEqual(mount[5], "/dev/loop7")
         self.assertEqual(unmount, ["sudo", "-n", "umount", str(root)])
         self.assertEqual(detach, ["sudo", "-n", "losetup", "--detach", "/dev/loop7"])
         self.assertFalse(root.exists())
@@ -486,12 +490,12 @@ class MountTests(unittest.TestCase):
                 with self.context(writable=True):
                     raise RuntimeError("body failed")
         self.assertNotIn("--read-only", self.calls[0])
-        self.assertIn("rw,uid=1001,gid=1002,umask=077", self.calls[1])
+        self.assertIn("rw,uid=1001,gid=1002,umask=077,allow_other,default_permissions", self.calls[1])
         self.assertEqual(self.calls[-2][2], "umount")
         self.assertIn("--detach", self.calls[-1])
 
     def test_mount_failure_still_detaches_loop(self):
-        self.failed_command = "mount"
+        self.failed_command = "mount.exfat-fuse"
         with mock.patch.object(dv.sys, "platform", "linux"), \
                 mock.patch.object(dv.subprocess, "run", side_effect=self.run_command):
             with self.assertRaises(subprocess.CalledProcessError):
