@@ -25,7 +25,7 @@ Pull requests to main and main pushes run the same checks automatically. Tag sig
 - USB detach and reattach, permission acquisition, and installed-version detection.
 - Healthy repair and separate primary/backup GPT-header damage and repair.
 - A real 1.1.15 payload followed by an app-driven update to bundled 1.1.16.
-- A real 1.1.17 payload that the app must refuse to downgrade, with the entire small test image unchanged.
+- A real 1.1.17 payload that the app must refuse to downgrade on two connections, with boot code, partition metadata, and ordinary file hashes preserved.
 - SeaBIOS and OVMF boot of an ISO through the app-created Ventoy disk. Success requires a serial marker from inside that ISO, after installation, after each repair, and after update.
 - A sparse 3 TiB drive: stable refuses it without writes; Preview installs GPT and preserves files through reconnection. This tests capacity arithmetic and high-LBA metadata, not real large-drive compatibility or every data sector.
 
@@ -33,7 +33,7 @@ The old/new payload archives are pinned by version and SHA-256 from the upstream
 
 The disk image is detached from QEMU and its block backend released before host inspection, filesystem mounting, or intentional corruption. Helpers accept regular image files, not physical block devices. Firmware checks use disposable snapshot writes and no network.
 
-The exact-byte downgrade check temporarily stops the disposable VM's `vold` service, then restores it. Bliss OS otherwise mounts GPT's VTOYEFI partition and runs `fsck_msdos`, adding an independent writer to the test. ADB root controls this VM service only; Vendroid runs under its ordinary app UID. Installation, reconnect, repair, and update checks retain normal Android mounting behavior. This isolated assertion verifies Vendroid's behavior, not that Android itself never writes to an attached drive.
+Android's normal storage services remain running. Bliss OS mounts GPT's VTOYEFI partition and runs `fsck_msdos`, so an entire-image hash can change independently of Vendroid. The downgrade gate checks the disabled action, newer version after reconnection, first MiB boot-region hash, partition metadata, and ordinary file hashes. Full-image hashes are retained as diagnostics. This does not prove zero I/O writes or unchanged VTOYEFI filesystem bytes. No ADB root or service shutdown is required.
 
 ## Read the result
 

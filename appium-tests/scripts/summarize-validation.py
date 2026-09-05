@@ -13,7 +13,7 @@ def summarize(root: Path) -> tuple[str, bool]:
     passed = True
     required = {"install-and-file-copy", "boot-after-install", "idle-usb-reconnect-and-version-detection",
                 "healthy-repair", "boot-after-healthy-repair", "old-to-bundled-update", "updated-version-detected",
-                "boot-after-update", "newer-version-blocked-with-zero-writes"}
+                "boot-after-update", "newer-version-blocked-and-preserved"}
     for channel in ("stable", "preview"):
         for controller in ("uhci", "xhci"):
             directory = root / f"qemu-diagnostics-{channel}-{controller}"
