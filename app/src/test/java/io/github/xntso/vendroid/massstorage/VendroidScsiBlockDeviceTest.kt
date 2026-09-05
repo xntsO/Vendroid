@@ -73,9 +73,11 @@ class VendroidScsiBlockDeviceTest {
         assertEquals(listOf(highLba, highLba), usb.ioCommands.map { it.lba })
 
         // Read both addresses through the driver as well as inspecting sparse storage.
-        device.read(lowLba, read.clear())
+        read.clear()
+        device.read(lowLba, read)
         assertArrayEquals(lowSentinel, read.array())
-        device.read(highLba, read.clear())
+        read.clear()
+        device.read(highLba, read)
         assertArrayEquals(replacement, read.array())
     }
 
@@ -199,7 +201,8 @@ class VendroidScsiBlockDeviceTest {
         assertEquals(13 + data.size, destination.position())
         assertEquals(13 + data.size, destination.limit())
         val actual = ByteArray(destination.capacity())
-        destination.clear().get(actual)
+        destination.clear()
+        destination.get(actual)
         val expected = ByteArray(actual.size) { 0x77 }.also { data.copyInto(it, 13) }
         assertArrayEquals(expected, actual)
         assertTrue(usb.ioCommands.count { it.isRead } > 1)
