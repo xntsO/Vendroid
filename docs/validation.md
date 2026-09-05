@@ -18,6 +18,7 @@ Pull requests to main and main pushes run the same checks automatically. Tag sig
 
 - Android debug, optimized, and Preview builds, existing unit tests, and lint.
 - Independent disk-image verifier tests, including invalid layout/CRC rejection.
+- Fifty immediate virtual-USB reconnect cycles that verify explicit QEMU image-node cleanup before Android tests start.
 - Stable MBR and Preview GPT with emulated UHCI and xHCI USB controllers.
 - Installation with an explicit assertion of the requested partition style, exFAT label, allocation size, and reserved space.
 - Primary and backup GPT CRCs, matching partition tables, disk identities, and partition boundaries.
