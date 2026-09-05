@@ -97,6 +97,7 @@ class VentoyDriveStateTest {
             diskSizeBytes = VentoyDiskLayout.MAX_MBR_DISK_BYTES + 512,
             bundledVersion = "1.1.16",
             supportsGpt = true,
+            supportsLargeDrives = true,
         )
 
         assertEquals(VentoyDriveState.ReadyToInstall, viewModel.state.value.ventoyDriveState)
