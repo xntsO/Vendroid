@@ -26,7 +26,7 @@ Pull requests to main and main pushes run the same checks automatically. Tag sig
 - Healthy repair and separate primary/backup GPT-header damage and repair.
 - A real 1.1.15 payload followed by an app-driven update to bundled 1.1.16.
 - A real 1.1.17 payload that the app must refuse to downgrade, with the entire small test image unchanged.
-- SeaBIOS and OVMF boot of an ISO through the app-created Ventoy disk. Success requires a serial marker from inside that ISO, after installation and after update.
+- SeaBIOS and OVMF boot of an ISO through the app-created Ventoy disk. Success requires a serial marker from inside that ISO, after installation, after each repair, and after update.
 - A sparse 3 TiB drive: stable refuses it without writes; Preview installs GPT and preserves files through reconnection. This tests capacity arithmetic and high-LBA metadata, not real large-drive compatibility or every data sector.
 
 The old/new payload archives are pinned by version and SHA-256 from the upstream release assets. Update fixtures deliberately when the bundled version changes. The boot ISO is built in CI from Ubuntu GRUB packages and is a chainloading probe, not proof that every operating-system ISO works. OVMF tests run without Secure Boot; Secure Boot lifecycle belongs to Release 3.

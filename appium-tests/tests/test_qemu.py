@@ -291,6 +291,7 @@ def test_ventoy_lifecycle_and_firmware(
     with mounted_data_partition(drive.path, writable=True) as root:
         manifest = create_preservation_files(root)
         prepare_boot_files(root, Path(os.environ["VENDROID_BOOT_PROBE_ISO"]))
+    (evidence / "preservation-sha256.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     record("install-and-file-copy", baseline)
     record("boot-after-install", verify_firmware_boot(drive.path, evidence / "boot-install"))
 
@@ -301,6 +302,7 @@ def test_ventoy_lifecycle_and_firmware(
     complete_operation(driver, "Repair")
     drive.detach()
     verify_preserved("healthy-repair")
+    record("boot-after-healthy-repair", verify_firmware_boot(drive.path, evidence / "boot-healthy-repair"))
 
     if style == "gpt":
         for damaged_copy in ("primary", "backup"):
@@ -311,6 +313,8 @@ def test_ventoy_lifecycle_and_firmware(
             complete_operation(driver, "Repair")
             drive.detach()
             verify_preserved(f"{damaged_copy}-gpt-repair")
+            record(f"boot-after-{damaged_copy}-gpt-repair",
+                   verify_firmware_boot(drive.path, evidence / f"boot-{damaged_copy}-repair"))
 
     fixtures = Path(os.environ["VENDROID_PAYLOAD_FIXTURES"])
     seed_payload(drive.path, fixtures / "ventoy-1.1.15-linux.tar.gz", style)
