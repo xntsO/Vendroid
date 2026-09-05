@@ -34,7 +34,7 @@ class VentoyInstaller(
         payload.validate()
         val plan = plan(device, options)
 
-        if (!options.forceInstall && scanner.hasAnyPartition(device) && scanner.scan(device) == null) {
+        if (!options.forceInstall && scanner.hasAnyPartition(device)) {
             throw IllegalStateException("The USB drive already has a partition table. Use force install to overwrite it.")
         }
 

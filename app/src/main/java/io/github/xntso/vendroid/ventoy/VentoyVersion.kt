@@ -8,6 +8,7 @@ enum class VentoyVersionRelation {
 }
 
 object VentoyVersion {
+    private val numericVersionPattern = Regex("""[0-9]+(?:\.[0-9]+)+""")
     private val grubVersionPattern = Regex(
         """(?m)^\s*set\s+VENTOY_VERSION\s*=\s*["']?([0-9]+(?:\.[0-9]+)+)["']?\s*$""",
     )
@@ -39,7 +40,8 @@ object VentoyVersion {
 
     private fun String.toVersionParts(): List<Int>? {
         val normalized = trim().removePrefix("v")
-        if (normalized.isEmpty()) return null
+        // Integer parsing alone also accepts signs and non-ASCII digits.
+        if (!numericVersionPattern.matches(normalized)) return null
         return normalized.split('.').map { it.toIntOrNull() ?: return null }
     }
 }
