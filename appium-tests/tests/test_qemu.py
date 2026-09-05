@@ -4,6 +4,7 @@ import tempfile
 import struct
 import hashlib
 import json
+from contextlib import contextmanager
 from pathlib import Path
 from time import sleep
 from typing import Generator
@@ -28,6 +29,7 @@ from vendroid.utils import (
     execute_script,
     run_adb_command,
     grant_permissions,
+    get_wait,
 )
 
 used(appium_service)
@@ -250,6 +252,23 @@ def file_digest(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+@contextmanager
+def paused_vm_automounter(driver):
+    """Isolate app writes from vold/fsck writes on the disposable Android VM."""
+    def state():
+        return run_adb_command(driver, "getprop", "init.svc.vold")["stdout"].strip()
+
+    assert state() == "running", "Expected the VM auto-mounter to start normally"
+    run_adb_command(driver, "stop", "vold")
+    try:
+        get_wait(driver, 10).until(lambda _: state() == "stopped")
+        yield
+        assert state() == "stopped", "Auto-mounter restarted during the zero-write check"
+    finally:
+        run_adb_command(driver, "start", "vold")
+        get_wait(driver, 10).until(lambda _: state() == "running")
+
+
 @pytest.mark.qemu
 def test_ventoy_lifecycle_and_firmware(
     driver: appium.webdriver.Remote,
@@ -332,17 +351,27 @@ def test_ventoy_lifecycle_and_firmware(
     record("boot-after-update", verify_firmware_boot(drive.path, evidence / "boot-update"))
 
     seed_payload(drive.path, fixtures / "ventoy-1.1.17-linux.tar.gz", style)
-    before_downgrade = file_digest(drive.path)
-    drive.attach()
-    restart_and_scan(driver)
-    assert_detected_version(driver, "1.1.17")
-    wait_for_element(driver, '//*[contains(@text,"Downgrade is blocked")]', timeout=30)
-    button = wait_for_element(driver, '//*[@resource-id="writeImageButton"]', timeout=15)
-    assert button.get_attribute("enabled") == "false"
-    driver.terminate_app(package_name)
-    drive.detach()
-    assert file_digest(drive.path) == before_downgrade, "Downgrade rejection wrote to the disk"
-    verify_preserved("newer-version-blocked-with-zero-writes")
+    # Bliss OS mounts GPT's VTOYEFI and runs fsck before Vendroid claims USB.
+    # Disable that independent writer only for this exact-byte assertion.
+    with paused_vm_automounter(driver):
+        before_downgrade = file_digest(drive.path)
+        try:
+            drive.attach()
+            restart_and_scan(driver)
+            assert_detected_version(driver, "1.1.17")
+            wait_for_element(driver, '//*[contains(@text,"Downgrade is blocked")]', timeout=30)
+            button = wait_for_element(driver, '//*[@resource-id="writeImageButton"]', timeout=15)
+            assert button.get_attribute("enabled") == "false"
+            driver.terminate_app(package_name)
+        finally:
+            drive.detach()
+        after_downgrade = file_digest(drive.path)
+        (evidence / "downgrade-write-check.json").write_text(json.dumps({
+            "automounter": "stopped", "before_sha256": before_downgrade,
+            "after_sha256": after_downgrade, "passed": before_downgrade == after_downgrade,
+        }, indent=2), encoding="utf-8")
+        assert after_downgrade == before_downgrade, "Disk changed while downgrade was blocked"
+        verify_preserved("newer-version-blocked-with-zero-writes")
     report["passed"] = True
     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
