@@ -91,8 +91,11 @@ jobs:
             --output ".vendroid-cache/ventoy-${VENTOY_VERSION}-linux.tar.gz" \
             "https://github.com/ventoy/Ventoy/releases/download/v${VENTOY_VERSION}/ventoy-${VENTOY_VERSION}-linux.tar.gz"
 
-      - name: Build and verify
-        run: ./gradlew assembleFossDebug assembleFossOptimized assembleFossPreview testFossDebugUnitTest lint
+      - name: Unit tests
+        run: ./gradlew testFossDebugUnitTest
+
+      - name: Build and lint
+        run: ./gradlew assembleFossDebug assembleFossOptimized assembleFossPreview lint
 
       - name: Upload stable APK for end-to-end tests
         uses: actions/upload-artifact@v5
