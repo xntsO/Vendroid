@@ -1001,7 +1001,8 @@ private fun VentoyDriveStatus(
         VentoyDriveState.RequiresPreview -> {
             val uriHandler = LocalUriHandler.current
             Text(
-                stringResource(
+                modifier = Modifier.appiumTag("ventoyRequiresPreview"),
+                text = stringResource(
                     if (state.scannedDiskSizeBytes > VentoyDiskLayout.MAX_MBR_DISK_BYTES) {
                         R.string.large_drive_requires_v_preview
                     } else {

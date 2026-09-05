@@ -385,7 +385,7 @@ def test_large_sparse_drive_policy(driver, validation_drive):
     app.grant_usb_permission(driver)
     evidence = Path(os.environ["VENDROID_EVIDENCE_DIR"])
     if os.environ.get("VENDROID_APP_NAME") == "Vendroid":
-        wait_for_element(driver, '//*[contains(@text,"requires the separately installable GitHub V-Preview")]', timeout=30)
+        wait_for_element(driver, '//*[@resource-id="ventoyRequiresPreview"]', timeout=30)
         button = wait_for_element(driver, '//*[@resource-id="writeImageButton"]', timeout=15)
         assert button.get_attribute("enabled") == "false"
         driver.terminate_app(package_name)
