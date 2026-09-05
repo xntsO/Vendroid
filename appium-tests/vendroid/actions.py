@@ -2,6 +2,7 @@ from appium.webdriver import Remote
 from selenium.common import (
     TimeoutException,
 )
+from selenium.webdriver.support.ui import WebDriverWait
 
 from vendroid import activity_name, package_name
 from vendroid.utils import wait_for_element, run_adb_command
@@ -44,8 +45,8 @@ def configure_ventoy_options(
         wait_for_element(driver, f'//*[@text="{partition_style}"]').click()
 
     label_field = wait_for_element(driver, '//*[@resource-id="ventoyVolumeLabelField"]')
-    label_field.clear()
-    label_field.send_keys(label)
+    driver.execute_script("mobile: replaceElementValue", {"elementId": label_field.id, "text": label})
+    WebDriverWait(driver, 5).until(lambda _: label_field.get_attribute("text") == label)
 
     cluster_button = wait_for_element(driver, '//*[@resource-id="ventoyClusterSizeButton"]')
     cluster_button.click()
@@ -55,8 +56,10 @@ def configure_ventoy_options(
     if reserve_switch.get_attribute("checked") != "true":
         reserve_switch.click()
     reserve_field = wait_for_element(driver, '//*[@resource-id="ventoyReservedSpaceField"]')
-    reserve_field.clear()
-    reserve_field.send_keys(str(reserved_mib))
+    driver.execute_script(
+        "mobile: replaceElementValue", {"elementId": reserve_field.id, "text": str(reserved_mib)}
+    )
+    WebDriverWait(driver, 5).until(lambda _: reserve_field.get_attribute("text") == str(reserved_mib))
     wait_for_element(driver, '//*[@resource-id="ventoyApplyOptionsButton"]').click()
 
 

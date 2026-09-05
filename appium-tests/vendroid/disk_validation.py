@@ -451,9 +451,11 @@ def seed_payload(path, archive, expected_style: str) -> dict:
         found = {}
         roots = set()
         for member in bundle:
+            # Official Linux archives prefix their members with "./".
+            member_name = member.name.removeprefix("./")
             for suffix in required:
-                if member.name.endswith("/" + suffix):
-                    root = member.name[:-(len(suffix) + 1)]
+                if member_name.endswith("/" + suffix):
+                    root = member_name[:-(len(suffix) + 1)]
                     _require(re.fullmatch(r"ventoy-[0-9]+\.[0-9]+\.[0-9]+", root) is not None,
                              "Unexpected Ventoy archive root")
                     _require(member.isfile() and suffix not in found,
