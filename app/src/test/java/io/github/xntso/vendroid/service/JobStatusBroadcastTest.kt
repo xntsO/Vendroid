@@ -18,15 +18,18 @@ import io.github.xntso.vendroid.ui.JobState
 import io.github.xntso.vendroid.ui.ProgressActivityViewModel
 import io.github.xntso.vendroid.utils.exception.InitException
 import io.github.xntso.vendroid.utils.exception.ServiceTimeoutException
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
+import org.robolectric.util.ReflectionHelpers
 import tech.apter.junit.jupiter.robolectric.RobolectricExtension
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -44,6 +47,14 @@ class JobStatusBroadcastTest {
         Intents.OPERATION_VENTOY_INSTALL,
         Intents.OPERATION_VENTOY_UPDATE,
     )
+
+    @BeforeEach
+    @AfterEach
+    fun resetLocalBroadcastManager() {
+        // Robolectric resets the Android environment between methods, but the
+        // AndroidX singleton can retain a Handler bound to the previous Looper.
+        ReflectionHelpers.setStaticField(LocalBroadcastManager::class.java, "mInstance", null)
+    }
 
     @Test
     fun `finished follows queued progress and leaves the screen successful`() {
@@ -158,6 +169,11 @@ class JobStatusBroadcastTest {
             }
 
             shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(
+                0L,
+                progressSnapshotStarted.count,
+                "Queued progress was not dispatched by the current main Looper",
+            )
             worker.get(5, TimeUnit.SECONDS)
 
             assertEquals(listOf(Intents.JOB_PROGRESS, Intents.JOB_PROGRESS, terminal.action), received, operation)
