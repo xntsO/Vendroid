@@ -4,12 +4,14 @@ import appium.webdriver
 
 from vendroid.fixtures import appium_service, driver
 from vendroid.utils import used, wait_for_element
+from vendroid.validation_profiles import configured_profile
 
 used(appium_service)
 
 
 def test_home_shows_install_ventoy_action(driver: appium.webdriver.Remote):
-    app_name = os.environ.get("VENDROID_APP_NAME", "Vendroid")
-    version = os.environ.get("VENDROID_EXPECTED_VERSION", "0.2.0")
+    profile = configured_profile()
+    version = profile.version(os.environ.get("VENDROID_VERSION", "0.2.0"))
     wait_for_element(driver, '//*[@resource-id="installVentoyCTA"]', timeout=15)
-    wait_for_element(driver, f'//*[@text="{app_name} v{version}"]', timeout=15)
+    wait_for_element(driver, f'//*[@text="{profile.app_name} v{version}"]', timeout=15)
+    assert driver.current_package == profile.package

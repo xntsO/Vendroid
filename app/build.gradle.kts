@@ -24,7 +24,7 @@ val releaseSigningConfigured = listOf(
     releaseKeyPassword,
 ).all { !it.isNullOrBlank() }
 val previewVersionCode = providers.environmentVariable("GITHUB_RUN_NUMBER")
-    .orElse("29")
+    .orElse("30")
     .map { runNumber -> 1_000_000 + runNumber.toInt() }
 val stableGptEnabled = false
 
@@ -47,7 +47,7 @@ android {
         applicationId = "io.github.xntso.vendroid"
         minSdk = sdkMin
         targetSdk = sdkTarget
-        versionCode = 29
+        versionCode = 30
         versionName = "0.2.0"
         buildConfigField("boolean", "IS_PREVIEW", "false")
         buildConfigField("boolean", "GPT_ENABLED", stableGptEnabled.toString())
@@ -98,6 +98,19 @@ android {
             isDebuggable = false
             isMinifyEnabled = true
             isShrinkResources = true
+        }
+        create("gptCandidate") {
+            // Exercise GPT in the stable package before its physical promotion gate.
+            // Large-drive permission remains tied to IS_PREVIEW, which stays false.
+            initWith(getByName("optimized"))
+            matchingFallbacks += listOf("release")
+            versionNameSuffix = "-gpt-candidate"
+            buildConfigField("boolean", "GPT_ENABLED", "true")
+            signingConfig = if (releaseSigningConfigured) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
     flavorDimensions += "store"
