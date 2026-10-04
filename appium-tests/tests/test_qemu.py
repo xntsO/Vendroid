@@ -228,7 +228,8 @@ def validation_drive(qemu, request):
 def restart_and_scan(driver):
     driver.terminate_app(package_name)
     driver.activate_app(package_name)
-    app.tap_install_ventoy(driver)
+    # A cold-start accessibility query can consume the helper's default 3 s timeout.
+    wait_for_element(driver, '//*[@resource-id="installVentoyCTA"]', timeout=15).click()
     app.select_first_usb_device_if_multiple(driver)
     app.grant_usb_permission(driver)
 
