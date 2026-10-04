@@ -375,8 +375,8 @@ jobs:
           printf '%s' "$VENDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/vendroid-release.jks"
           echo "VENDROID_KEYSTORE_PATH=$RUNNER_TEMP/vendroid-release.jks" >> "$GITHUB_ENV"
 
-      - name: Build signed release APK and Play AAB
-        run: ./gradlew assembleFossRelease bundleFossRelease
+      - name: Build signed release APK
+        run: ./gradlew assembleFossRelease
 
       - name: Verify and name release APK
         run: |
@@ -399,7 +399,6 @@ jobs:
           path: |
             app/build/outputs/apk/foss/release/vendroid-v${{ env.VENDROID_VERSION }}.apk
             app/build/outputs/apk/foss/release/vendroid-v${{ env.VENDROID_VERSION }}.apk.sha256
-            app/build/outputs/bundle/fossRelease/app-foss-release.aab
           if-no-files-found: error
 
       - name: Publish GitHub release
