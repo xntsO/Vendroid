@@ -44,8 +44,6 @@ import io.github.xntso.vendroid.utils.exception.UsbDriveTooLargeException
 import io.github.xntso.vendroid.utils.exception.VerificationFailedException
 import io.github.xntso.vendroid.utils.exception.base.VendroidException
 import io.github.xntso.vendroid.utils.exception.base.FatalException
-import io.github.xntso.vendroid.utils.ktexts.broadcastLocally
-import io.github.xntso.vendroid.utils.ktexts.broadcastLocallySync
 import io.github.xntso.vendroid.utils.ktexts.getDisplayName
 import io.github.xntso.vendroid.utils.ktexts.getFileName
 import io.github.xntso.vendroid.utils.ktexts.getFileSize
@@ -213,6 +211,7 @@ class WorkerService : LifecycleService() {
             }
 
             Intents.ERROR -> {
+                mNotificationManager.cancel(mProgressNotificationId)
                 if (!notificationsAllowed) return@broadcastReceiver
                 val status =
                     intent.safeParcelableExtra<JobStatusInfo>("status") ?: return@broadcastReceiver
@@ -251,6 +250,7 @@ class WorkerService : LifecycleService() {
             }
 
             Intents.FINISHED -> {
+                mNotificationManager.cancel(mProgressNotificationId)
                 if (!notificationsAllowed) return@broadcastReceiver
                 val status =
                     intent.safeParcelableExtra<JobStatusInfo>("status") ?: return@broadcastReceiver
@@ -381,7 +381,7 @@ class WorkerService : LifecycleService() {
                     operation = mOperation,
                     forceInstall = mForceInstall,
                     ventoyOptions = mVentoyOptions,
-                ).broadcastLocallySync(this@WorkerService)
+                ).enqueueJobStatus(this@WorkerService)
             }
             stopSelf()
             return START_NOT_STICKY
@@ -452,7 +452,7 @@ class WorkerService : LifecycleService() {
                         operation = mOperation,
                         forceInstall = mForceInstall,
                         ventoyOptions = mVentoyOptions,
-                    ).broadcastLocallySync(this@WorkerService)
+                    ).enqueueJobStatus(this@WorkerService)
 
                     val payload = mVentoyOptions.onlinePayloadVersion?.let { version ->
                         VentoyPayloadCache(noBackupFilesDir).load(version)
@@ -478,7 +478,7 @@ class WorkerService : LifecycleService() {
                         operation = mOperation,
                         forceInstall = mForceInstall,
                         ventoyOptions = mVentoyOptions,
-                    ).broadcastLocallySync(
+                    ).enqueueJobStatus(
                         this@WorkerService
                     )
                     return@launch
@@ -506,7 +506,7 @@ class WorkerService : LifecycleService() {
                     operation = mOperation,
                     forceInstall = mForceInstall,
                     ventoyOptions = mVentoyOptions,
-                ).broadcastLocallySync(this@WorkerService)
+                ).enqueueJobStatus(this@WorkerService)
 
                 val bufferSize = BUFFER_BLOCKS * blockDev.blockSize
 
@@ -569,7 +569,7 @@ class WorkerService : LifecycleService() {
                     operation = mOperation,
                     forceInstall = mForceInstall,
                     ventoyOptions = mVentoyOptions,
-                ).broadcastLocallySync(
+                ).enqueueJobStatus(
                     this@WorkerService
                 )
 
@@ -590,7 +590,7 @@ class WorkerService : LifecycleService() {
                     operation = mOperation,
                     forceInstall = mForceInstall,
                     ventoyOptions = mVentoyOptions,
-                ).broadcastLocallySync(this@WorkerService)
+                ).enqueueJobStatus(this@WorkerService)
             } finally {
                 finish()
                 releaseWakelock()
@@ -658,7 +658,7 @@ class WorkerService : LifecycleService() {
             operation = mOperation,
             forceInstall = mForceInstall,
             ventoyOptions = mVentoyOptions,
-        ).broadcastLocally(this@WorkerService)
+        ).enqueueJobStatus(this@WorkerService)
 
         mLastProgressUpdate = newTime
         mBytesSinceLastUpdate = 0.0
@@ -690,7 +690,7 @@ class WorkerService : LifecycleService() {
             operation = mOperation,
             forceInstall = mForceInstall,
             ventoyOptions = mVentoyOptions,
-        ).broadcastLocally(this@WorkerService)
+        ).enqueueJobStatus(this@WorkerService)
     }
 
     private val filenameStr: String by lazy {
