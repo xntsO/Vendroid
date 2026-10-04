@@ -299,7 +299,10 @@ def test_ventoy_lifecycle_and_firmware(
     wait_for_element(driver, '//*[@text="MBR (Recommended)"]', timeout=15)
     selector.click()
     gpt_label = "GPT (Preview)" if profile.channel == "preview" else "GPT"
-    gpt_option = wait_for_element(driver, f'//*[@text="{gpt_label}"]', timeout=15)
+    # Compose exposes the label as enabled even when its owning menu item is disabled.
+    gpt_option = wait_for_element(
+        driver, f'//*[@text="{gpt_label}"]/ancestor-or-self::*[@clickable="true"][1]', timeout=15,
+    )
     gpt_enabled = gpt_option.get_attribute("enabled") == "true"
     driver.save_screenshot(str(evidence / "partition-style-menu.png"))
     assert gpt_enabled == (style == "gpt"), "GPT availability differs from the channel policy"
