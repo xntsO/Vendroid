@@ -39,6 +39,9 @@ jobs:
       - name: Test independent disk inspector
         working-directory: appium-tests
         run: python3 -m unittest discover -s tests -p test_disk_validation.py -v
+      - name: Test bounded VM preparation
+        working-directory: appium-tests
+        run: python3 -m unittest discover -s scripts -p test_prepare_vm.py -v
       - uses: astral-sh/setup-uv@v5
       - name: Install boot probe tools
         run: |
@@ -215,19 +218,21 @@ jobs:
         id: bliss-cache
         uses: actions/cache/restore@v4
         with:
-          key: blissos-${{ env.BLISSOS_FILE }}
+          key: blissos-${{ env.BLISSOS_FILE }}-${{ hashFiles('appium-tests/scripts/prepare-vm.sh') }}
           path: ${{ env.VM_DIR }}
 
       - name: Prepare Bliss OS
+        timeout-minutes: 15
         run: |
-          ./appium-tests/scripts/prepare-vm.sh
+          set -o pipefail
+          ./appium-tests/scripts/prepare-vm.sh 2>&1 | tee vm-outputs/bliss-preparation.log
           rm -f "${VM_DIR}/${BLISSOS_FILE}"
 
       - name: Save pristine Bliss OS cache
         if: steps.bliss-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          key: blissos-${{ env.BLISSOS_FILE }}
+          key: blissos-${{ env.BLISSOS_FILE }}-${{ hashFiles('appium-tests/scripts/prepare-vm.sh') }}
           path: ${{ env.VM_DIR }}
 
       - name: Run QEMU and Appium tests
