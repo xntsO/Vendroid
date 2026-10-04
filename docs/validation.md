@@ -72,7 +72,7 @@ The known 0.1.2 APKs use package `io.github.xntso.vendroid`, versionCode 29, and
 
 Every signed candidate and release must pass `apksigner verify`, match that certificate fingerprint, and report the expected package, versionName, and versionCode. A valid signature alone does not prove continuity with an installed APK. The workflow must fail if the fingerprint changes. Preserve the old keystore through the existing `VENDROID_KEYSTORE_BASE64`, `VENDROID_KEYSTORE_PASSWORD`, `VENDROID_KEY_ALIAS`, and `VENDROID_KEY_PASSWORD` secrets; Gradle receives its decoded path through `VENDROID_KEYSTORE_PATH`.
 
-The final signed stable APK, the owner's promotion decision, and the final physical smoke result remain required before publication. The artifact-only GPT candidate does not satisfy those final steps. Its signature and metadata evidence establish packaging and signing continuity, not a hardware pass.
+The final signed stable APK, the owner's promotion decision, and the final physical smoke result remain required before publication. After promotion and a versionCode increment, pushing the version tag validates and signs the final APK and creates a draft GitHub release. Download the APK from that draft or its Actions artifact, complete and record the final physical smoke check, then publish the draft explicitly. A tag push does not publish it automatically. The artifact-only GPT candidate does not satisfy those final steps. Its signature and metadata evidence establish packaging and signing continuity, not a hardware pass.
 
 ## Coverage for upcoming releases
 
