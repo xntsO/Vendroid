@@ -1,8 +1,9 @@
 [CmdletBinding()]
 param(
-    [string]$Ref = 'codex/release-2-gpt-stabilization',
+    [string]$Ref = 'main',
     [switch]$Wait,
-    [string]$RunId
+    [string]$RunId,
+    [switch]$SignedCandidate
 )
 
 $ErrorActionPreference = 'Stop'
@@ -20,10 +21,13 @@ function Invoke-GitHub {
 Get-Command gh -ErrorAction Stop | Out-Null
 if ($RunId) {
     if ($RunId -notmatch '^\d+$') { throw 'RunId must be a numeric GitHub Actions run ID.' }
+    if ($SignedCandidate) { throw 'SignedCandidate applies to a new dispatch. Follow an existing signed-candidate run with -RunId and -Wait.' }
 } else {
     $validationId = [Guid]::NewGuid().ToString('N')
-    Invoke-GitHub @('workflow', 'run', 'build-test-debug.yml', '--repo', $repository,
-        '--ref', $Ref, '-f', "validation_id=$validationId") | Out-Null
+    $dispatchArguments = @('workflow', 'run', 'build-test-debug.yml', '--repo', $repository,
+        '--ref', $Ref, '-f', "validation_id=$validationId")
+    if ($SignedCandidate) { $dispatchArguments += @('-f', 'signed_candidate=true') }
+    Invoke-GitHub $dispatchArguments | Out-Null
     $deadline = [DateTime]::UtcNow.AddSeconds(60)
     do {
         $runs = Invoke-GitHub @('run', 'list', '--repo', $repository,

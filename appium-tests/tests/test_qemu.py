@@ -21,6 +21,7 @@ from vendroid.disk_validation import (
     verify_preservation_files, damage_gpt_header, seed_payload,
 )
 from vendroid.firmware_validation import prepare_boot_files, verify_firmware_boot
+from vendroid.validation_profiles import LARGE_DRIVE_BYTES, configured_profile
 from vendroid.utils import (
     used,
     device_temp_sparse_file,
@@ -257,16 +258,26 @@ def boot_region_digest(path):
     return hashlib.sha256(boot_region).hexdigest()
 
 
+def validation_identity(driver, profile):
+    assert package_name == profile.package
+    version = profile.version(os.environ.get("VENDROID_VERSION", "0.2.0"))
+    wait_for_element(driver, f'//*[@text="{profile.app_name} v{version}"]', timeout=15)
+    assert driver.current_package == profile.package
+    return {"channel": profile.channel, "package": profile.package, "version": version,
+            "commit": os.environ["GITHUB_SHA"]}
+
+
 @pytest.mark.qemu
 def test_ventoy_lifecycle_and_firmware(
     driver: appium.webdriver.Remote,
     validation_drive,
 ):
     drive = validation_drive
-    style = "gpt" if os.environ.get("VENDROID_PARTITION_STYLE", "MBR").startswith("GPT") else "mbr"
+    profile = configured_profile()
+    style = profile.layout
     evidence = Path(os.environ["VENDROID_EVIDENCE_DIR"])
     evidence.mkdir(parents=True, exist_ok=True)
-    report = {"layout": style, "usb_bus": drive.bus, "checkpoints": []}
+    report = {**validation_identity(driver, profile), "layout": style, "usb_bus": drive.bus, "checkpoints": []}
     report_path = evidence / "lifecycle.json"
 
     def record(name, details=None):
@@ -286,11 +297,19 @@ def test_ventoy_lifecycle_and_firmware(
     selector = wait_for_element(driver, '//*[@resource-id="ventoyInstallPartitionStyleButton"]', timeout=30)
     assert selector.is_displayed(), "Partition style must be shown before opening Advanced options"
     wait_for_element(driver, '//*[@text="MBR (Recommended)"]', timeout=15)
+    selector.click()
+    gpt_label = "GPT (Preview)" if profile.channel == "preview" else "GPT"
+    gpt_option = wait_for_element(driver, f'//*[@text="{gpt_label}"]', timeout=15)
+    gpt_enabled = gpt_option.get_attribute("enabled") == "true"
+    driver.save_screenshot(str(evidence / "partition-style-menu.png"))
+    assert gpt_enabled == (style == "gpt"), "GPT availability differs from the channel policy"
+    driver.back()
+    record("partition-style-policy", {"default": "mbr", "gpt_enabled": gpt_enabled})
     app.open_ventoy_advanced_options(driver)
     wait_for_element(driver, '//*[@text="MBR (Recommended)"]', timeout=15)
     app.configure_ventoy_options(
         driver, "TOOLS", 1, "64 KiB",
-        partition_style=os.environ.get("VENDROID_PARTITION_STYLE"),
+        partition_style=profile.partition_style,
     )
     driver.save_screenshot(str(evidence / "install-confirmation.png"))
     app.confirm_write_image(driver)
@@ -376,23 +395,26 @@ def test_ventoy_lifecycle_and_firmware(
 
 
 @pytest.mark.qemu
-@pytest.mark.parametrize("validation_drive", [3 * 1024**4], indirect=True)
+@pytest.mark.parametrize("validation_drive", [LARGE_DRIVE_BYTES], indirect=True)
 def test_large_sparse_drive_policy(driver, validation_drive):
     if os.environ.get("VENDROID_TEST_USB_BUS") != "xhci.0":
         pytest.skip("Large-capacity case runs once per channel on xHCI")
     drive = validation_drive
+    profile = configured_profile()
+    identity = {**validation_identity(driver, profile), "usb_bus": drive.bus,
+                "bytes": drive.path.stat().st_size}
     app.tap_install_ventoy(driver)
     app.select_first_usb_device_if_multiple(driver)
     app.grant_usb_permission(driver)
     evidence = Path(os.environ["VENDROID_EVIDENCE_DIR"])
-    if os.environ.get("VENDROID_APP_NAME") == "Vendroid":
+    if not profile.supports_large_drives:
         wait_for_element(driver, '//*[@resource-id="ventoyRequiresPreview"]', timeout=30)
         button = wait_for_element(driver, '//*[@resource-id="writeImageButton"]', timeout=15)
         assert button.get_attribute("enabled") == "false"
         driver.terminate_app(package_name)
         drive.detach()
-        assert drive.path.stat().st_blocks == 0, "Stable wrote to a blocked sparse drive"
-        result = {"passed": True, "bytes": drive.path.stat().st_size, "stable_blocked_without_writes": True}
+        assert drive.path.stat().st_blocks == 0, f"{profile.channel} wrote to a blocked sparse drive"
+        result = {"passed": True, "blocked_without_writes": True}
     else:
         app.open_ventoy_advanced_options(driver)
         app.configure_ventoy_options(driver, "LARGE", 1, "64 KiB", partition_style="GPT (Preview)")
@@ -413,7 +435,7 @@ def test_large_sparse_drive_policy(driver, validation_drive):
             verify_preservation_files(root, manifest)
         result = {"passed": True, "simulated_large_drive": result}
     evidence.mkdir(parents=True, exist_ok=True)
-    (evidence / "large-drive.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+    (evidence / "large-drive.json").write_text(json.dumps({**identity, **result}, indent=2), encoding="utf-8")
 
 
 @pytest.mark.qemu

@@ -13,6 +13,10 @@ on:
         description: Optional identifier used by scripts/verify.ps1
         type: string
         required: false
+      signed_candidate:
+        description: Build a signed GPT candidate after validation, without publishing a release
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -26,7 +30,9 @@ env:
   BLISSOS_URL: https://deac-riga.dl.sourceforge.net/project/blissos-x86/Official/BlissOS16/FOSS/Generic/
   VENTOY_VERSION: '1.1.16'
   VENDROID_VERSION: '0.2.0'
-  VENDROID_VERSION_CODE: '29'
+  VENDROID_VERSION_CODE: '30'
+  # Public certificate from the signed 0.1.2 APK; see docs/validation.md.
+  VENDROID_SIGNER_SHA256: b388ad9d2290967480630cbd4a48f4f8c6784305c05da3541ad780821d9fbeb1
   VM_DIR: /appium-vm
 
 jobs:
@@ -39,6 +45,9 @@ jobs:
       - name: Test independent disk inspector
         working-directory: appium-tests
         run: python3 -m unittest discover -s tests -p test_disk_validation.py -v
+      - name: Test validation evidence requirements
+        working-directory: appium-tests
+        run: python3 -m unittest discover -s tests -p test_validation_summary.py -v
       - name: Test bounded VM preparation
         working-directory: appium-tests
         run: python3 -m unittest discover -s scripts -p test_prepare_vm.py -v
@@ -98,7 +107,7 @@ jobs:
         run: ./gradlew testFossDebugUnitTest
 
       - name: Build and lint
-        run: ./gradlew assembleFossDebug assembleFossOptimized assembleFossPreview lint
+        run: ./gradlew assembleFossDebug assembleFossOptimized assembleFossPreview assembleFossGptCandidate lint
 
       - name: Upload stable APK for end-to-end tests
         uses: actions/upload-artifact@v5
@@ -113,6 +122,14 @@ jobs:
           name: vendroid-e2e-preview-apk
           path: app/build/outputs/apk/foss/preview/app-foss-preview.apk
           retention-days: 30
+
+      - name: Upload optimized GPT candidate for end-to-end tests
+        uses: actions/upload-artifact@v5
+        with:
+          name: vendroid-e2e-gpt-candidate-apk
+          path: app/build/outputs/apk/foss/gptCandidate/app-foss-gptCandidate.apk
+          retention-days: 30
+          if-no-files-found: error
 
       - name: Upload verification reports
         if: always()
@@ -135,7 +152,7 @@ jobs:
       max-parallel: 4
       matrix:
         controller: [uhci, xhci]
-        channel: [stable, preview]
+        channel: [stable, preview, gpt-candidate]
         include:
           - channel: stable
             app_name: Vendroid
@@ -149,7 +166,14 @@ jobs:
             package: io.github.xntso.vendroid.preview
             partition_style: GPT (Preview)
             version: 0.2.0-preview
+          - channel: gpt-candidate
+            app_name: Vendroid
+            artifact: vendroid-e2e-gpt-candidate-apk
+            package: io.github.xntso.vendroid
+            partition_style: GPT
+            version: 0.2.0-gpt-candidate
     env:
+      VENDROID_TEST_CHANNEL: ${{ matrix.channel }}
       VENDROID_APP_NAME: ${{ matrix.app_name }}
       VENDROID_PACKAGE_NAME: ${{ matrix.package }}
       VENDROID_PARTITION_STYLE: ${{ matrix.partition_style }}
@@ -319,8 +343,8 @@ jobs:
         run: test "$BUILD_RESULT" = success && test "$TEST_RESULT" = success && test "$TOOLS_RESULT" = success
 
   signed-apk:
-    name: Signed Vendroid release
-    if: startsWith(github.ref, 'refs/tags/v')
+    name: Signed Vendroid APK
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.signed_candidate)
     needs: validation-summary
     runs-on: ubuntu-24.04
     timeout-minutes: 25
@@ -328,6 +352,7 @@ jobs:
       contents: write
     env:
       JAVA_TOOL_OPTIONS: -Xmx4g
+      IS_SIGNED_CANDIDATE: ${{ github.event_name == 'workflow_dispatch' && inputs.signed_candidate }}
       VENDROID_KEYSTORE_BASE64: ${{ secrets.VENDROID_KEYSTORE_BASE64 }}
       VENDROID_KEYSTORE_PASSWORD: ${{ secrets.VENDROID_KEYSTORE_PASSWORD }}
       VENDROID_KEY_ALIAS: ${{ secrets.VENDROID_KEY_ALIAS }}
@@ -355,9 +380,17 @@ jobs:
 
       - name: Check release readiness
         run: |
-          test "$GITHUB_REF_NAME" = "v${VENDROID_VERSION}"
           test "$VENDROID_VERSION_CODE" -gt 29
-          grep -q '^val stableGptEnabled = true$' app/build.gradle.kts
+          if [ "$IS_SIGNED_CANDIDATE" = true ]; then
+            echo "DISTRIBUTION_VERSION=${VENDROID_VERSION}-gpt-candidate" >> "$GITHUB_ENV"
+            echo "DISTRIBUTION_VARIANT=gptCandidate" >> "$GITHUB_ENV"
+          else
+            test "$GITHUB_REF_NAME" = "v${VENDROID_VERSION}"
+            test "$VENDROID_VERSION_CODE" -gt 30
+            grep -q '^val stableGptEnabled = true$' app/build.gradle.kts
+            echo "DISTRIBUTION_VERSION=${VENDROID_VERSION}" >> "$GITHUB_ENV"
+            echo "DISTRIBUTION_VARIANT=release" >> "$GITHUB_ENV"
+          fi
 
       - name: Require release-signing secrets
         run: |
@@ -375,39 +408,55 @@ jobs:
           printf '%s' "$VENDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/vendroid-release.jks"
           echo "VENDROID_KEYSTORE_PATH=$RUNNER_TEMP/vendroid-release.jks" >> "$GITHUB_ENV"
 
-      - name: Build signed release APK
-        run: ./gradlew assembleFossRelease
+      - name: Build signed APK
+        run: |
+          if [ "$IS_SIGNED_CANDIDATE" = true ]; then
+            ./gradlew assembleFossGptCandidate
+          else
+            ./gradlew assembleFossRelease
+          fi
 
       - name: Verify and name release APK
         run: |
-          apk="app/build/outputs/apk/foss/release/app-foss-release.apk"
-          output="app/build/outputs/apk/foss/release/vendroid-v${VENDROID_VERSION}.apk"
-          checksum="app/build/outputs/apk/foss/release/vendroid-v${VENDROID_VERSION}.apk.sha256"
-          aapt="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
-          apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
-          "$apksigner" verify --verbose --print-certs "$apk"
-          "$aapt" dump badging "$apk" | tee apk-metadata.txt
-          grep -q "versionCode='${VENDROID_VERSION_CODE}'" apk-metadata.txt
-          grep -q "versionName='${VENDROID_VERSION}'" apk-metadata.txt
+          sdkmanager 'build-tools;36.0.0'
+          apk="app/build/outputs/apk/foss/${DISTRIBUTION_VARIANT}/app-foss-${DISTRIBUTION_VARIANT}.apk"
+          mkdir -p distribution
+          output="distribution/vendroid-v${DISTRIBUTION_VERSION}.apk"
+          checksum="${output}.sha256"
+          aapt="$ANDROID_HOME/build-tools/36.0.0/aapt"
+          apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          "$apksigner" verify --verbose --print-certs "$apk" | tee distribution/signature.txt
+          signer="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' distribution/signature.txt)"
+          test "$signer" = "$VENDROID_SIGNER_SHA256"
+          test "$(grep -c '^Signer #[0-9][0-9]* certificate SHA-256 digest:' distribution/signature.txt)" -eq 1
+          "$aapt" dump badging "$apk" | tee distribution/apk-metadata.txt
+          grep -q "package: name='io.github.xntso.vendroid'" distribution/apk-metadata.txt
+          grep -q "versionCode='${VENDROID_VERSION_CODE}'" distribution/apk-metadata.txt
+          grep -q "versionName='${DISTRIBUTION_VERSION}'" distribution/apk-metadata.txt
+          git rev-parse HEAD > distribution/commit.txt
           cp "$apk" "$output"
           (cd "$(dirname "$output")" && sha256sum "$(basename "$output")" > "$(basename "$checksum")")
 
       - name: Upload signed distribution artifacts
         uses: actions/upload-artifact@v5
         with:
-          name: vendroid-v${{ env.VENDROID_VERSION }}
-          path: |
-            app/build/outputs/apk/foss/release/vendroid-v${{ env.VENDROID_VERSION }}.apk
-            app/build/outputs/apk/foss/release/vendroid-v${{ env.VENDROID_VERSION }}.apk.sha256
+          name: vendroid-v${{ env.DISTRIBUTION_VERSION }}
+          path: distribution/
           if-no-files-found: error
+          retention-days: 30
+
+      - name: Remove temporary signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/vendroid-release.jks"
 
       - name: Publish GitHub release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
-            "app/build/outputs/apk/foss/release/vendroid-v${VENDROID_VERSION}.apk" \
-            "app/build/outputs/apk/foss/release/vendroid-v${VENDROID_VERSION}.apk.sha256" \
+            "distribution/vendroid-v${VENDROID_VERSION}.apk" \
+            "distribution/vendroid-v${VENDROID_VERSION}.apk.sha256" \
             --verify-tag \
             --title "Vendroid ${VENDROID_VERSION}" \
             --notes-file "docs/releases/${VENDROID_VERSION}.md"
