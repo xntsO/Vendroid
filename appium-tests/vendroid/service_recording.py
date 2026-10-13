@@ -1,10 +1,8 @@
 """Optional real-screen evidence for Play's connected-device service declaration.
 
-Appium API: https://github.com/appium/python-client/blob/v5.0.0/appium/webdriver/extensions/screen_record.py
-Android recorder: https://github.com/appium/appium-android-driver/blob/v13.1.1/lib/commands/recordscreen.ts
+Appium stream: https://github.com/appium/appium-uiautomator2-driver/blob/v7.1.2/docs/mjpeg.md
 """
 
-import base64
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -14,8 +12,10 @@ import re
 import subprocess
 from time import monotonic
 
+from vendroid.mjpeg_recording import MjpegRecorder
 
-RECORDING_OPTIONS = {"timeLimit": 600, "bitRate": 1_000_000, "forceRestart": True}
+
+RECORDING_OPTIONS = {"timeLimit": 600, "bitRate": 1_000_000, "frameRate": 3, "source": "Appium UiAutomator2 MJPEG"}
 MAX_VIDEO_BYTES = 128 * 1024 * 1024
 
 
@@ -26,6 +26,7 @@ class ServiceRecording:
         self.driver = driver
         self.enabled = identity["channel"] == "preview" and identity["usb_bus"] == "xhci.0"
         self.directory = evidence / "foreground-service-demo"
+        self.recorder = MjpegRecorder(driver, self.directory, RECORDING_OPTIONS["timeLimit"])
         self.report = {
             **identity,
             "environment": "Bliss OS / QEMU virtual USB",
@@ -58,7 +59,7 @@ class ServiceRecording:
         def start():
             self.directory.mkdir(parents=True, exist_ok=True)
             self._start_attempted = True
-            self.driver.start_recording_screen(**RECORDING_OPTIONS)
+            self.recorder.start()
             self._started = True
             self._begin = monotonic()
             self.mark("before-install-action")
@@ -112,20 +113,18 @@ class ServiceRecording:
         if not math.isfinite(duration) or duration <= 0 or stream["width"] <= 0 or stream["height"] <= 0:
             raise ValueError("Recorded video has no usable video stream or duration")
         self.report["video"].update({"duration_seconds": duration, "width": stream["width"], "height": stream["height"]})
-        # The Android driver returns only the last 180s chunk when merging fails.
+        # A disconnected stream or stalled encoder can omit part of the operation.
         if duration + 5 < self.report["stop_requested_elapsed_seconds"]:
             self._gap("video-duration", "Video is shorter than the observed install interval; check for missing chunks or encoder stalls")
 
     def _stop(self):
-        payload = self.driver.stop_recording_screen()
-        if not isinstance(payload, (str, bytes)) or not payload:
-            raise ValueError("Appium returned no recorded video")
-        if len(payload) > 4 * ((MAX_VIDEO_BYTES + 2) // 3):
+        self.recorder.stop()
+        video = self.directory / "usb-install.mp4"
+        if video.stat().st_size > MAX_VIDEO_BYTES:
             raise ValueError("Recorded video exceeds the evidence size limit")
-        data = base64.b64decode(payload, validate=True)
+        data = video.read_bytes()
         if len(data) < 12 or data[4:8] != b"ftyp":
             raise ValueError("Recorded data is not an MP4 file")
-        (self.directory / "usb-install.mp4").write_bytes(data)
         self.report["video"] = {"file": "usb-install.mp4", "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
         self.report["status"] = "captured"
         self._optional("inspect-video", self._inspect_video)
