@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
+import posixpath
 import shutil
 import subprocess
 import sys
@@ -47,7 +48,7 @@ def pinned_download(url, expected_sha256, destination):
 
 
 def extract_source(archive, destination, cache_boundary):
-    """Extract only regular files inside one source root; reject links and escaping paths."""
+    """Materialize regular files and bounded internal file links inside one source root."""
     destination = destination.resolve()
     boundary = cache_boundary.resolve()
     if destination == boundary or not destination.is_relative_to(boundary):
@@ -56,20 +57,53 @@ def extract_source(archive, destination, cache_boundary):
         members = source.getmembers()
         roots = set()
         total_bytes = 0
-        paths = set()
+        paths = {}
         for member in members:
             name = PurePosixPath(member.name)
             if name.is_absolute() or not name.parts or ".." in name.parts or "\\" in member.name:
                 raise ValueError(f"Unsafe source archive path: {member.name}")
             roots.add(name.parts[0])
-            if not (member.isdir() or member.isfile()):
-                raise ValueError(f"Unsupported link or special file in source archive: {member.name}")
-            if member.name in paths:
+            if not (member.isdir() or member.isfile() or member.issym()):
+                raise ValueError(f"Unsupported hard link or special file in source archive: {member.name}")
+            if len(name.parts) == 1 and not member.isdir():
+                raise ValueError("Source archive root must be a directory")
+            canonical = name.as_posix()
+            if canonical in paths:
                 raise ValueError(f"Duplicate source archive path: {member.name}")
-            paths.add(member.name)
+            paths[canonical] = member
             total_bytes += member.size
         if len(roots) != 1 or total_bytes > 50 * 1024 * 1024:
             raise ValueError("Source archive must have one root and remain within its size limit")
+        root = next(iter(roots))
+        payloads = {}
+        for name, member in paths.items():
+            if member.isdir():
+                continue
+            visited = set()
+            current = name
+            for _ in range(64):
+                if current in visited:
+                    raise ValueError(f"Source archive symlink cycle: {name}")
+                visited.add(current)
+                target = paths.get(current)
+                if target is None:
+                    raise ValueError(f"Source archive symlink target is missing: {name}")
+                if target.isfile():
+                    payloads[name] = target
+                    break
+                if not target.issym():
+                    raise ValueError(f"Source archive symlink must resolve to a regular file: {name}")
+                link = PurePosixPath(target.linkname)
+                if link.is_absolute() or "\\" in target.linkname:
+                    raise ValueError(f"Unsafe source archive symlink target: {name}")
+                current = posixpath.normpath((PurePosixPath(current).parent / link).as_posix())
+                normalized = PurePosixPath(current)
+                if not normalized.parts or normalized.parts[0] != root or ".." in normalized.parts:
+                    raise ValueError(f"Source archive symlink escapes its root: {name}")
+            else:
+                raise ValueError(f"Source archive symlink chain exceeds its limit: {name}")
+        if sum(member.size for member in payloads.values()) > 50 * 1024 * 1024:
+            raise ValueError("Materialized source files exceed the size limit")
         if destination.exists():
             shutil.rmtree(destination)
         destination.mkdir(parents=True)
@@ -84,9 +118,10 @@ def extract_source(archive, destination, cache_boundary):
                 target.mkdir(parents=True, exist_ok=True)
             else:
                 target.parent.mkdir(parents=True, exist_ok=True)
-                with source.extractfile(member) as stream:
+                payload = payloads[PurePosixPath(member.name).as_posix()]
+                with source.extractfile(payload) as stream:
                     target.write_bytes(stream.read())
-                target.chmod(0o755 if member.mode & 0o111 else 0o644)
+                target.chmod(0o755 if payload.mode & 0o111 else 0o644)
     return destination
 
 
