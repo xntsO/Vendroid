@@ -24,6 +24,14 @@ validation gates in [validation.md](validation.md) pass.
    `b388ad9d2290967480630cbd4a48f4f8c6784305c05da3541ad780821d9fbeb1`.
    Keep the existing keystore and credentials private. Do not rotate keys during
    first-time setup. The CI bundle uses that key as its upload signer initially.
+   If the keystore is available only in GitHub Actions secrets, use the dedicated
+   `export_play_signing_key=true` manual input on `Build and test`. It exports the
+   existing key using Google's pinned PEPK tool and the listing's public encryption
+   key. Download `vendroid-google-play-key-import` within three days and upload
+   `vendroid-play-signing-key.zip` through the same Console import dialog. The
+   artifact contains only Google's encrypted key, the public certificate, and
+   provenance. This enrollment job does not build or publish the app and is not
+   evidence that the release passed validation.
 3. Run the Google Play workflow in `prepare` mode for the beta track. Download the
    signed AAB and its metadata, signature, checksum, native-library, and commit
    evidence. Upload the first bundle through Play Console and complete any required
@@ -34,6 +42,9 @@ validation gates in [validation.md](validation.md) pass.
    do not bulk-upload them. Capture current Vendroid screenshots and use its current
    launcher icon. Complete content rating, audience, app access, ads, Data safety,
    countries, contact details, and foreground-service declarations in the Console.
+   Use `contact@fhas.sa` for public developer and support contact. The owner has
+   enabled a Vendroid website at `https://vendroid.fhas.sa`; add it to the listing
+   only after deployment, DNS, and HTTPS are verified.
    App access needs no login. USB operations require a USB host-capable Android
    device, a USB drive, and permission to access it. Declare the connected-device
    foreground service with a demonstration of a user-started USB operation.

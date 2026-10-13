@@ -4,7 +4,7 @@ Effective date: 13 October 2026
 
 Vendroid is an open-source Android app maintained by Xnts0. This policy applies to
 the Vendroid FOSS app, including its Google Play beta and production releases.
-Privacy questions can be sent to xnts0.dev@gmail.com.
+Privacy questions can be sent to contact@fhas.sa.
 
 ## Files and USB drives
 
