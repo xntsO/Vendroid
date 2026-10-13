@@ -22,12 +22,16 @@ on:
         description: Prepare a signed beta APK and Google Play bundle after validation, without publishing
         type: boolean
         default: false
+      export_play_signing_key:
+        description: Export only the existing signing key encrypted for Google Play enrollment
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: build-test-${{ github.workflow }}-${{ github.ref }}
+  group: build-test-${{ github.workflow }}-${{ github.ref }}-${{ inputs.export_play_signing_key && 'key-export' || 'validation' }}
   cancel-in-progress: true
 
 env:
@@ -39,8 +43,46 @@ env:
   VM_DIR: /appium-vm
 
 jobs:
+  export-play-signing-key:
+    name: Encrypt existing signing key for Google Play
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.export_play_signing_key }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Require a dedicated enrollment export
+        env:
+          SIGNED_CANDIDATE: ${{ inputs.signed_candidate }}
+          SIGNED_PLAY_BUNDLE: ${{ inputs.signed_play_bundle }}
+        run: test "$SIGNED_CANDIDATE" != true && test "$SIGNED_PLAY_BUNDLE" != true
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Verify export boundaries before accessing credentials
+        run: python3 -m unittest discover -s scripts/play -p test_export_signing_key.py -v
+      - name: Export encrypted key and public certificate
+        env:
+          VENDROID_KEYSTORE_BASE64: ${{ secrets.VENDROID_KEYSTORE_BASE64 }}
+          VENDROID_KEYSTORE_PASSWORD: ${{ secrets.VENDROID_KEYSTORE_PASSWORD }}
+          VENDROID_KEY_ALIAS: ${{ secrets.VENDROID_KEY_ALIAS }}
+          VENDROID_KEY_PASSWORD: ${{ secrets.VENDROID_KEY_PASSWORD }}
+        run: python3 scripts/play/export_signing_key.py --output-dir pepk-export --commit "$GITHUB_SHA"
+      - name: Retain only the Google-encrypted export and public evidence
+        uses: actions/upload-artifact@v5
+        with:
+          name: vendroid-google-play-key-import
+          path: |
+            pepk-export/vendroid-play-signing-key.zip
+            pepk-export/certificate.pem
+            pepk-export/export-evidence.json
+            pepk-export/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 3
+
   validation-tools:
     name: Verify disk inspector and build boot probe
+    if: ${{ !inputs.export_play_signing_key }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -56,6 +98,9 @@ jobs:
         run: |
           python3 -m pip install 'Appium-Python-Client>=5.0.0'
           python3 -m unittest discover -s tests -p test_usb_permission.py -v
+      - name: Test foreground-service recording evidence
+        working-directory: appium-tests
+        run: python3 -m unittest discover -s tests -p test_service_recording.py -v
       - name: Test bounded VM preparation
         working-directory: appium-tests
         run: python3 -m unittest discover -s scripts -p test_prepare_vm.py -v
@@ -69,6 +114,7 @@ jobs:
       - name: Install boot probe tools
         run: |
           sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
+          sudo apt-get update -o Acquire::Retries=3
           sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
             grub-pc-bin grub-efi-amd64-bin grub-common xorriso mtools qemu-system-x86
       - name: Verify repeated QMP image lifecycle
@@ -85,6 +131,7 @@ jobs:
 
   verify:
     name: Build, unit tests, and lint
+    if: ${{ !inputs.export_play_signing_key }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     outputs:
@@ -249,8 +296,9 @@ jobs:
           sudo sed -i \
             's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' \
             /etc/apt/apt-mirrors.txt
+          sudo apt-get update -o Acquire::Retries=3
           sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
-            qemu-system-x86 qemu-utils ovmf exfatprogs exfat-fuse
+            qemu-system-x86 qemu-utils ovmf exfatprogs exfat-fuse ffmpeg
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
@@ -370,7 +418,7 @@ jobs:
 
   validation-summary:
     name: Validate collected evidence
-    if: always()
+    if: ${{ always() && !inputs.export_play_signing_key }}
     needs: [verify, validation-tools, qemu-tests]
     runs-on: ubuntu-24.04
     env:
