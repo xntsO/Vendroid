@@ -7,6 +7,7 @@ import android.view.View
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.ConfigurationCompat
 import androidx.test.core.app.ApplicationProvider
+import io.github.xntso.vendroid.utils.exception.ServiceTimeoutException
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -64,6 +65,11 @@ abstract class AppLocalesTestSuite {
         AppLocales.apply(context)
         assertLocale("ar", View.LAYOUT_DIRECTION_RTL, "تثبيت Ventoy")
         assertEquals("جارٍ تنزيل Ventoy 1.1.18…", AppLocales.getString(context, R.string.downloading_online_ventoy, "1.1.18"))
+        assertEquals("مُثبّت Ventoy", AppLocales.getString(context, R.string.ventoy_installer_name))
+        assertEquals(
+            "يبدو أن عملية الكتابة قد تعثرت. حاول مرة اخرى.",
+            ServiceTimeoutException().getUiMessage(AppLocales.localizedContext(context)),
+        )
         val firstServiceContext = AppLocales.localizedContext(context)
         AppSettings(context).language = AppLanguage.ENGLISH
         RuntimeEnvironment.setQualifiers("ar")
@@ -71,6 +77,11 @@ abstract class AppLocalesTestSuite {
         assertLocale("en", View.LAYOUT_DIRECTION_LTR, "Install Ventoy")
         // A notification constructed by an already-running service uses the current saved choice.
         assertEquals("Downloading Ventoy 1.1.18…", AppLocales.getString(firstServiceContext, R.string.downloading_online_ventoy, "1.1.18"))
+        assertEquals("Ventoy installer", AppLocales.getString(firstServiceContext, R.string.ventoy_installer_name))
+        assertEquals(
+            "The writing process seems to have gotten stuck. Please try again.",
+            ServiceTimeoutException().getUiMessage(AppLocales.localizedContext(firstServiceContext)),
+        )
     }
 
     private fun assertLocale(tag: String, direction: Int, installLabel: String) {

@@ -108,6 +108,7 @@
     <string name="language_arabic">العربية</string>
     <string name="privacy_policy_language_note">سياسة الخصوصية أدناه متاحة باللغة الإنجليزية.</string>
     <string name="install_ventoy">تثبيت Ventoy</string>
+    <string name="ventoy_installer_name">مُثبّت Ventoy</string>
     <string name="force_install_ventoy">فرض التثبيت</string>
     <string name="installing_ventoy">جارٍ تثبيت Ventoy على</string>
     <string name="updating_ventoy">جارٍ تحديث Ventoy على</string>
