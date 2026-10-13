@@ -1226,7 +1226,7 @@ fun AutoJobRestarter(
                         return@broadcastReceiver
                     }
 
-                    val granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
+                    val granted = usbManager.hasPermission(usbDevice)
                     if (!granted) {
                         activity.toast(
                             resources.getString(
