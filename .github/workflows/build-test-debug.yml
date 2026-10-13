@@ -350,7 +350,8 @@ jobs:
             adb shell dumpsys package "$VENDROID_PACKAGE_NAME" | tee ../vm-outputs/package.txt
             grep -q "versionName=${VENDROID_EXPECTED_VERSION}$" ../vm-outputs/package.txt
             adb logcat -d > "$LOGCAT_DIR/0_before.log" 2>&1
-            uv run pytest -sv --tb=native --junit-xml=../vm-outputs/junit.xml
+            uv run pytest -sv --ignore=tests/test_store_screenshots.py --tb=native --junit-xml=../vm-outputs/junit.xml
+            uv run pytest -sv tests/test_store_screenshots.py --tb=native --junit-xml=../vm-outputs/store-screenshots-junit.xml
 
       - name: Upload QEMU validation evidence
         if: always()
