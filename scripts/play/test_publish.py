@@ -58,8 +58,22 @@ class PlayPublishingTest(unittest.TestCase):
                 self.assertLess(names.index("edits().tracks().list"), names.index("edits().bundles().upload"))
                 self.assertLess(names.index("edits().validate"), names.index("edits().commit"))
                 edits.commit.assert_called_once_with(packageName="io.github.xntso.vendroid",
-                                                     editId="test-edit", changesNotSentForReview=False)
+                                                     editId="test-edit", changesNotSentForReview=False,
+                                                     changesInReviewBehavior="ERROR_IF_IN_REVIEW")
                 edits.delete.assert_not_called()
+
+    def test_pending_review_error_abandons_current_edit_without_cancelling_review(self):
+        client = self.client()
+        edits = client.edits.return_value
+        edits.commit.return_value.execute.side_effect = RuntimeError("CHANGES_ALREADY_IN_REVIEW")
+        with self.assertRaisesRegex(RuntimeError, "CHANGES_ALREADY_IN_REVIEW"):
+            self.publish(client, "alpha")
+        edits.commit.assert_called_once_with(
+            packageName="io.github.xntso.vendroid", editId="test-edit",
+            changesNotSentForReview=False, changesInReviewBehavior="ERROR_IF_IN_REVIEW",
+        )
+        edits.commit.return_value.execute.assert_called_once_with(num_retries=2)
+        edits.delete.assert_called_once_with(packageName="io.github.xntso.vendroid", editId="test-edit")
 
     def test_equal_or_lower_code_on_any_track_blocks_before_upload(self):
         for track in ("beta", "production", "internal", "custom-testing"):
