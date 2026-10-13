@@ -135,8 +135,17 @@ SHA-256 verification and manifest readback. The archive is 20,320,548 bytes and
 matches upstream SHA-256
 `d86ff9de63d94c8b8f1f6b14d23c55af4b88e8207bf2893890892a6a97b1ad54`.
 The scheduled workflow still needs registration on the default branch and
-activation after CI validation. The owner's all-ages legal
-certification and final Data safety declarations remain pending.
+activation after CI validation. The owner explicitly authorized the separate
+all-ages certification on 13 October 2026. It was saved for all six age groups,
+including children under 13; the optional Teacher Approved program was not joined.
+This records the owner's declaration, not an independent compliance finding.
+The Data safety answers declare optional, non-ephemeral approximate location and
+app interactions for functionality, operational analytics, and security. HTTPS is
+used; the app has no accounts. The observed hosting-log transfers use Google's
+service-provider sharing exception, supported by the
+[Sites DPA](https://openai.com/policies/chatgpt-sites-data-processing-addendum/).
+This does not claim that providers retain no connection data. There is no verified
+server-log deletion mechanism or 90-day deletion guarantee.
 
 ## Version codes and upgrades
 
