@@ -1,9 +1,7 @@
 package io.github.xntso.vendroid.ventoy
 
-import io.github.xntso.vendroid.online.OnlineAccess
-import io.github.xntso.vendroid.online.OnlineEligibility
-import io.github.xntso.vendroid.online.requireOnlineEligibility
 import org.json.JSONObject
+import io.github.xntso.vendroid.BuildConfig
 import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
 import java.io.EOFException
@@ -12,7 +10,6 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection
-import java.net.URI
 import java.net.URL
 import java.security.MessageDigest
 import java.util.Locale
@@ -105,8 +102,6 @@ class VentoyPayloadCache(
 
 class VentoyOnlineUpdater(
     private val payloadCache: VentoyPayloadCache,
-    private val releaseApiUrl: String = LATEST_RELEASE_API,
-    private val eligibility: () -> OnlineEligibility = { OnlineAccess.session.eligibility },
     private val connectionFactory: (URL) -> HttpURLConnection = { url ->
         url.openConnection() as HttpURLConnection
     },
@@ -124,7 +119,7 @@ class VentoyOnlineUpdater(
         bundledVersion: String,
         onProgress: (VentoyDownloadProgress) -> Unit = {},
     ): VentoyOnlinePayload {
-        requireOfficialRelease(release)
+        requireMirrorRelease(release)
         require(VentoyVersion.isPayloadCompatible(release.version, bundledVersion)) {
             "Ventoy ${release.version} requires a Vendroid update before it can be used safely."
         }
@@ -174,43 +169,33 @@ class VentoyOnlineUpdater(
     }
 
     fun fetchLatestRelease(): VentoyOnlineRelease {
-        val connection = openConnection(releaseApiUrl, acceptJson = true)
+        val connection = openConnection(LATEST_RELEASE_API, acceptJson = true)
         val body = connection.readSuccessfulResponse(MAX_RELEASE_METADATA_BYTES).decodeToString()
-        val release = parseReleaseMetadata(body)
-        requireOfficialRelease(release)
-        return release
+        return parseReleaseMetadata(body)
     }
 
     internal fun parseReleaseMetadata(json: String): VentoyOnlineRelease {
-        val release = JSONObject(json)
-        require(!release.optBoolean("draft", false)) { "Latest Ventoy release is a draft" }
-        require(!release.optBoolean("prerelease", false)) { "Latest Ventoy release is a prerelease" }
-
-        val version = release.getString("tag_name").trim().removePrefix("v")
-        require(VentoyPayloadCache.VERSION_PATTERN.matches(version)) {
-            "Invalid Ventoy release version: $version"
+        val metadata = JSONObject(json)
+        require(metadata.keys().asSequence().toSet() == METADATA_FIELDS) {
+            "Vendroid mirror metadata has unexpected or missing fields"
         }
-        val assetName = "ventoy-$version-linux.tar.gz"
-        val assets = release.getJSONArray("assets")
-        val asset = (0 until assets.length())
-            .map { assets.getJSONObject(it) }
-            .singleOrNull { it.getString("name") == assetName }
-            ?: throw IllegalArgumentException("Ventoy release is missing $assetName")
-        val size = asset.getLong("size")
-        require(size in 1..MAX_ARCHIVE_BYTES) {
-            "Ventoy archive size $size is outside the supported range"
-        }
-        val sha256 = parseAssetSha256(asset.optString("digest"))
-            ?: parsePublishedSha256(release.optString("body"), assetName)
-            ?: throw IllegalArgumentException("Ventoy release does not publish a SHA-256 for $assetName")
-
+        require(metadata.requireInteger("schemaVersion") == 1L) { "Unsupported Vendroid mirror schema" }
         return VentoyOnlineRelease(
-            version = version,
-            assetName = assetName,
-            downloadUrl = asset.getString("browser_download_url"),
-            sizeBytes = size,
-            sha256 = sha256,
-        )
+            version = metadata.requireString("version"),
+            assetName = metadata.requireString("assetName"),
+            downloadUrl = metadata.requireString("downloadUrl"),
+            sizeBytes = metadata.requireInteger("sizeBytes"),
+            sha256 = metadata.requireString("sha256"),
+        ).also(::requireMirrorRelease)
+    }
+
+    private fun JSONObject.requireString(name: String): String =
+        get(name) as? String ?: throw IllegalArgumentException("Mirror $name must be a string")
+
+    private fun JSONObject.requireInteger(name: String): Long = when (val value = get(name)) {
+        is Int -> value.toLong()
+        is Long -> value
+        else -> throw IllegalArgumentException("Mirror $name must be an integer")
     }
 
     private fun downloadArchive(
@@ -222,14 +207,7 @@ class VentoyOnlineUpdater(
         try {
             val status = connection.responseCode
             if (status !in 200..299) {
-                val detail = connection.errorStream
-                    ?.bufferedReader()
-                    ?.use { it.readText().take(512) }
-                    .orEmpty()
-                throw IOException(
-                    "Ventoy download returned HTTP $status" +
-                        if (detail.isBlank()) "" else ": $detail",
-                )
+                throw IOException("Vendroid download returned HTTP $status")
             }
             val reportedLength = connection.contentLength.toLong()
             if (reportedLength > 0) {
@@ -265,40 +243,32 @@ class VentoyOnlineUpdater(
     }
 
     private fun openConnection(url: String, acceptJson: Boolean): HttpURLConnection {
-        var target = URL(url)
-        repeat(MAX_REDIRECTS + 1) { redirectCount ->
-            // Enforce at every connection, including direct downloads, redirects, and retries.
-            requireOnlineEligibility(eligibility())
-            require(target.protocol == "https" && target.userInfo == null) {
-                "Ventoy requests require an HTTPS URL without credentials"
-            }
-            val connection = connectionFactory(target)
-            try {
-                connection.instanceFollowRedirects = false
-                connection.connectTimeout = CONNECT_TIMEOUT_MS
-                connection.readTimeout = READ_TIMEOUT_MS
-                connection.setRequestProperty("User-Agent", "Vendroid/${javaClass.`package`?.implementationVersion ?: "dev"}")
-                if (acceptJson) connection.setRequestProperty("Accept", "application/vnd.github+json")
-                if (connection.responseCode !in REDIRECT_STATUSES) return connection
-                require(redirectCount < MAX_REDIRECTS) { "Too many Ventoy download redirects" }
-                val location = connection.getHeaderField("Location")
-                    ?: throw IOException("Ventoy redirect has no destination")
-                target = URL(target, location)
-            } catch (error: Exception) {
-                connection.disconnect()
-                throw error
-            }
-            connection.disconnect()
+        require(url == LATEST_RELEASE_API || MIRROR_ASSET_URL.matches(url)) {
+            "Ventoy requests must use the exact Vendroid mirror origin and paths"
         }
-        throw IOException("Too many Ventoy download redirects")
+        val connection = connectionFactory(URL(url))
+        try {
+            connection.instanceFollowRedirects = false
+            connection.connectTimeout = CONNECT_TIMEOUT_MS
+            connection.readTimeout = READ_TIMEOUT_MS
+            connection.setRequestProperty("User-Agent", "Vendroid/${BuildConfig.VERSION_NAME}")
+            if (acceptJson) connection.setRequestProperty("Accept", "application/json")
+            // The mirror serves stored assets directly. Never follow a redirect, even on-origin.
+            if (connection.responseCode in 300..399) {
+                throw IOException("Vendroid mirror redirects are not allowed")
+            }
+            return connection
+        } catch (error: Exception) {
+            connection.disconnect()
+            throw error
+        }
     }
 
     private fun HttpURLConnection.readSuccessfulResponse(maxBytes: Int): ByteArray {
         try {
             val status = responseCode
             if (status !in 200..299) {
-                val detail = errorStream?.bufferedReader()?.use { it.readText().take(512) }.orEmpty()
-                throw IOException("GitHub returned HTTP $status${if (detail.isBlank()) "" else ": $detail"}")
+                throw IOException("Vendroid mirror returned HTTP $status")
             }
             return inputStream.use { input ->
                 val output = ByteArrayOutputStream()
@@ -306,9 +276,9 @@ class VentoyOnlineUpdater(
                 while (true) {
                     val read = input.read(buffer)
                     if (read < 0) break
-                    if (read == 0) throw IOException("GitHub response made no progress")
+                    if (read == 0) throw IOException("Vendroid mirror response made no progress")
                     require(output.size() + read <= maxBytes) {
-                        "GitHub response is unexpectedly large"
+                        "Vendroid mirror response is unexpectedly large"
                     }
                     output.write(buffer, 0, read)
                 }
@@ -319,53 +289,31 @@ class VentoyOnlineUpdater(
         }
     }
 
-    private fun requireOfficialRelease(release: VentoyOnlineRelease) {
+    private fun requireMirrorRelease(release: VentoyOnlineRelease) {
+        require(CANONICAL_VERSION.matches(release.version)) { "Invalid mirrored Ventoy version" }
         require(release.assetName == "ventoy-${release.version}-linux.tar.gz") {
-            "Unexpected Ventoy release asset name"
+            "Unexpected mirrored Ventoy asset name"
         }
-        require(release.sha256.matches(Regex("[0-9a-fA-F]{64}"))) {
-            "Invalid Ventoy release checksum"
-        }
-        require(release.sizeBytes in 1..MAX_ARCHIVE_BYTES) {
-            "Ventoy archive size is outside the supported range"
-        }
-        val uri = URI(release.downloadUrl)
-        val expectedPath =
-            "/ventoy/Ventoy/releases/download/v${release.version}/${release.assetName}"
-        require(
-            uri.scheme == "https" &&
-                uri.host == "github.com" &&
-                uri.path.equals(expectedPath, ignoreCase = true)
-        ) {
-            "Ventoy release asset URL is not an official HTTPS GitHub URL"
-        }
+        require(release.sha256.matches(Regex("[0-9a-f]{64}"))) { "Invalid mirrored Ventoy checksum" }
+        require(release.sizeBytes in 1..MAX_ARCHIVE_BYTES) { "Ventoy archive size is outside the supported range" }
+        val expectedUrl = "$MIRROR_ORIGIN/v1/assets/${release.sha256}/${release.assetName}"
+        require(release.downloadUrl == expectedUrl) { "Ventoy asset URL does not match its mirror metadata" }
     }
 
     companion object {
-        const val LATEST_RELEASE_API =
-            "https://api.github.com/repos/ventoy/Ventoy/releases/latest"
+        const val MIRROR_ORIGIN = "https://updates.vendroid.fhas.sa"
+        const val LATEST_RELEASE_API = "$MIRROR_ORIGIN/v1/ventoy/latest.json"
         private const val CONNECT_TIMEOUT_MS = 15_000
         private const val READ_TIMEOUT_MS = 60_000
         private const val DOWNLOAD_BUFFER_BYTES = 64 * 1024
         private const val MAX_RELEASE_METADATA_BYTES = 1024 * 1024
         private const val MAX_ARCHIVE_BYTES = 256L * 1024L * 1024L
-        private const val MAX_REDIRECTS = 5
-        private val REDIRECT_STATUSES = setOf(301, 302, 303, 307, 308)
-
-        internal fun parseAssetSha256(digest: String): String? {
-            val match = Regex("""(?i)^sha256:([0-9a-f]{64})$""").matchEntire(digest.trim())
-            return match?.groupValues?.get(1)?.lowercase(Locale.US)
-        }
-
-        internal fun parsePublishedSha256(body: String, assetName: String): String? {
-            val pattern = Regex(
-                """(?i)([0-9a-f]{64})\s+\*?${Regex.escape(assetName)}""",
-            )
-            return pattern.findAll(body)
-                .map { it.groupValues[1].lowercase(Locale.US) }
-                .distinct()
-                .singleOrNull()
-        }
+        private val METADATA_FIELDS = setOf("schemaVersion", "version", "assetName", "sizeBytes", "sha256", "downloadUrl")
+        private val CANONICAL_VERSION = Regex("""(?:0|[1-9][0-9]{0,5})(?:\.(?:0|[1-9][0-9]{0,5})){1,3}""")
+        private val MIRROR_ASSET_URL = Regex(
+            Regex.escape(MIRROR_ORIGIN) + "/v1/assets/[0-9a-f]{64}/ventoy-" +
+                CANONICAL_VERSION.pattern + "-linux\\.tar\\.gz",
+        )
     }
 }
 

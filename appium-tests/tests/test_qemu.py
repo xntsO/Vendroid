@@ -298,15 +298,10 @@ def test_ventoy_lifecycle_and_firmware(
         app.tap_install_ventoy(driver)
         app.select_first_usb_device_if_multiple(driver)
         app.grant_usb_permission(driver)
-        app.assert_online_check_requires_local_age(driver)
+        app.assert_mirror_controls_without_age(driver)
         selector = wait_for_element(driver, '//*[@resource-id="ventoyInstallPartitionStyleButton"]', timeout=30)
         assert selector.is_displayed(), "Partition style must be shown before opening Advanced options"
         wait_for_element(driver, '//*[@text="MBR (Recommended)"]', timeout=15)
-        if style == "mbr":
-            beta_button = wait_for_element(
-                driver, '//*[@text="Join Vendroid beta"]/ancestor-or-self::*[@clickable="true"][1]', timeout=15,
-            )
-            assert beta_button.get_attribute("enabled") == "true"
         selector.click()
         gpt_label = "GPT (Preview)" if profile.channel == "preview" else "GPT"
         # Compose exposes the label as enabled even when its owning menu item is disabled.
@@ -320,6 +315,11 @@ def test_ventoy_lifecycle_and_firmware(
         record("partition-style-policy", {"default": "mbr", "gpt_enabled": gpt_enabled})
         app.open_ventoy_advanced_options(driver)
         wait_for_element(driver, '//*[@text="MBR (Recommended)"]', timeout=15)
+        if style == "mbr":
+            beta_button = wait_for_element(
+                driver, '//*[@text="Join Vendroid beta"]/ancestor-or-self::*[@clickable="true"][1]', timeout=15,
+            )
+            assert beta_button.get_attribute("enabled") == "true"
         app.configure_ventoy_options(
             driver, "TOOLS", 1, "64 KiB",
             partition_style=profile.partition_style,
@@ -552,3 +552,18 @@ def test_unplug_resume_from_notification(driver: appium.webdriver.Remote, qemu: 
         skip_btn.click()
 
         app.wait_for_success(driver)
+
+
+@pytest.mark.qemu
+def test_mirror_check_starts_without_age_entry(driver, validation_drive):
+    # This isolated drive is scanned only. Never install the mirror result into it.
+    app.tap_install_ventoy(driver)
+    app.select_first_usb_device_if_multiple(driver)
+    app.grant_usb_permission(driver)
+    app.assert_mirror_controls_without_age(driver)
+    wait_for_element(driver, '//*[@resource-id="ventoyOnlineUpdateButton"]', timeout=15).click()
+    wait_for_element(driver, '//*[@resource-id="ventoyMirrorRequestStarted"]', timeout=15)
+    assert not driver.find_elements(
+        "xpath", '//*[@resource-id="onlineBirthDay" or @resource-id="onlineBirthMonth" '
+        'or @resource-id="onlineBirthYear" or @resource-id="onlineAccessRestricted"]',
+    ), "Selecting a mirror update must start the request without an age prompt"

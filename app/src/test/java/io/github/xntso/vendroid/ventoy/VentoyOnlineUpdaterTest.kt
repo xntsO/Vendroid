@@ -1,11 +1,13 @@
 package io.github.xntso.vendroid.ventoy
 
 import io.github.xntso.vendroid.VendroidApplication
-import io.github.xntso.vendroid.online.OnlineAccessRequiredException
-import io.github.xntso.vendroid.online.OnlineEligibility
+import io.github.xntso.vendroid.BuildConfig
+import org.json.JSONObject
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -16,8 +18,9 @@ import tech.apter.junit.jupiter.robolectric.RobolectricExtension
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.InputStream
 import java.io.IOException
+import java.io.InputStream
+import java.net.CookieHandler
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.file.Path
@@ -26,264 +29,238 @@ import java.util.Locale
 import java.util.zip.GZIPOutputStream
 
 @ExtendWith(RobolectricExtension::class)
-@Config(application = VendroidApplication::class)
+@Config(application = VendroidApplication::class, sdk = [35])
 class VentoyOnlineUpdaterTest {
     @TempDir
     lateinit var temporaryDirectory: Path
+    private val origin = VentoyOnlineUpdater.MIRROR_ORIGIN
 
     @Test
-    fun `parses official linux asset and its GitHub digest`() {
-        val assetName = "ventoy-1.1.17-linux.tar.gz"
-        val hash = "ab".repeat(32)
-        val metadata =
-            """
-            {
-              "tag_name": "v1.1.17",
-              "draft": false,
-              "prerelease": false,
-              "body": "Release notes without checksums",
-              "assets": [{
-                "name": "$assetName",
-                "size": 123456,
-                "digest": "sha256:$hash",
-                "browser_download_url": "https://github.com/ventoy/Ventoy/releases/download/v1.1.17/$assetName"
-              }]
-            }
-            """.trimIndent()
-
-        val release = VentoyOnlineUpdater(
-            VentoyPayloadCache(temporaryDirectory.toFile()),
-        ).parseReleaseMetadata(metadata)
-
+    fun `parses the exact first-party mirror schema and checksum`() {
+        val release = updater().parseReleaseMetadata(metadata())
         assertEquals("1.1.17", release.version)
-        assertEquals(assetName, release.assetName)
-        assertEquals(123456, release.sizeBytes)
-        assertEquals(hash, release.sha256)
+        assertEquals("ventoy-1.1.17-linux.tar.gz", release.assetName)
+        assertEquals(123456L, release.sizeBytes)
+        assertEquals("ab".repeat(32), release.sha256)
+        assertEquals("$origin/v1/assets/${release.sha256}/${release.assetName}", release.downloadUrl)
     }
 
     @Test
-    fun `falls back to a checksum published in release notes`() {
-        val assetName = "ventoy-1.1.17-linux.tar.gz"
-        val hash = "cd".repeat(32)
-        val metadata =
-            """
-            {
-              "tag_name": "v1.1.17",
-              "draft": false,
-              "prerelease": false,
-              "body": "$hash  $assetName",
-              "assets": [{
-                "name": "$assetName",
-                "size": 123456,
-                "browser_download_url": "https://github.com/ventoy/Ventoy/releases/download/v1.1.17/$assetName"
-              }]
-            }
-            """.trimIndent()
-
-        val release = VentoyOnlineUpdater(
-            VentoyPayloadCache(temporaryDirectory.toFile()),
-        ).parseReleaseMetadata(metadata)
-
-        assertEquals(hash, release.sha256)
-    }
-
-    @Test
-    fun `rejects release metadata without a published checksum`() {
-        val metadata =
-            """
-            {
-              "tag_name": "v1.1.17",
-              "draft": false,
-              "prerelease": false,
-              "body": "No checksum",
-              "assets": [{
-                "name": "ventoy-1.1.17-linux.tar.gz",
-                "size": 123456,
-                "browser_download_url": "https://github.com/ventoy/Ventoy/releases/download/v1.1.17/ventoy-1.1.17-linux.tar.gz"
-              }]
-            }
-            """.trimIndent()
-
-        assertThrows<IllegalArgumentException> {
-            VentoyOnlineUpdater(
-                VentoyPayloadCache(temporaryDirectory.toFile()),
-            ).parseReleaseMetadata(metadata)
-        }
-    }
-
-    @Test
-    fun `extracts only the required payload files from tar`() {
-        val files = payloadFiles("1.1.17")
-        val archive = tarArchive(
-            mapOf("ventoy-1.1.17/README" to byteArrayOf(99)) +
-                files.mapKeys { (path, _) -> "ventoy-1.1.17/$path" },
+    fun `rejects missing extra unsupported and coerced schema fields`() {
+        val changes = listOf<(JSONObject) -> Unit>(
+            { it.remove("sha256") }, { it.put("upstreamUrl", "https://github.com/ventoy/Ventoy") },
+            { it.put("schemaVersion", 2) }, { it.put("schemaVersion", "1") },
+            { it.put("sizeBytes", "12") }, { it.put("sizeBytes", 1.25) },
+            { it.put("version", 117) }, { it.put("assetName", JSONObject.NULL) },
+            { it.put("sha256", "AB".repeat(32)) }, { it.put("sha256", "invalid") },
         )
-        val destination = temporaryDirectory.resolve("payload").toFile().apply { mkdirs() }
-
-        VentoyTarExtractor.extractRequiredPayload(ByteArrayInputStream(archive), destination)
-
-        files.forEach { (path, expected) ->
-            assertArrayEquals(expected, File(destination, path).readBytes())
+        changes.forEach { change ->
+            val json = JSONObject(metadata()).also(change).toString()
+            assertThrows<IllegalArgumentException> { updater().parseReleaseMetadata(json) }
         }
-        assertTrue(!File(destination, "README").exists())
-    }
-
-    @Test
-    fun `rejects tar missing a required payload file`() {
-        val files = payloadFiles("1.1.17") - "boot/core.img.xz"
-        val archive = tarArchive(
-            files.mapKeys { (path, _) -> "ventoy-1.1.17/$path" },
-        )
-
         assertThrows<IllegalArgumentException> {
-            VentoyTarExtractor.extractRequiredPayload(
-                ByteArrayInputStream(archive),
-                temporaryDirectory.resolve("payload").toFile().apply { mkdirs() },
-            )
+            updater().parseReleaseMetadata(metadata().replace("\"schemaVersion\":1", "\"schemaVersion\":1.0"))
         }
     }
 
     @Test
-    fun `loads validated cached payload and chooses newest version`() {
-        val cache = VentoyPayloadCache(temporaryDirectory.toFile())
+    fun `version components must be canonical and bounded`() {
+        for (version in listOf("1", "v1.1.17", "1.01.17", "01.1", "1.1.1000000", "1.1.17.0.1", "1.1.-1", "1.1.17 ")) {
+            assertThrows<IllegalArgumentException> { updater().parseReleaseMetadata(metadata(version = version)) }
+        }
+        for (version in listOf("0.0", "1.1.18", "1.1.18.0", "999999.999999")) {
+            assertEquals(version, updater().parseReleaseMetadata(metadata(version = version)).version)
+        }
+    }
+
+    @Test
+    fun `size metadata must be positive and at most 256 MiB`() {
+        for (size in listOf(-1L, 0L, 256L * 1024 * 1024 + 1)) {
+            assertThrows<IllegalArgumentException> { updater().parseReleaseMetadata(metadata(size = size)) }
+        }
+        assertEquals(256L * 1024 * 1024, updater().parseReleaseMetadata(metadata(size = 256L * 1024 * 1024)).sizeBytes)
+    }
+
+    @Test
+    fun `asset origin path and digest must match exactly before any request`() {
+        val valid = release()
+        val invalidUrls = listOf(
+            "https://github.com/ventoy/Ventoy/releases/download/v1.1.17/${valid.assetName}",
+            valid.downloadUrl.replace("updates.vendroid.fhas.sa", "updates.vendroid.fhas.sa.evil.example"),
+            valid.downloadUrl.replace("https://", "http://"),
+            valid.downloadUrl.replace("https://", "https://user@"),
+            valid.downloadUrl.replace(origin, "$origin:443"),
+            valid.downloadUrl + "?download=1", valid.downloadUrl + "#asset",
+            valid.downloadUrl.replace(valid.sha256, "cd".repeat(32)),
+            valid.downloadUrl.replace("ventoy-1.1.17", "ventoy-1.1.18"),
+            valid.downloadUrl.replace("/v1/assets/", "/v1/assets/../assets/"),
+            valid.downloadUrl.replace("updates.vendroid", "UPDATES.vendroid"),
+        )
+        val client = updater { throw AssertionError("Invalid metadata must never open a connection") }
+        for (url in invalidUrls) {
+            assertThrows<IllegalArgumentException> { client.downloadRelease(valid.copy(downloadUrl = url), "1.1.16") }
+            assertThrows<IllegalArgumentException> { client.parseReleaseMetadata(metadata(url = url)) }
+        }
+        assertThrows<IllegalArgumentException> { client.parseReleaseMetadata(metadata().replace("ventoy-1.1.17-linux", "ventoy-1.1.17-windows")) }
+    }
+
+    @Test
+    fun `rejects every redirect for metadata and assets without following it`() {
+        for (status in listOf(300, 301, 302, 303, 304, 307, 308)) {
+            for (location in listOf("https://github.com/ventoy/Ventoy", "$origin/other")) {
+                for (metadataRequest in listOf(true, false)) {
+                    val requests = mutableListOf<FakeHttpURLConnection>()
+                    val client = updater { url ->
+                        FakeHttpURLConnection(url, byteArrayOf(), status, location).also(requests::add)
+                    }
+                    assertThrows<IOException> {
+                        if (metadataRequest) client.fetchLatestRelease() else client.downloadRelease(release(), "1.1.16")
+                    }
+                    assertEquals(1, requests.size)
+                    assertFalse(requests.single().instanceFollowRedirects)
+                    assertTrue(requests.single().disconnected)
+                    assertEquals(0, requests.single().bodyReads)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `a newer compatible mirrored payload downloads immediately without eligibility state`() {
+        val version = "1.1.18"
+        val archive = compressedArchive(version)
+        val release = release(version, archive.size.toLong(), archive.sha256())
+        val requests = mutableListOf<FakeHttpURLConnection>()
+        val previousCookieHandler = CookieHandler.getDefault()
+        val client = updater { url ->
+            val body = if (url.toString() == VentoyOnlineUpdater.LATEST_RELEASE_API) {
+                metadata(version, archive.size.toLong(), archive.sha256()).encodeToByteArray()
+            } else archive
+            FakeHttpURLConnection(url, body, responseCookie = "security=fixture").also(requests::add)
+        }
+        val progress = mutableListOf<VentoyDownloadProgress>()
+        val downloaded = client.downloadLatest("1.1.16", progress::add)
+        assertEquals(version, downloaded.version)
+        assertEquals(version, cache().load(version).version)
+        assertEquals(archive.size.toLong(), progress.last().downloadedBytes)
+        assertEquals(listOf(VentoyOnlineUpdater.LATEST_RELEASE_API, release.downloadUrl), requests.map { it.url.toString() })
+        assertEquals("application/json", requests.first().getRequestProperty("Accept"))
+        requests.forEach {
+            assertEquals("Vendroid/${BuildConfig.VERSION_NAME}", it.getRequestProperty("User-Agent"))
+            assertNull(it.getRequestProperty("Cookie"))
+            assertNull(it.getRequestProperty("Authorization"))
+            assertTrue(it.disconnected)
+        }
+        assertSame(previousCookieHandler, CookieHandler.getDefault())
+    }
+
+    @Test
+    fun `HTTP errors never consume unbounded server detail streams`() {
+        for (metadataRequest in listOf(true, false)) {
+            val requests = mutableListOf<FakeHttpURLConnection>()
+            val client = updater { url ->
+                FakeHttpURLConnection(url, byteArrayOf(), status = 503).also(requests::add)
+            }
+            assertThrows<IOException> {
+                if (metadataRequest) client.fetchLatestRelease() else client.downloadRelease(release(), "1.1.16")
+            }
+            assertEquals(0, requests.single().errorReads)
+            assertTrue(requests.single().disconnected)
+        }
+    }
+
+    @Test
+    fun `checksum failure never activates a payload or leaves staging files`() {
+        val archive = compressedArchive("1.1.17")
+        val client = updater { url -> FakeHttpURLConnection(url, archive) }
+        assertThrows<IllegalArgumentException> { client.downloadRelease(release(size = archive.size.toLong()), "1.1.16") }
+        assertNull(cache().find("1.1.17"))
+        assertTrue(cache().rootDirectory().listFiles().orEmpty().isEmpty())
+    }
+
+    @Test
+    fun `short oversized and changed-size downloads cannot activate a payload`() {
+        val archive = compressedArchive("1.1.17")
+        val expected = release(size = archive.size.toLong(), hash = archive.sha256())
+        val responses = listOf(
+            archive.copyOf(archive.size - 1) to expected.sizeBytes.toInt(),
+            (archive + byteArrayOf(1)) to expected.sizeBytes.toInt(),
+            archive to archive.size + 1,
+        )
+        for ((body, declaredLength) in responses) {
+            val client = updater { url -> FakeHttpURLConnection(url, body, length = declaredLength) }
+            assertThrows<IllegalArgumentException> { client.downloadRelease(expected, "1.1.16") }
+            assertNull(cache().find("1.1.17"))
+            assertTrue(cache().rootDirectory().listFiles().orEmpty().isEmpty())
+        }
+    }
+
+    @Test
+    fun `verified archive with mismatched payload version is still rejected`() {
+        val archive = compressedArchive("1.1.18")
+        val client = updater { url -> FakeHttpURLConnection(url, archive) }
+        assertThrows<IllegalArgumentException> {
+            client.downloadRelease(release(size = archive.size.toLong(), hash = archive.sha256()), "1.1.16")
+        }
+        assertNull(cache().find("1.1.17"))
+    }
+
+    @Test
+    fun `incompatible payload formats are rejected before the asset request`() {
+        val client = updater { throw AssertionError("Incompatible payload must not be downloaded") }
+        assertThrows<IllegalArgumentException> { client.downloadRelease(release(version = "1.2.0"), "1.1.16") }
+    }
+
+    @Test
+    fun `validated cached payload remains usable without a request`() {
+        writeCachedPayload(cache(), "1.1.17")
+        val client = updater { throw AssertionError("Cache reuse must be offline") }
+        assertEquals("1.1.17", client.downloadRelease(release(), "1.1.16").version)
+    }
+
+    @Test
+    fun `loads validated cached payload and chooses newest compatible version`() {
+        val cache = cache()
         writeCachedPayload(cache, "1.1.16")
         writeCachedPayload(cache, "1.1.17")
         writeCachedPayload(cache, "1.2.0")
-
         assertEquals("1.2.0", cache.newest()?.version)
         assertEquals("1.1.17", cache.newestCompatible("1.1.16")?.version)
-        assertEquals("1.1.17", cache.load("1.1.17").version)
         assertNull(cache.find("1.1.18"))
     }
 
     @Test
-    fun `downloads verifies extracts and activates official payload`() {
-        val version = "1.1.17"
-        val tar = tarArchive(
-            payloadFiles(version).mapKeys { (path, _) -> "ventoy-$version/$path" },
+    fun `extracts only required files and rejects a missing payload file`() {
+        val files = payloadFiles("1.1.17")
+        val destination = temporaryDirectory.resolve("payload").toFile().apply { mkdirs() }
+        VentoyTarExtractor.extractRequiredPayload(
+            ByteArrayInputStream(tarArchive(mapOf("ventoy-1.1.17/README" to byteArrayOf(99)) + files)), destination,
         )
-        val archive = ByteArrayOutputStream().also { output ->
-            GZIPOutputStream(output).use { it.write(tar) }
-        }.toByteArray()
-        val assetName = "ventoy-$version-linux.tar.gz"
-        val release = VentoyOnlineRelease(
-            version = version,
-            assetName = assetName,
-            downloadUrl =
-                "https://github.com/ventoy/Ventoy/releases/download/v$version/$assetName",
-            sizeBytes = archive.size.toLong(),
-            sha256 = archive.sha256(),
-        )
-        val cache = VentoyPayloadCache(temporaryDirectory.toFile())
-        val progress = mutableListOf<VentoyDownloadProgress>()
-        val requestedUrls = mutableListOf<String>()
-        val updater = VentoyOnlineUpdater(cache, eligibility = { OnlineEligibility.ELIGIBLE }) { url ->
-            requestedUrls.add(url.toString())
-            if (url.host == "github.com") {
-                FakeHttpURLConnection(url, byteArrayOf(), 302, "https://release-assets.githubusercontent.com/payload")
-            } else {
-                FakeHttpURLConnection(url, archive)
-            }
-        }
-
-        val downloaded = updater.downloadRelease(release, "1.1.16", progress::add)
-
-        assertEquals(version, downloaded.version)
-        assertEquals(version, cache.load(version).version)
-        assertEquals(archive.size.toLong(), progress.last().downloadedBytes)
-        assertEquals(archive.size.toLong(), progress.last().totalBytes)
-        assertEquals(listOf(release.downloadUrl, "https://release-assets.githubusercontent.com/payload"), requestedUrls)
-    }
-
-    @Test
-    fun `unknown and restricted checks direct downloads and retries open no connections`() {
-        val cache = VentoyPayloadCache(temporaryDirectory.toFile())
-        var connections = 0
-        var eligibility = OnlineEligibility.UNKNOWN
-        val updater = VentoyOnlineUpdater(cache, eligibility = { eligibility }) { url ->
-            connections++
-            FakeHttpURLConnection(url, byteArrayOf())
-        }
-        for (band in listOf(OnlineEligibility.UNKNOWN, OnlineEligibility.RESTRICTED)) {
-            eligibility = band
-            repeat(2) {
-                assertThrows<OnlineAccessRequiredException> { updater.fetchLatestRelease() }
-                assertThrows<OnlineAccessRequiredException> { updater.downloadLatest("1.1.16") }
-                assertThrows<OnlineAccessRequiredException> { updater.downloadRelease(officialRelease(), "1.1.16") }
-                assertEquals(0, connections)
-            }
+        files.forEach { (path, expected) -> assertArrayEquals(expected, File(destination, path).readBytes()) }
+        assertFalse(File(destination, "README").exists())
+        assertThrows<IllegalArgumentException> {
+            VentoyTarExtractor.extractRequiredPayload(
+                ByteArrayInputStream(tarArchive(files - "boot/core.img.xz")),
+                temporaryDirectory.resolve("incomplete").toFile().apply { mkdirs() },
+            )
         }
     }
 
-    @Test
-    fun `default updater fails closed without any supplied eligibility`() {
-        var connections = 0
-        val updater = VentoyOnlineUpdater(VentoyPayloadCache(temporaryDirectory.toFile())) { url ->
-            connections++
-            FakeHttpURLConnection(url, byteArrayOf())
-        }
-        assertThrows<OnlineAccessRequiredException> { updater.fetchLatestRelease() }
-        assertEquals(0, connections)
-    }
+    private fun cache() = VentoyPayloadCache(temporaryDirectory.toFile())
+    private fun updater(factory: (URL) -> HttpURLConnection = { throw AssertionError("No network expected") }) =
+        VentoyOnlineUpdater(cache(), factory)
 
-    @Test
-    fun `restricted users can reuse a validated cached payload entirely offline`() {
-        val cache = VentoyPayloadCache(temporaryDirectory.toFile())
-        writeCachedPayload(cache, "1.1.17")
-        val updater = VentoyOnlineUpdater(cache, eligibility = { OnlineEligibility.RESTRICTED }) {
-            throw AssertionError("Cached payload must not request a connection")
-        }
-        assertEquals("1.1.17", updater.downloadRelease(officialRelease(), "1.1.16").version)
-        assertEquals("1.1.17", cache.newestCompatible("1.1.16")?.version)
-    }
+    private fun release(version: String = "1.1.17", size: Long = 123456, hash: String = "ab".repeat(32)) =
+        VentoyOnlineRelease(version, "ventoy-$version-linux.tar.gz", "$origin/v1/assets/$hash/ventoy-$version-linux.tar.gz", size, hash)
 
-    @Test
-    fun `a redirect rechecks eligibility before contacting the delivery provider`() {
-        var eligibility = OnlineEligibility.ELIGIBLE
-        val connections = mutableListOf<URL>()
-        var disconnected = false
-        val updater = VentoyOnlineUpdater(
-            VentoyPayloadCache(temporaryDirectory.toFile()), eligibility = { eligibility },
-        ) { url ->
-            connections.add(url)
-            object : HttpURLConnection(url) {
-                override fun connect() = Unit
-                override fun disconnect() { disconnected = true }
-                override fun usingProxy() = false
-                override fun getResponseCode(): Int {
-                    eligibility = OnlineEligibility.RESTRICTED
-                    return 302
-                }
-                override fun getHeaderField(name: String): String? =
-                    if (name == "Location") "https://release-assets.githubusercontent.com/payload" else null
-            }
-        }
-        assertThrows<OnlineAccessRequiredException> { updater.downloadRelease(officialRelease(), "1.1.16") }
-        assertEquals(1, connections.size)
-        assertTrue(disconnected)
-    }
+    private fun metadata(version: String = "1.1.17", size: Long = 123456, hash: String = "ab".repeat(32), url: String? = null): String =
+        JSONObject().put("schemaVersion", 1).put("version", version).put("assetName", "ventoy-$version-linux.tar.gz")
+            .put("sizeBytes", size).put("sha256", hash)
+            .put("downloadUrl", url ?: release(version, size, hash).downloadUrl).toString()
 
-    @Test
-    fun `a failed eligible request cannot be retried after eligibility is lost`() {
-        var eligibility = OnlineEligibility.ELIGIBLE
-        var connections = 0
-        val updater = VentoyOnlineUpdater(
-            VentoyPayloadCache(temporaryDirectory.toFile()), eligibility = { eligibility },
-        ) {
-            connections++
-            throw IOException("Fixture connection failed")
-        }
-        assertThrows<IOException> { updater.fetchLatestRelease() }
-        eligibility = OnlineEligibility.UNKNOWN
-        assertThrows<OnlineAccessRequiredException> { updater.fetchLatestRelease() }
-        assertEquals(1, connections)
-    }
-
-    private fun officialRelease() = VentoyOnlineRelease(
-        version = "1.1.17", assetName = "ventoy-1.1.17-linux.tar.gz",
-        downloadUrl = "https://github.com/ventoy/Ventoy/releases/download/v1.1.17/ventoy-1.1.17-linux.tar.gz",
-        sizeBytes = 1, sha256 = "ab".repeat(32),
-    )
+    private fun compressedArchive(version: String): ByteArray = ByteArrayOutputStream().also { output ->
+        GZIPOutputStream(output).use { it.write(tarArchive(payloadFiles(version))) }
+    }.toByteArray()
 
     private fun writeCachedPayload(cache: VentoyPayloadCache, version: String) {
         val directory = cache.directoryFor(version).apply { mkdirs() }
@@ -339,13 +316,29 @@ class VentoyOnlineUpdaterTest {
         private val response: ByteArray,
         private val status: Int = 200,
         private val location: String? = null,
+        private val length: Int = response.size,
+        private val responseCookie: String? = null,
     ) : HttpURLConnection(url) {
+        var disconnected = false
+        var bodyReads = 0
+        var errorReads = 0
         override fun connect() = Unit
-        override fun disconnect() = Unit
-        override fun usingProxy(): Boolean = false
-        override fun getResponseCode(): Int = status
-        override fun getHeaderField(name: String): String? = if (name == "Location") location else null
-        override fun getContentLength(): Int = response.size
-        override fun getInputStream(): InputStream = ByteArrayInputStream(response)
+        override fun disconnect() { disconnected = true }
+        override fun usingProxy() = false
+        override fun getResponseCode() = status
+        override fun getHeaderField(name: String): String? = when (name) {
+            "Location" -> location
+            "Set-Cookie" -> responseCookie
+            else -> null
+        }
+        override fun getErrorStream(): InputStream {
+            errorReads++
+            throw AssertionError("Server error bodies must not be consumed")
+        }
+        override fun getContentLength() = length
+        override fun getInputStream(): InputStream {
+            bodyReads++
+            return ByteArrayInputStream(response)
+        }
     }
 }
