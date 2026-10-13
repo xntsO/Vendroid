@@ -51,6 +51,11 @@ jobs:
       - name: Test validation evidence requirements
         working-directory: appium-tests
         run: python3 -m unittest discover -s tests -p test_validation_summary.py -v
+      - name: Test confirmed USB permission readiness
+        working-directory: appium-tests
+        run: |
+          python3 -m pip install 'Appium-Python-Client>=5.0.0'
+          python3 -m unittest discover -s tests -p test_usb_permission.py -v
       - name: Test bounded VM preparation
         working-directory: appium-tests
         run: python3 -m unittest discover -s scripts -p test_prepare_vm.py -v

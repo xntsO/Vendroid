@@ -5,7 +5,7 @@ from selenium.common import (
 from selenium.webdriver.support.ui import WebDriverWait
 
 from vendroid import activity_name, package_name
-from vendroid.utils import wait_for_element, run_adb_command
+from vendroid.utils import get_wait, wait_for_element, run_adb_command
 
 
 def basic_flow(driver: Remote, image_filename: str):
@@ -88,10 +88,22 @@ def grant_usb_permission(driver: Remote):
     grant_btn = wait_for_element(driver, '//*[@resource-id="grantUsbPermissionButton"]')
     grant_btn.click()
 
-    try:
-        accept_usb_permission(driver)
-    except TimeoutException:
-        pass
+    # A delayed system dialog must not be mistaken for an existing grant.
+    get_wait(driver, 15).until(_complete_usb_permission)
+
+
+def _complete_usb_permission(driver: Remote) -> bool:
+    if any(element.is_displayed() for element in driver.find_elements(
+        "xpath", '//*[@content-desc="Permission granted"]',
+    )):
+        return True
+    for button in driver.find_elements(
+        "xpath", '//*[@package="com.android.systemui" and @resource-id="android:id/button1" and @text="OK"]',
+    ):
+        if button.is_displayed() and button.get_attribute("enabled") == "true":
+            button.click()
+            break
+    return False
 
 
 def accept_usb_permission(driver: Remote):
