@@ -86,12 +86,24 @@ def find_and_open_file(driver: Remote, filename: str):
     arch_iso.click()
 
 
-def select_first_usb_device_if_multiple(driver: Remote, timeout: int = 1):
-    try:
-        usb_device = wait_for_element(driver, '//*[@content-desc="USB drive"]', timeout=timeout)
-        usb_device.click()
-    except TimeoutException:
-        pass
+def select_first_usb_device_if_multiple(driver: Remote, timeout: int = 15):
+    selected = False
+
+    def select_or_confirm(current: Remote):
+        nonlocal selected
+        if any(element.is_displayed() for element in current.find_elements(
+            "xpath", '//*[@resource-id="writeImageButton"]',
+        )):
+            return True
+        if not selected:
+            for row in current.find_elements("xpath", '//*[@resource-id="usbDeviceListItem"]'):
+                if row.is_displayed() and row.get_attribute("enabled") == "true":
+                    row.click()
+                    selected = True
+                    break
+        return False
+
+    get_wait(driver, timeout).until(select_or_confirm)
 
 
 def grant_usb_permission(driver: Remote):
