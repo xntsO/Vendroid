@@ -177,7 +177,7 @@ class MjpegRecorderTest(unittest.TestCase):
         self.recorder.stop()
         command = self.popen.call_args.args[0]
         self.assertIn("http://127.0.0.1:12345", command)
-        self.assertIn("mpjpeg", command)
+        self.assertIn("mjpeg", command)
         self.assertIn("libx264", command)
         self.assertIn("-use_wallclock_as_timestamps", command)
         self.assertEqual(self.adb.call_args_list[0].args[0],
