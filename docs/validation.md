@@ -52,6 +52,8 @@ See [Google Play publishing](google-play.md) for bundle preparation, signing enr
 
 Play distribution reuses this full workflow on the same source revision before accessing signing credentials. The preview branch also runs the full validation workflow. Beta and production share one package, signer, and increasing version-code sequence; historical evidence for the former separate V-Preview remains historical.
 
+The beta xHCI lifecycle optionally records its existing initial install for the Play connected-device foreground-service declaration. Evidence is saved under `validation/foreground-service-demo/`: the real Appium MP4, its hash and duration, observed UI milestones, the active WorkerService/notification dump, and the installed-success screenshot and UI XML. `recording.json` identifies virtual hardware and any capture gaps. Recorder or evidence errors do not change the required USB test result. Review the actual video before using it in a declaration; an unavailable or truncated recording needs a replacement demonstration.
+
 ## Read the result
 
 Download the workflow artifacts. They retain APKs, unit/lint reports, JUnit, package metadata, APK checksums, the tested commit, lifecycle checkpoints, large-drive results, and boot serial logs for 30 days, including successful runs. Keep the release evidence before artifacts expire. A missing final `passed: true` or a missing expected report is not a pass. The workflow status and JUnit failures remain authoritative; earlier successful checkpoints do not override a later failure. All six lifecycle cases must report the expected package and partition style. A skipped signed-candidate job on a normal PR is expected; an explicitly requested signed-candidate job must pass.

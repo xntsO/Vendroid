@@ -21,6 +21,7 @@ from vendroid.disk_validation import (
     verify_preservation_files, damage_gpt_header, seed_payload,
 )
 from vendroid.firmware_validation import prepare_boot_files, verify_firmware_boot
+from vendroid.service_recording import ServiceRecording
 from vendroid.validation_profiles import LARGE_DRIVE_BYTES, configured_profile
 from vendroid.utils import (
     used,
@@ -278,7 +279,8 @@ def test_ventoy_lifecycle_and_firmware(
     style = profile.layout
     evidence = Path(os.environ["VENDROID_EVIDENCE_DIR"])
     evidence.mkdir(parents=True, exist_ok=True)
-    report = {**validation_identity(driver, profile), "layout": style, "usb_bus": drive.bus, "checkpoints": []}
+    identity = {**validation_identity(driver, profile), "layout": style, "usb_bus": drive.bus}
+    report = {**identity, "checkpoints": []}
     report_path = evidence / "lifecycle.json"
 
     def record(name, details=None):
@@ -292,38 +294,43 @@ def test_ventoy_lifecycle_and_firmware(
             verify_preservation_files(root, manifest)
         record(name, snapshot)
 
-    app.tap_install_ventoy(driver)
-    app.select_first_usb_device_if_multiple(driver)
-    app.grant_usb_permission(driver)
-    selector = wait_for_element(driver, '//*[@resource-id="ventoyInstallPartitionStyleButton"]', timeout=30)
-    assert selector.is_displayed(), "Partition style must be shown before opening Advanced options"
-    wait_for_element(driver, '//*[@text="MBR (Recommended)"]', timeout=15)
-    if style == "mbr":
-        beta_button = wait_for_element(
-            driver, '//*[@text="Join Vendroid beta"]/ancestor-or-self::*[@clickable="true"][1]', timeout=15,
+    with ServiceRecording(driver, evidence, identity) as recording:
+        app.tap_install_ventoy(driver)
+        app.select_first_usb_device_if_multiple(driver)
+        app.grant_usb_permission(driver)
+        app.assert_online_check_requires_local_age(driver)
+        selector = wait_for_element(driver, '//*[@resource-id="ventoyInstallPartitionStyleButton"]', timeout=30)
+        assert selector.is_displayed(), "Partition style must be shown before opening Advanced options"
+        wait_for_element(driver, '//*[@text="MBR (Recommended)"]', timeout=15)
+        if style == "mbr":
+            beta_button = wait_for_element(
+                driver, '//*[@text="Join Vendroid beta"]/ancestor-or-self::*[@clickable="true"][1]', timeout=15,
+            )
+            assert beta_button.get_attribute("enabled") == "true"
+        selector.click()
+        gpt_label = "GPT (Preview)" if profile.channel == "preview" else "GPT"
+        # Compose exposes the label as enabled even when its owning menu item is disabled.
+        gpt_option = wait_for_element(
+            driver, f'//*[@text="{gpt_label}"]/ancestor-or-self::*[@clickable="true"][1]', timeout=15,
         )
-        assert beta_button.get_attribute("enabled") == "true"
-    selector.click()
-    gpt_label = "GPT (Preview)" if profile.channel == "preview" else "GPT"
-    # Compose exposes the label as enabled even when its owning menu item is disabled.
-    gpt_option = wait_for_element(
-        driver, f'//*[@text="{gpt_label}"]/ancestor-or-self::*[@clickable="true"][1]', timeout=15,
-    )
-    gpt_enabled = gpt_option.get_attribute("enabled") == "true"
-    driver.save_screenshot(str(evidence / "partition-style-menu.png"))
-    assert gpt_enabled == (style == "gpt"), "GPT availability differs from the channel policy"
-    driver.back()
-    record("partition-style-policy", {"default": "mbr", "gpt_enabled": gpt_enabled})
-    app.open_ventoy_advanced_options(driver)
-    wait_for_element(driver, '//*[@text="MBR (Recommended)"]', timeout=15)
-    app.configure_ventoy_options(
-        driver, "TOOLS", 1, "64 KiB",
-        partition_style=profile.partition_style,
-    )
-    driver.save_screenshot(str(evidence / "install-confirmation.png"))
-    app.confirm_write_image(driver)
-    app.skip_lay_flat_sheet(driver)
-    app.wait_for_success(driver, timeout=240)
+        gpt_enabled = gpt_option.get_attribute("enabled") == "true"
+        driver.save_screenshot(str(evidence / "partition-style-menu.png"))
+        assert gpt_enabled == (style == "gpt"), "GPT availability differs from the channel policy"
+        driver.back()
+        record("partition-style-policy", {"default": "mbr", "gpt_enabled": gpt_enabled})
+        app.open_ventoy_advanced_options(driver)
+        wait_for_element(driver, '//*[@text="MBR (Recommended)"]', timeout=15)
+        app.configure_ventoy_options(
+            driver, "TOOLS", 1, "64 KiB",
+            partition_style=profile.partition_style,
+        )
+        driver.save_screenshot(str(evidence / "install-confirmation.png"))
+        recording.mark("write-confirmation")
+        app.confirm_write_image(driver)
+        app.skip_lay_flat_sheet(driver)
+        recording.capture_active_service()
+        app.wait_for_success(driver, timeout=240)
+        recording.installed()
     drive.detach()
     baseline = inspect_image(drive.path, style)
     verify_ventoy_options(drive.path, "TOOLS", 1, 64 * 1024)
