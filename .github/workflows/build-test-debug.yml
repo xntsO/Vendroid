@@ -509,7 +509,23 @@ jobs:
             --native-report distribution/aab-native-libraries.json \
             --version-code "$VENDROID_VERSION_CODE" --version-name "$DISTRIBUTION_VERSION" \
             --commit "$(git rev-parse HEAD)" --output distribution/play-metadata.json
+          umask 077
+          printf '%s' "$VENDROID_KEYSTORE_PASSWORD" > "$RUNNER_TEMP/vendroid-keystore.pass"
+          printf '%s' "$VENDROID_KEY_PASSWORD" > "$RUNNER_TEMP/vendroid-key.pass"
+          java -jar "$RUNNER_TEMP/bundletool.jar" build-apks \
+            --bundle="$bundle" --output="$RUNNER_TEMP/vendroid.apks" --mode=universal \
+            --ks="$VENDROID_KEYSTORE_PATH" --ks-key-alias="$VENDROID_KEY_ALIAS" \
+            --ks-pass="file:$RUNNER_TEMP/vendroid-keystore.pass" --key-pass="file:$RUNNER_TEMP/vendroid-key.pass"
+          unzip -p "$RUNNER_TEMP/vendroid.apks" universal.apk > distribution/vendroid-generated.apk
+          python3 scripts/native/verify.py distribution/vendroid-generated.apk --output distribution/generated-apk-native.json
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs distribution/vendroid-generated.apk > distribution/generated-apk-signature.txt
+          test "$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' distribution/generated-apk-signature.txt)" = "$VENDROID_SIGNER_SHA256"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging distribution/vendroid-generated.apk > distribution/generated-apk-metadata.txt
+          grep -q "package: name='io.github.xntso.vendroid'" distribution/generated-apk-metadata.txt
+          grep -q "versionCode='${VENDROID_VERSION_CODE}'" distribution/generated-apk-metadata.txt
+          grep -q "versionName='${DISTRIBUTION_VERSION}'" distribution/generated-apk-metadata.txt
           (cd distribution && sha256sum "vendroid-v${DISTRIBUTION_VERSION}.aab" > "vendroid-v${DISTRIBUTION_VERSION}.aab.sha256")
+          (cd distribution && sha256sum vendroid-generated.apk > vendroid-generated.apk.sha256)
 
       - name: Upload signed distribution artifacts
         uses: actions/upload-artifact@v5
@@ -521,7 +537,7 @@ jobs:
 
       - name: Remove temporary signing material
         if: always()
-        run: rm -f "$RUNNER_TEMP/vendroid-release.jks"
+        run: rm -f "$RUNNER_TEMP/vendroid-release.jks" "$RUNNER_TEMP/vendroid-keystore.pass" "$RUNNER_TEMP/vendroid-key.pass" "$RUNNER_TEMP/vendroid.apks"
 
       - name: Create draft GitHub release for final physical check
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
