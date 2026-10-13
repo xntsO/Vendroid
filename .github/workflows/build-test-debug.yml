@@ -108,7 +108,7 @@ jobs:
         run: |
           python3 -m pip install -r scripts/play/requirements.txt
           python3 -m unittest discover -s scripts/play -p 'test_*.py' -v
-      - name: Test native library validation
+      - name: Test native library validation and SDK retries
         run: python3 -m unittest discover -s scripts/native -p 'test_*.py' -v
       - uses: actions/setup-node@v4
         with:
@@ -182,7 +182,7 @@ jobs:
 
       - name: Rebuild USB libraries for 16 KB pages
         run: |
-          sdkmanager 'ndk;28.2.13676358' 'cmake;3.22.1'
+          python3 scripts/native/install_sdk.py 'ndk;28.2.13676358' 'cmake;3.22.1'
           python3 scripts/native/prepare.py --sdk-root "$ANDROID_HOME"
 
       - name: Download Ventoy payload
@@ -486,7 +486,7 @@ jobs:
 
       - name: Rebuild USB libraries for 16 KB pages
         run: |
-          sdkmanager 'ndk;28.2.13676358' 'cmake;3.22.1'
+          python3 scripts/native/install_sdk.py 'ndk;28.2.13676358' 'cmake;3.22.1'
           python3 scripts/native/prepare.py --sdk-root "$ANDROID_HOME"
 
       - name: Check release readiness

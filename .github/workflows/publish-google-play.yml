@@ -136,7 +136,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
       - name: Prepare native dependencies and signed build inputs
         run: |
-          sdkmanager 'ndk;28.2.13676358' 'cmake;3.22.1' 'build-tools;36.0.0'
+          python3 scripts/native/install_sdk.py 'ndk;28.2.13676358' 'cmake;3.22.1' 'build-tools;36.0.0'
           python3 scripts/native/prepare.py --sdk-root "$ANDROID_HOME"
           mkdir -p .vendroid-cache play-artifacts
           curl --fail --location --retry 3 --connect-timeout 15 --max-time 300 \
