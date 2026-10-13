@@ -48,6 +48,8 @@ Android's normal storage services remain running. Bliss OS mounts GPT's VTOYEFI 
 
 ## Google Play and native libraries
 
+Language regression fixtures use separate Android API 23, 32, and 35 test classes for persisted Automatic/English/Arabic selection, primary-device-language detection, English fallback, resource strings, RTL, and notification wording. API 32 and 35 activity fixtures cover locale changes during progress and retained completion after recreation. The Appium language case switches the actual UI to Arabic, checks mirrored placement, relaunches without clearing data, then restores Automatic before subsequent USB tests. These cases do not require physical USB access.
+
 See [Google Play publishing](google-play.md) for bundle preparation, signing enrollment, track selection, and first-listing requirements. CI rebuilds the pinned libaums JNI and libusb libraries with NDK 28 for 16 KB page compatibility before Gradle runs. Every packaged APK and Play AAB must pass the independent native-library checker. The checker fixtures cover malformed ELF files and insufficient alignment; publishing fixtures cover release routing, version-code collisions, metadata rejection, and failed API edits. These checks supplement the six USB lifecycle cases.
 
 Play distribution reuses this full workflow on the same source revision before accessing signing credentials. The preview branch also runs the full validation workflow. Beta and production share one package, signer, and increasing version-code sequence; historical evidence for the former separate V-Preview remains historical.

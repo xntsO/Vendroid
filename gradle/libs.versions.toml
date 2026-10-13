@@ -1,5 +1,6 @@
 [versions]
 activity-compose = "1.13.0"
+appcompat = "1.7.1"
 android-gradle-plugin = "9.2.1"
 android-junit5 = "2.0.1"
 coil = "2.7.0"
@@ -36,6 +37,7 @@ robolectric-junit5 = { id = "tech.apter.junit5.jupiter.robolectric-extension-gra
 
 [libraries]
 activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activity-compose" }
+appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 coil-gif = { group = "io.coil-kt", name = "coil-gif", version.ref = "coil" }
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
