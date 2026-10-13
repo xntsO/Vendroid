@@ -5,7 +5,8 @@ if(NOT ANDROID)
     message(FATAL_ERROR "Use the pinned Android NDK toolchain")
 endif()
 
-# Reuse the release's unchanged JNI adapters and libusb source list. Both link
+# Reuse the pinned JNI adapters with only three integer release-mode corrections
+# and the unchanged libusb source list. Both link
 # options are explicit so all four ABIs use the same page alignment policy.
 add_link_options("-Wl,-z,max-page-size=16384" "-Wl,-z,common-page-size=16384")
 set(LIBUSB_PATH "${LIBUSB_SOURCE}")

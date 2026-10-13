@@ -3,6 +3,13 @@
   "cmake_version": "3.22.1",
   "android_api": 23,
   "abis": ["arm64-v8a", "armeabi-v7a", "x86", "x86_64"],
+  "jni_release_mode_patch": {
+    "file": "jni-release-modes.patch",
+    "sha256": "1f56a1d1ccb98f260d575b8aabf6c142ea37743ffc53d5a27eb6f4203494317e",
+    "source_file": "libusbcommunication/src/c/usb.c",
+    "source_sha256": "82cbc8e2c8fad28ea0a7cf5c49d8f85e269a8ca2c2eb33249320055da5476aae",
+    "patched_source_sha256": "1c22b14149e73cfb88bd3dcbff9938cd7cfdbf13acfca7bcfd7ae074315a54e8"
+  },
   "sources": {
     "libaums": {
       "commit": "af89120aa434ccd97b985a6d66420c1b7e30a1ad",

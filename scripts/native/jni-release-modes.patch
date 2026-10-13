@@ -1,0 +1,11 @@
+--- a/libusbcommunication/src/c/usb.c
++++ b/libusbcommunication/src/c/usb.c
+@@ -45 +45 @@
+-    (*env)->ReleaseLongArrayElements(env, handle, body, NULL);
++    (*env)->ReleaseLongArrayElements(env, handle, body, 0);
+@@ -81 +81 @@
+-    (*env)->ReleaseByteArrayElements(env, data, c_data, NULL);
++    (*env)->ReleaseByteArrayElements(env, data, c_data, 0);
+@@ -98 +98 @@
+-    (*env)->ReleaseByteArrayElements(env, buffer, c_data, NULL);
++    (*env)->ReleaseByteArrayElements(env, buffer, c_data, 0);
