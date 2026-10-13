@@ -20,12 +20,16 @@ class PermissionTrace:
         self.confirmation = Mock()
         self.confirmation.is_displayed.return_value = True
         self.confirmation.get_attribute.side_effect = lambda attribute: self.frame[2]
+        self.install_selector = Mock()
+        self.install_selector.is_displayed.return_value = True
 
     def find_elements(self, by, value):
         if value == '//*[@content-desc="Permission granted"]':
             return [self.granted] if self.frame[0] else []
         if value == '//*[@resource-id="writeImageButton"]':
             return [self.confirmation] if len(self.frame) > 2 else []
+        if value == '//*[@resource-id="ventoyInstallPartitionStyleButton"]':
+            return [self.install_selector] if len(self.frame) > 3 and self.frame[3] else []
         return [self.ok] if self.frame[1] else []
 
     def until(self, predicate):
@@ -103,6 +107,36 @@ class UsbPermissionTest(unittest.TestCase):
         trace = PermissionTrace([(True, False, "false")])
         self.grant(trace)
         trace.ok.click.assert_not_called()
+
+    def test_completed_scan_confirms_grant_when_capacity_blocks_the_action(self):
+        # The real 3 TiB trace had a completed scan, hidden grant checkmark,
+        # and a disabled Install footer until GPT was selected.
+        trace = PermissionTrace([(False, False, "false", True)])
+        self.grant(trace)
+        trace.ok.click.assert_not_called()
+
+    def test_completed_scan_waits_for_a_delayed_permission_dialog(self):
+        trace = PermissionTrace([
+            (False, False, "false", False), (False, True, "false", False),
+            (False, False, "false", True),
+        ])
+        self.grant(trace)
+        trace.ok.click.assert_called_once()
+        self.assertTrue(trace.frame[3])
+
+    def test_a_hidden_install_selector_does_not_confirm_permission(self):
+        trace = PermissionTrace([(False, False, "false", True)])
+        trace.install_selector.is_displayed.return_value = False
+        with self.assertRaises(TimeoutException):
+            self.grant(trace)
+
+    def test_denied_access_without_a_completed_scan_is_still_unconfirmed(self):
+        trace = PermissionTrace([
+            (False, True, "false", False), (False, False, "false", False),
+        ])
+        with self.assertRaises(TimeoutException):
+            self.grant(trace)
+        trace.ok.click.assert_called_once()
 
 
 if __name__ == "__main__":

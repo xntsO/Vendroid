@@ -112,6 +112,12 @@ def _complete_usb_permission(driver: Remote) -> bool:
     if any(element.is_displayed() and element.get_attribute("enabled") == "true"
            for element in driver.find_elements("xpath", '//*[@resource-id="writeImageButton"]')):
         return True
+    # This selector appears only after a permission-backed USB scan succeeds.
+    # Large drives still require GPT selection before the Install footer enables.
+    if any(element.is_displayed() for element in driver.find_elements(
+        "xpath", '//*[@resource-id="ventoyInstallPartitionStyleButton"]',
+    )):
+        return True
     for button in driver.find_elements(
         "xpath", '//*[@package="com.android.systemui" and @resource-id="android:id/button1" and @text="OK"]',
     ):
