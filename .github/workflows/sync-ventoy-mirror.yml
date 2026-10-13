@@ -1,0 +1,39 @@
+name: Sync verified Ventoy mirror
+run-name: Ventoy mirror sync at ${{ github.sha }}
+
+on:
+  schedule:
+    - cron: '17,47 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vendroid-ventoy-mirror-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: vars.VENDROID_MIRROR_SYNC_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify sync boundaries before using the publisher credential
+        run: python3 -m unittest discover -s scripts/mirror -p 'test_*.py' -v
+      - name: Populate and read back the first-party mirror
+        env:
+          VENDROID_MIRROR_PUBLISH_TOKEN: ${{ secrets.VENDROID_MIRROR_PUBLISH_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/mirror/sync.py --commit "$GITHUB_SHA" --output mirror-evidence.json
+      - name: Retain public mirror verification evidence
+        uses: actions/upload-artifact@v5
+        with:
+          name: vendroid-mirror-sync-${{ github.run_id }}
+          path: mirror-evidence.json
+          retention-days: 30
+          if-no-files-found: error
