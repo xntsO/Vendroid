@@ -194,6 +194,7 @@ data class ConfirmOperationActivityState(
     val openedImage: Uri? = null,
     val selectedDevice: UsbMassStorageDeviceDescriptor? = null,
     val hasUsbPermission: Boolean = false,
+    val ventoyScanGeneration: Int = 0,
     val operation: String = Intents.OPERATION_WRITE_IMAGE,
     val forceInstall: Boolean = false,
     val ventoyOptions: VentoyJobOptions = VentoyJobOptions(),
@@ -211,6 +212,16 @@ data class ConfirmOperationActivityState(
     val hasAnyPartition: Boolean = false,
     val canRepairVentoyMetadata: Boolean = false,
 ) : IThemeState {
+    val ventoyScanRequest: VentoyScanRequest?
+        get() {
+            val device = selectedDevice ?: return null
+            if (!hasUsbPermission || ventoyDriveState !in setOf(
+                    VentoyDriveState.AwaitingPermission, VentoyDriveState.Scanning,
+                )
+            ) return null
+            return VentoyScanRequest(device, ventoyScanGeneration)
+        }
+
     val targetVentoyVersion: String?
         get() = ventoyOptions.onlinePayloadVersion ?: bundledVentoyVersion
 
@@ -363,6 +374,7 @@ class ConfirmOperationActivityViewModel : ViewModel(), SettingChangeListener,
         _state.update {
             it.copy(
                 ventoyDriveState = VentoyDriveState.AwaitingPermission,
+                ventoyScanGeneration = it.ventoyScanGeneration + 1,
                 scanError = null,
             )
         }

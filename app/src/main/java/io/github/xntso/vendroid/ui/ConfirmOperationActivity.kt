@@ -380,12 +380,11 @@ class ConfirmOperationActivity : ActivityBase() {
                 var showLayFlatDialog by rememberSaveable { mutableStateOf(false) }
                 var showAdvancedOptions by rememberSaveable { mutableStateOf(false) }
 
-                LaunchedEffect(uiState.hasUsbPermission, uiState.ventoyDriveState) {
-                    if (
-                        uiState.hasUsbPermission &&
-                        uiState.ventoyDriveState == VentoyDriveState.AwaitingPermission
-                    ) {
-                        scanVentoyDrive(uiState.selectedDevice!!)
+                // Scanning keeps the same request key instead of cancelling its own IO.
+                LaunchedEffect(uiState.ventoyScanRequest) {
+                    val request = uiState.ventoyScanRequest
+                    if (request != null) {
+                        scanVentoyDrive(request)
                     }
                 }
 
@@ -455,34 +454,32 @@ class ConfirmOperationActivity : ActivityBase() {
 
     }
 
-    private suspend fun scanVentoyDrive(device: UsbMassStorageDeviceDescriptor) {
-        mViewModel.setVentoyScanning()
-        withContext(Dispatchers.IO) {
-            var massStorageDevice: io.github.xntso.vendroid.massstorage.VendroidUsbMassStorageDevice? = null
-            try {
-                val openedDevice = device.buildDevice(this@ConfirmOperationActivity)
-                massStorageDevice = openedDevice
-                openedDevice.init()
-                val blockDevice = openedDevice.blockDevices[0]
-                    ?: error("The USB drive does not expose a usable block device.")
-                val rawDevice = BlockDeviceRawBlockDevice(blockDevice)
-                val scanner = VentoyDiskScanner()
-                val diskInfo = scanner.scan(rawDevice)
-                val hasAnyPartition = scanner.hasAnyPartition(rawDevice)
-                val bundledVersion = VentoyPayload.fromAssets(assets).version
-                mViewModel.setVentoyScanResult(
-                    diskInfo = diskInfo,
-                    hasAnyPartition = hasAnyPartition,
-                    diskSizeBytes = rawDevice.sizeBytes,
-                    bundledVersion = bundledVersion,
-                    supportsGpt = BuildConfig.GPT_ENABLED,
-                    supportsLargeDrives = BuildConfig.IS_PREVIEW,
-                )
-            } catch (exception: Exception) {
-                Log.e(TAG, "Failed to inspect Ventoy drive", exception)
-                mViewModel.setVentoyScanError(exception.message)
-            } finally {
-                runCatching { massStorageDevice?.close() }
+    private suspend fun scanVentoyDrive(request: VentoyScanRequest) {
+        runVentoyScan(
+            mViewModel, request,
+            supportsGpt = BuildConfig.GPT_ENABLED,
+            supportsLargeDrives = BuildConfig.IS_PREVIEW,
+            onError = { Log.e(TAG, "Failed to inspect Ventoy drive", it) },
+        ) {
+            withContext(Dispatchers.IO) {
+                var massStorageDevice: io.github.xntso.vendroid.massstorage.VendroidUsbMassStorageDevice? = null
+                try {
+                    val openedDevice = request.device.buildDevice(this@ConfirmOperationActivity)
+                    massStorageDevice = openedDevice
+                    openedDevice.init()
+                    val blockDevice = openedDevice.blockDevices[0]
+                        ?: error("The USB drive does not expose a usable block device.")
+                    val rawDevice = BlockDeviceRawBlockDevice(blockDevice)
+                    val scanner = VentoyDiskScanner()
+                    VentoyDriveScanResult(
+                        diskInfo = scanner.scan(rawDevice),
+                        hasAnyPartition = scanner.hasAnyPartition(rawDevice),
+                        diskSizeBytes = rawDevice.sizeBytes,
+                        bundledVersion = VentoyPayload.fromAssets(assets).version,
+                    )
+                } finally {
+                    runCatching { massStorageDevice?.close() }
+                }
             }
         }
     }
