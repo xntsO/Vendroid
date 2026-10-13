@@ -29,6 +29,7 @@ MAX_MIRROR_JSON_BYTES = 16 * 1024
 MAX_REDIRECTS = 5
 CHUNK_BYTES = 64 * 1024
 TIMEOUT_SECONDS = 60
+USER_AGENT = "Vendroid-Mirror/1.0"
 VERSION_PATTERN = re.compile(r"(?:0|[1-9][0-9]{0,5})(?:\.(?:0|[1-9][0-9]{0,5})){1,3}\Z", re.ASCII)
 DIGEST_PATTERN = re.compile(r"[0-9a-f]{64}\Z", re.ASCII)
 
@@ -192,7 +193,8 @@ class HttpTransport:
         self.opener = build_opener(NoRedirects())
 
     def request(self, method: str, url: str, *, headers: dict[str, str], data=None):
-        request = Request(url, data=data, headers=headers, method=method)
+        request_headers = {"User-Agent": USER_AGENT, **headers}
+        request = Request(url, data=data, headers=request_headers, method=method)
         try:
             return self.opener.open(request, timeout=TIMEOUT_SECONDS)
         except HTTPError as response:
@@ -202,7 +204,7 @@ class HttpTransport:
 
 def source_headers(*, json_response: bool, github_token: str = "") -> dict[str, str]:
     headers = {
-        "User-Agent": "Vendroid-Mirror/1.0", "Accept-Encoding": "identity",
+        "User-Agent": USER_AGENT, "Accept-Encoding": "identity",
         "Accept": "application/vnd.github+json" if json_response else "application/octet-stream",
     }
     if json_response:

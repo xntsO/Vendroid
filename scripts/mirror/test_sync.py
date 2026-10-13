@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import patch
 
 from sync import (
-    MAX_ARCHIVE_BYTES, MIRROR_ORIGIN, UPSTREAM_API, MirrorSyncError,
+    MAX_ARCHIVE_BYTES, MIRROR_ORIGIN, UPSTREAM_API, HttpTransport, MirrorSyncError,
     asset_path, check_new_release, decode_json, main, open_source_archive,
     parse_manifest, parse_upstream_release, read_bounded, sync_mirror,
 )
@@ -75,6 +75,38 @@ def initial_sync_responses():
 
 
 class MirrorSyncTest(unittest.TestCase):
+    def test_http_requests_identify_the_sync_job_without_persisting_credentials(self):
+        delivery_url = "https://release-assets.githubusercontent.com/payload?temporary=delivery"
+        responses = initial_sync_responses()
+        responses.insert(2, Response(status=302, headers={"Location": delivery_url}))
+        with patch("sync.build_opener") as build_opener:
+            opener = build_opener.return_value
+            opener.open.side_effect = responses
+            sync_mirror(HttpTransport(), TOKEN, github_token=GITHUB_TOKEN)
+        self.assertEqual(8, opener.open.call_count)
+        for call in opener.open.call_args_list:
+            request = call.args[0]
+            self.assertEqual("Vendroid-Mirror/1.0", request.get_header("User-agent"))
+            if request.full_url == UPSTREAM_API:
+                self.assertEqual(f"Bearer {GITHUB_TOKEN}", request.get_header("Authorization"))
+            elif request.full_url.startswith(MIRROR_ORIGIN + "/v1/admin/"):
+                self.assertEqual(f"Bearer {TOKEN}", request.get_header("Authorization"))
+            else:
+                self.assertIsNone(request.get_header("Authorization"))
+            for header in ("Cookie", "Referer", "Forwarded", "X-forwarded-for", "Cf-connecting-ip", "X-real-ip"):
+                self.assertIsNone(request.get_header(header))
+        mirror_reads = [call.args[0] for call in opener.open.call_args_list
+                        if call.args[0].full_url == MIRROR_ORIGIN + "/v1/ventoy/latest.json"]
+        self.assertTrue(all(request.get_header("Accept") == "application/json" for request in mirror_reads))
+
+    def test_default_user_agent_does_not_mutate_caller_headers(self):
+        headers = {"Accept": "application/json"}
+        with patch("sync.build_opener") as build_opener:
+            HttpTransport().request("GET", MIRROR_ORIGIN + "/v1/ventoy/latest.json", headers=headers)
+            request = build_opener.return_value.open.call_args.args[0]
+        self.assertEqual({"Accept": "application/json"}, headers)
+        self.assertEqual("Vendroid-Mirror/1.0", request.get_header("User-agent"))
+
     def test_strips_metadata_and_publishes_only_after_both_archive_hash_checks(self):
         transport = Transport(initial_sync_responses())
         proof = sync_mirror(transport, TOKEN, github_token=GITHUB_TOKEN)
