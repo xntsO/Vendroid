@@ -48,7 +48,7 @@ validation gates in [validation.md](validation.md) pass.
    App access needs no login. USB operations require a USB host-capable Android
    device, a USB drive, and permission to access it. Declare the connected-device
    foreground service with a demonstration of a user-started USB operation.
-5. Link the published [privacy policy](https://github.com/xntsO/Vendroid/blob/main/docs/privacy-policy.md)
+5. Link the published [privacy policy](https://vendroid.fhas.sa/privacy/)
    and verify that Google accepts and can access it. Review Data safety against the
    current code: no accounts, ads, analytics, or remote crash reporting; optional
    GitHub downloads disclose ordinary network information to GitHub. Local file
