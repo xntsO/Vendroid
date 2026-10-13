@@ -32,6 +32,18 @@ def open_ventoy_advanced_options(driver: Remote):
     button.click()
 
 
+def assert_online_check_requires_local_age(driver: Remote):
+    wait_for_element(driver, '//*[@resource-id="ventoyOnlineUpdateButton"]', timeout=30).click()
+    for tag in ("onlineBirthDay", "onlineBirthMonth", "onlineBirthYear"):
+        assert wait_for_element(driver, f'//*[@resource-id="{tag}"]', timeout=15).get_attribute("text") == ""
+    assert wait_for_element(driver, '//*[@resource-id="onlineAgeContinue"]').get_attribute("enabled") == "false"
+    wait_for_element(
+        driver, '//*[@text="Continue offline"]/ancestor-or-self::*[@clickable="true"][1]', timeout=15,
+    ).click()
+    # Cancelling the local screen must leave the updater idle and USB installation available.
+    wait_for_element(driver, '//*[@resource-id="ventoyOnlineUpdateButton"]', timeout=15)
+
+
 def configure_ventoy_options(
     driver: Remote,
     label: str,

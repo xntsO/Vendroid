@@ -19,12 +19,23 @@ the developer. Installing Ventoy erases the selected USB drive after confirmatio
 The bundled Ventoy payload works offline. If you choose to check for or download
 a Ventoy update, Vendroid connects over HTTPS to GitHub's API and official Ventoy
 release downloads. GitHub and its delivery providers receive ordinary connection
-information, including your IP address and the request's user-agent. Their handling
+information, including your IP address, requested resources, and the request's
+user-agent. GitHub may derive approximate location from an IP address and retain
+request information under its own policies. Their handling
 of that information is governed by [GitHub's privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement).
 Vendroid does not attach personal files or USB contents to these requests.
 
-Links to project pages, the privacy policy, and Google Play open external services
-whose own privacy policies apply.
+Before accessing GitHub updates or project links, Vendroid asks for a birth date
+to check GitHub's minimum age of 13. It processes the birth date only on your device
+and keeps only an eligibility result in memory for the current app session. It does
+not save, back up, or transmit the birth date or eligibility result. GitHub access
+stays blocked until eligibility is established. Users under 13 can still use the
+bundled payload and all offline USB operations. The privacy policy is included in
+the app and can be read offline without entering a birth date.
+
+Project links and Google Play links open external services whose own privacy
+policies apply. Google Play manages access to its service through its own account
+and parental controls.
 
 ## Analytics, storage, and deletion
 
@@ -35,7 +46,10 @@ report, review it first and remove information you do not wish to disclose.
 
 App preferences and downloaded Ventoy payloads are stored locally. Clear the app's
 storage or uninstall it to remove its private data. Android backup and restore may
-retain app data according to your device settings and backup provider's policies.
+retain interface preferences according to your device settings and backup
+provider's policies. Downloaded Ventoy payloads are excluded from Android backup.
+Uninstalling Vendroid does not remove connection records retained by GitHub or its
+delivery providers; their privacy policies govern those records.
 Files on external USB drives remain until you delete or overwrite them. Revoking
 file-picker or USB permission stops the corresponding access.
 

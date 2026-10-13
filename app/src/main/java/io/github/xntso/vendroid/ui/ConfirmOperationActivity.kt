@@ -129,6 +129,7 @@ import io.github.xntso.vendroid.ventoy.VentoyDiskScanner
 import io.github.xntso.vendroid.ventoy.VentoyClusterSize
 import io.github.xntso.vendroid.ventoy.VentoyPayload
 import io.github.xntso.vendroid.ventoy.VentoyOnlineUpdater
+import io.github.xntso.vendroid.ui.composables.rememberOnlineAccessGate
 import io.github.xntso.vendroid.ventoy.VentoyPartitionStyle
 import io.github.xntso.vendroid.ventoy.VentoyVersion
 import io.github.xntso.vendroid.ventoy.VentoyVersionRelation
@@ -379,6 +380,7 @@ class ConfirmOperationActivity : ActivityBase() {
                 val uiState by mViewModel.state.collectAsState()
                 var showLayFlatDialog by rememberSaveable { mutableStateOf(false) }
                 var showAdvancedOptions by rememberSaveable { mutableStateOf(false) }
+                val onlineAccessGate = rememberOnlineAccessGate()
 
                 // Scanning keeps the same request key instead of cancelling its own IO.
                 LaunchedEffect(uiState.ventoyScanRequest) {
@@ -404,9 +406,11 @@ class ConfirmOperationActivity : ActivityBase() {
                 }, onRetryVentoyScan = {
                     mViewModel.retryVentoyScan()
                 }, onCheckOnlineVentoy = {
-                    val bundled = mViewModel.state.value.bundledVentoyVersion
-                    if (bundled != null) {
-                        mViewModel.checkForOnlinePayload(mVentoyOnlineUpdater, bundled)
+                    onlineAccessGate {
+                        val bundled = mViewModel.state.value.bundledVentoyVersion
+                        if (bundled != null) {
+                            mViewModel.checkForOnlinePayload(mVentoyOnlineUpdater, bundled)
+                        }
                     }
                 }, askUsbPermission = {
                     val usbManager = getSystemService(USB_SERVICE) as UsbManager

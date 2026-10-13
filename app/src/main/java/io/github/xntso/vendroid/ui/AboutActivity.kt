@@ -1,6 +1,5 @@
 package io.github.xntso.vendroid.ui
 
-import android.content.Intent
 import android.graphics.Typeface
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -25,10 +24,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -39,13 +44,15 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.net.toUri
 import io.github.xntso.vendroid.AppSettings
 import io.github.xntso.vendroid.BuildConfig
 import io.github.xntso.vendroid.R
+import io.github.xntso.vendroid.online.ExternalProjectLinks
 import io.github.xntso.vendroid.plugins.reviews.WriteReviewHelper
 import io.github.xntso.vendroid.ui.composables.MainView
 import io.github.xntso.vendroid.ui.composables.ScreenSizeLayoutSelector
+import io.github.xntso.vendroid.ui.composables.PrivacyPolicyDialog
+import io.github.xntso.vendroid.ui.composables.rememberOnlineAccessGate
 import io.github.xntso.vendroid.utils.ktexts.activity
 
 class AboutActivity : ActivityBase() {
@@ -176,135 +183,129 @@ fun AboutViewLayout(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AboutView() {
-    AboutViewLayout(
-        modifier = Modifier.fillMaxSize(),
-        appTitle = {
-            Text(
-                text = "${stringResource(R.string.app_name)} v${BuildConfig.VERSION_NAME}",
-                style = MaterialTheme.typography.titleLarge.copy(fontSize = 28.sp),
-                textAlign = TextAlign.Center,
-            )
-        },
-        versionInfo = {
-            SelectionContainer {
+    val context = LocalContext.current
+    val onlineAccessGate = rememberOnlineAccessGate()
+    val externalLinks = remember { ExternalProjectLinks() }
+    var showPrivacyPolicy by remember { mutableStateOf(false) }
+    val uriHandler = object : UriHandler {
+        override fun openUri(uri: String) {
+            onlineAccessGate { externalLinks.open(context, uri) }
+        }
+    }
+    // Text's LinkAnnotation.Url actions and buttons share the same external boundary.
+    CompositionLocalProvider(LocalUriHandler provides uriHandler) {
+        AboutViewLayout(
+            modifier = Modifier.fillMaxSize(),
+            appTitle = {
                 Text(
-                    text = "${BuildConfig.APPLICATION_ID}\n v${BuildConfig.VERSION_NAME}+${BuildConfig.VERSION_CODE}, ${BuildConfig.FLAVOR}+${BuildConfig.BUILD_TYPE}",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 16.sp,
-                        fontFamily = FontFamily(Typeface.MONOSPACE)
-                    ),
+                    text = "${stringResource(R.string.app_name)} v${BuildConfig.VERSION_NAME}",
+                    style = MaterialTheme.typography.titleLarge.copy(fontSize = 28.sp),
                     textAlign = TextAlign.Center,
                 )
-            }
-        },
-        logo = {
-            VendroidLogo(
-                modifier = Modifier.size(128.dp),
-                contentDescription = stringResource(R.string.app_name),
-            )
-        },
-        contributorsInfo = {
-            val developerName = stringResource(R.string.developer_name)
-            val github = "GitHub"
-            val ventoy = "Ventoy"
-            val etchDroid = "EtchDroid"
-            val developerLine = stringResource(R.string.developer_credit, developerName)
-            val sourceLine = stringResource(R.string.project_source, github)
-            val upstreamLine = stringResource(R.string.upstream_projects, ventoy, etchDroid)
-            val linkStyle = SpanStyle(
-                color = MaterialTheme.colorScheme.primary,
-                textDecoration = TextDecoration.Underline,
-            )
-            val annotatedText = buildAnnotatedString {
-                append(stringResource(R.string.about_project_summary))
-                append("\n\n")
-                appendLinkedText(developerLine, developerName, "https://github.com/xntso", linkStyle)
-                append("\n")
-                appendLinkedText(
-                    sourceLine,
-                    github,
-                    "https://github.com/xntsO/Vendroid",
-                    linkStyle,
-                )
-                append("\n")
-                appendLinkedText(upstreamLine, ventoy, "https://www.ventoy.net", linkStyle)
-                val etchDroidStart = upstreamLine.indexOf(etchDroid)
-                if (etchDroidStart >= 0) {
-                    val absoluteStart = length - upstreamLine.length + etchDroidStart
-                    addStyle(linkStyle, absoluteStart, absoluteStart + etchDroid.length)
-                    addLink(
-                        LinkAnnotation.Url("https://github.com/EtchDroid/EtchDroid"),
-                        absoluteStart,
-                        absoluteStart + etchDroid.length,
-                    )
-                }
-                append("\n")
-                append(stringResource(R.string.gpl_license_notice))
-
-            }
-
-            Text(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                text = annotatedText,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    color = MaterialTheme.colorScheme.onBackground,
-                    textAlign = TextAlign.Center
-                )
-            )
-
-        },
-        actionButtons = {
-            val activity = LocalContext.current.activity
-            OutlinedButton(
-                onClick = {
-                    activity?.startActivity(
-                        Intent(
-                            Intent.ACTION_VIEW,
-                            "https://github.com/xntsO/Vendroid".toUri()
-                        )
-                    )
-                }
-            ) {
-                Text(stringResource(R.string.project_on_github))
-            }
-            OutlinedButton(
-                onClick = {
-                    activity?.startActivity(
-                        Intent(
-                            Intent.ACTION_VIEW,
-                            "https://www.ventoy.net".toUri()
-                        )
-                    )
-                }
-            ) {
-                Text("Ventoy")
-            }
-            OutlinedButton(
-                onClick = {
-                    activity?.startActivity(
-                        Intent(
-                            Intent.ACTION_VIEW,
-                            "https://github.com/xntsO/Vendroid/blob/main/docs/privacy-policy.md".toUri()
-                        )
-                    )
-                }
-            ) {
-                Text(stringResource(R.string.privacy_policy))
-            }
-            val reviewHelper = remember { activity?.let { WriteReviewHelper(it) } }
-            if (reviewHelper != null) {
-                OutlinedButton(onClick = { reviewHelper.launchReviewFlow() }) {
+            },
+            versionInfo = {
+                SelectionContainer {
                     Text(
-                        text = if (reviewHelper.isGPlayFlavor) stringResource(
-                            R.string.write_a_review
-                        )
-                        else stringResource(R.string.star_on_github)
+                        text = "${BuildConfig.APPLICATION_ID}\n v${BuildConfig.VERSION_NAME}+${BuildConfig.VERSION_CODE}, ${BuildConfig.FLAVOR}+${BuildConfig.BUILD_TYPE}",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 16.sp,
+                            fontFamily = FontFamily(Typeface.MONOSPACE)
+                        ),
+                        textAlign = TextAlign.Center,
                     )
                 }
-            }
-        },
-    )
+            },
+            logo = {
+                VendroidLogo(
+                    modifier = Modifier.size(128.dp),
+                    contentDescription = stringResource(R.string.app_name),
+                )
+            },
+            contributorsInfo = {
+                val developerName = stringResource(R.string.developer_name)
+                val github = "GitHub"
+                val ventoy = "Ventoy"
+                val etchDroid = "EtchDroid"
+                val developerLine = stringResource(R.string.developer_credit, developerName)
+                val sourceLine = stringResource(R.string.project_source, github)
+                val upstreamLine = stringResource(R.string.upstream_projects, ventoy, etchDroid)
+                val linkStyle = SpanStyle(
+                    color = MaterialTheme.colorScheme.primary,
+                    textDecoration = TextDecoration.Underline,
+                )
+                val annotatedText = buildAnnotatedString {
+                    append(stringResource(R.string.about_project_summary))
+                    append("\n\n")
+                    appendLinkedText(developerLine, developerName, "https://github.com/xntso", linkStyle)
+                    append("\n")
+                    appendLinkedText(
+                        sourceLine,
+                        github,
+                        "https://github.com/xntsO/Vendroid",
+                        linkStyle,
+                    )
+                    append("\n")
+                    appendLinkedText(upstreamLine, ventoy, "https://www.ventoy.net", linkStyle)
+                    val etchDroidStart = upstreamLine.indexOf(etchDroid)
+                    if (etchDroidStart >= 0) {
+                        val absoluteStart = length - upstreamLine.length + etchDroidStart
+                        addStyle(linkStyle, absoluteStart, absoluteStart + etchDroid.length)
+                        addLink(
+                            LinkAnnotation.Url("https://github.com/EtchDroid/EtchDroid"),
+                            absoluteStart,
+                            absoluteStart + etchDroid.length,
+                        )
+                    }
+                    append("\n")
+                    append(stringResource(R.string.gpl_license_notice))
+
+                }
+
+                Text(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    text = annotatedText,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        color = MaterialTheme.colorScheme.onBackground,
+                        textAlign = TextAlign.Center
+                    )
+                )
+
+            },
+            actionButtons = {
+                val activity = LocalContext.current.activity
+                OutlinedButton(
+                    onClick = { uriHandler.openUri("https://github.com/xntsO/Vendroid") }
+                ) {
+                    Text(stringResource(R.string.project_on_github))
+                }
+                OutlinedButton(
+                    onClick = { uriHandler.openUri("https://www.ventoy.net") }
+                ) {
+                    Text("Ventoy")
+                }
+                OutlinedButton(
+                    onClick = { showPrivacyPolicy = true }
+                ) {
+                    Text(stringResource(R.string.privacy_policy))
+                }
+                val reviewHelper = remember { activity?.let { WriteReviewHelper(it) } }
+                if (reviewHelper != null) {
+                    OutlinedButton(onClick = { onlineAccessGate { reviewHelper.launchReviewFlow() } }) {
+                        Text(
+                            text = if (reviewHelper.isGPlayFlavor) stringResource(
+                                R.string.write_a_review
+                            )
+                            else stringResource(R.string.star_on_github)
+                        )
+                    }
+                }
+            },
+        )
+    }
+    if (showPrivacyPolicy) {
+        PrivacyPolicyDialog { showPrivacyPolicy = false }
+    }
 }
 
 

@@ -13,6 +13,7 @@ val ventoyPayloadArchive = providers.gradleProperty("ventoyPayloadArchive")
             .absolutePath
     )
 val generatedVentoyPayloadAssets = layout.buildDirectory.dir("generated/ventoyPayload/assets")
+val generatedPrivacyAssets = layout.buildDirectory.dir("generated/privacyPolicy/assets")
 val releaseKeystorePath = providers.environmentVariable("VENDROID_KEYSTORE_PATH").orNull
 val releaseKeystorePassword = providers.environmentVariable("VENDROID_KEYSTORE_PASSWORD").orNull
 val releaseKeyAlias = providers.environmentVariable("VENDROID_KEY_ALIAS").orNull
@@ -155,6 +156,7 @@ android {
     sourceSets {
         getByName("main") {
             assets.srcDir(generatedVentoyPayloadAssets.get().asFile)
+            assets.srcDir(generatedPrivacyAssets.get().asFile)
         }
     }
     testOptions {
@@ -287,6 +289,11 @@ val prepareVentoyPayload = tasks.register("prepareVentoyPayload") {
     }
 }
 
+val preparePrivacyPolicy = tasks.register<Copy>("preparePrivacyPolicy") {
+    from(rootProject.layout.projectDirectory.file("docs/privacy-policy.md"))
+    into(generatedPrivacyAssets)
+}
+
 tasks.named("preBuild") {
-    dependsOn(prepareVentoyPayload)
+    dependsOn(prepareVentoyPayload, preparePrivacyPolicy)
 }

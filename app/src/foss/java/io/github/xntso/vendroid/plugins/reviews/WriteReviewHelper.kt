@@ -1,16 +1,13 @@
 package io.github.xntso.vendroid.plugins.reviews
 
 import android.app.Activity
-import android.content.Intent
-import androidx.core.net.toUri
+import io.github.xntso.vendroid.online.ExternalProjectLinks
 
 class WriteReviewHelper(private val mActivity: Activity) : IWriteReviewHelper {
     override val isGPlayFlavor: Boolean
         get() = false
 
     override fun launchReviewFlow() {
-        mActivity.startActivity(
-            Intent(Intent.ACTION_VIEW, "https://github.com/xntsO/Vendroid/".toUri())
-        )
+        ExternalProjectLinks().open(mActivity, "https://github.com/xntsO/Vendroid/")
     }
 }

@@ -1,6 +1,8 @@
 package io.github.xntso.vendroid.ventoy
 
 import io.github.xntso.vendroid.VendroidApplication
+import io.github.xntso.vendroid.online.OnlineAccessRequiredException
+import io.github.xntso.vendroid.online.OnlineEligibility
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -15,6 +17,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.file.Path
@@ -173,8 +176,14 @@ class VentoyOnlineUpdaterTest {
         )
         val cache = VentoyPayloadCache(temporaryDirectory.toFile())
         val progress = mutableListOf<VentoyDownloadProgress>()
-        val updater = VentoyOnlineUpdater(cache) { url ->
-            FakeHttpURLConnection(url, archive)
+        val requestedUrls = mutableListOf<String>()
+        val updater = VentoyOnlineUpdater(cache, eligibility = { OnlineEligibility.ELIGIBLE }) { url ->
+            requestedUrls.add(url.toString())
+            if (url.host == "github.com") {
+                FakeHttpURLConnection(url, byteArrayOf(), 302, "https://release-assets.githubusercontent.com/payload")
+            } else {
+                FakeHttpURLConnection(url, archive)
+            }
         }
 
         val downloaded = updater.downloadRelease(release, "1.1.16", progress::add)
@@ -183,7 +192,98 @@ class VentoyOnlineUpdaterTest {
         assertEquals(version, cache.load(version).version)
         assertEquals(archive.size.toLong(), progress.last().downloadedBytes)
         assertEquals(archive.size.toLong(), progress.last().totalBytes)
+        assertEquals(listOf(release.downloadUrl, "https://release-assets.githubusercontent.com/payload"), requestedUrls)
     }
+
+    @Test
+    fun `unknown and restricted checks direct downloads and retries open no connections`() {
+        val cache = VentoyPayloadCache(temporaryDirectory.toFile())
+        var connections = 0
+        var eligibility = OnlineEligibility.UNKNOWN
+        val updater = VentoyOnlineUpdater(cache, eligibility = { eligibility }) { url ->
+            connections++
+            FakeHttpURLConnection(url, byteArrayOf())
+        }
+        for (band in listOf(OnlineEligibility.UNKNOWN, OnlineEligibility.RESTRICTED)) {
+            eligibility = band
+            repeat(2) {
+                assertThrows<OnlineAccessRequiredException> { updater.fetchLatestRelease() }
+                assertThrows<OnlineAccessRequiredException> { updater.downloadLatest("1.1.16") }
+                assertThrows<OnlineAccessRequiredException> { updater.downloadRelease(officialRelease(), "1.1.16") }
+                assertEquals(0, connections)
+            }
+        }
+    }
+
+    @Test
+    fun `default updater fails closed without any supplied eligibility`() {
+        var connections = 0
+        val updater = VentoyOnlineUpdater(VentoyPayloadCache(temporaryDirectory.toFile())) { url ->
+            connections++
+            FakeHttpURLConnection(url, byteArrayOf())
+        }
+        assertThrows<OnlineAccessRequiredException> { updater.fetchLatestRelease() }
+        assertEquals(0, connections)
+    }
+
+    @Test
+    fun `restricted users can reuse a validated cached payload entirely offline`() {
+        val cache = VentoyPayloadCache(temporaryDirectory.toFile())
+        writeCachedPayload(cache, "1.1.17")
+        val updater = VentoyOnlineUpdater(cache, eligibility = { OnlineEligibility.RESTRICTED }) {
+            throw AssertionError("Cached payload must not request a connection")
+        }
+        assertEquals("1.1.17", updater.downloadRelease(officialRelease(), "1.1.16").version)
+        assertEquals("1.1.17", cache.newestCompatible("1.1.16")?.version)
+    }
+
+    @Test
+    fun `a redirect rechecks eligibility before contacting the delivery provider`() {
+        var eligibility = OnlineEligibility.ELIGIBLE
+        val connections = mutableListOf<URL>()
+        var disconnected = false
+        val updater = VentoyOnlineUpdater(
+            VentoyPayloadCache(temporaryDirectory.toFile()), eligibility = { eligibility },
+        ) { url ->
+            connections.add(url)
+            object : HttpURLConnection(url) {
+                override fun connect() = Unit
+                override fun disconnect() { disconnected = true }
+                override fun usingProxy() = false
+                override fun getResponseCode(): Int {
+                    eligibility = OnlineEligibility.RESTRICTED
+                    return 302
+                }
+                override fun getHeaderField(name: String): String? =
+                    if (name == "Location") "https://release-assets.githubusercontent.com/payload" else null
+            }
+        }
+        assertThrows<OnlineAccessRequiredException> { updater.downloadRelease(officialRelease(), "1.1.16") }
+        assertEquals(1, connections.size)
+        assertTrue(disconnected)
+    }
+
+    @Test
+    fun `a failed eligible request cannot be retried after eligibility is lost`() {
+        var eligibility = OnlineEligibility.ELIGIBLE
+        var connections = 0
+        val updater = VentoyOnlineUpdater(
+            VentoyPayloadCache(temporaryDirectory.toFile()), eligibility = { eligibility },
+        ) {
+            connections++
+            throw IOException("Fixture connection failed")
+        }
+        assertThrows<IOException> { updater.fetchLatestRelease() }
+        eligibility = OnlineEligibility.UNKNOWN
+        assertThrows<OnlineAccessRequiredException> { updater.fetchLatestRelease() }
+        assertEquals(1, connections)
+    }
+
+    private fun officialRelease() = VentoyOnlineRelease(
+        version = "1.1.17", assetName = "ventoy-1.1.17-linux.tar.gz",
+        downloadUrl = "https://github.com/ventoy/Ventoy/releases/download/v1.1.17/ventoy-1.1.17-linux.tar.gz",
+        sizeBytes = 1, sha256 = "ab".repeat(32),
+    )
 
     private fun writeCachedPayload(cache: VentoyPayloadCache, version: String) {
         val directory = cache.directoryFor(version).apply { mkdirs() }
@@ -237,11 +337,14 @@ class VentoyOnlineUpdaterTest {
     private class FakeHttpURLConnection(
         url: URL,
         private val response: ByteArray,
+        private val status: Int = 200,
+        private val location: String? = null,
     ) : HttpURLConnection(url) {
         override fun connect() = Unit
         override fun disconnect() = Unit
         override fun usingProxy(): Boolean = false
-        override fun getResponseCode(): Int = 200
+        override fun getResponseCode(): Int = status
+        override fun getHeaderField(name: String): String? = if (name == "Location") location else null
         override fun getContentLength(): Int = response.size
         override fun getInputStream(): InputStream = ByteArrayInputStream(response)
     }
