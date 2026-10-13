@@ -181,19 +181,60 @@ class SourcePackagingFixtures(unittest.TestCase):
             with self.assertRaises(VerificationError):
                 replace_native_entries(source, output, {native: elf(alignment=4096)}, {})
 
-    def test_source_archive_cannot_escape_or_create_links(self):
+    def test_source_archive_materializes_an_internal_symlink_and_chain(self):
         with tempfile.TemporaryDirectory() as directory:
             cache = Path(directory)
-            for name, kind in (("root/../../escaped", tarfile.REGTYPE), ("root/link", tarfile.SYMTYPE)):
+            archive = cache / "source.tar.gz"
+            content = b"the same pinned source bytes"
+            with tarfile.open(archive, "w:gz") as source:
+                regular = tarfile.TarInfo("root/README")
+                regular.size = len(content)
+                regular.mode = 0o644
+                source.addfile(regular, io.BytesIO(content))
+                for name, link in (("root/README.md", "README"), ("root/docs/README", "../README.md")):
+                    member = tarfile.TarInfo(name)
+                    member.type = tarfile.SYMTYPE
+                    member.linkname = link
+                    source.addfile(member)
+            destination = extract_source(archive, cache / "sources", cache)
+            for name in ("README", "README.md", "docs/README"):
+                self.assertEqual((destination / name).read_bytes(), content)
+                self.assertFalse((destination / name).is_symlink())
+
+    def test_source_archive_cannot_escape_or_create_unsafe_links(self):
+        with tempfile.TemporaryDirectory() as directory:
+            cache = Path(directory)
+            for name, kind, link in (("root/../../escaped", tarfile.REGTYPE, ""),
+                                     ("root/link", tarfile.SYMTYPE, "../../escaped"),
+                                     ("root/link", tarfile.SYMTYPE, "/etc/passwd"),
+                                     ("root/link", tarfile.SYMTYPE, "missing"),
+                                     ("root/link", tarfile.LNKTYPE, "../../escaped")):
                 archive = cache / "source.tar.gz"
                 with tarfile.open(archive, "w:gz") as source:
                     member = tarfile.TarInfo(name)
                     member.type = kind
-                    member.linkname = "../../escaped" if kind == tarfile.SYMTYPE else ""
+                    member.linkname = link
                     source.addfile(member, io.BytesIO())
                 with self.assertRaises(ValueError):
                     extract_source(archive, cache / "sources", cache)
             self.assertFalse((cache.parent / "escaped").exists())
+
+    def test_source_archive_rejects_symlink_cycles_and_directory_targets(self):
+        with tempfile.TemporaryDirectory() as directory:
+            cache = Path(directory)
+            for directory_target in (False, True):
+                archive = cache / "source.tar.gz"
+                with tarfile.open(archive, "w:gz") as source:
+                    first = tarfile.TarInfo("root/first")
+                    first.type = tarfile.SYMTYPE
+                    first.linkname = "second"
+                    source.addfile(first)
+                    second = tarfile.TarInfo("root/second")
+                    second.type = tarfile.DIRTYPE if directory_target else tarfile.SYMTYPE
+                    second.linkname = "first" if not directory_target else ""
+                    source.addfile(second)
+                with self.assertRaisesRegex(ValueError, "regular file|cycle"):
+                    extract_source(archive, cache / "sources", cache)
 
 
 if __name__ == "__main__":
