@@ -131,7 +131,10 @@ def publish_bundle(client, bundle: VerifiedBundle, *, track: str, release_name: 
             }],
         }).execute(num_retries=API_RETRIES)
         edits.validate(**args).execute(num_retries=API_RETRIES)
-        edits.commit(**args, changesNotSentForReview=False).execute(num_retries=API_RETRIES)
+        edits.commit(
+            **args, changesNotSentForReview=False,
+            changesInReviewBehavior="ERROR_IF_IN_REVIEW",
+        ).execute(num_retries=API_RETRIES)
         committed = True
         return {
             "packageName": PACKAGE_NAME,
