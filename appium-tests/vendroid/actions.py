@@ -109,6 +109,11 @@ def _complete_usb_permission(driver: Remote) -> bool:
         "xpath", '//*[@content-desc="Permission granted"]',
     )):
         return True
+    # The ready card can move the grant checkmark below the scroll viewport.
+    # This fixed footer action also requires hasUsbPermission in the app.
+    if any(element.is_displayed() and element.get_attribute("enabled") == "true"
+           for element in driver.find_elements("xpath", '//*[@resource-id="writeImageButton"]')):
+        return True
     for button in driver.find_elements(
         "xpath", '//*[@package="com.android.systemui" and @resource-id="android:id/button1" and @text="OK"]',
     ):

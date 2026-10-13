@@ -17,10 +17,15 @@ class PermissionTrace:
         self.ok = Mock()
         self.ok.is_displayed.return_value = True
         self.ok.get_attribute.return_value = "true"
+        self.confirmation = Mock()
+        self.confirmation.is_displayed.return_value = True
+        self.confirmation.get_attribute.side_effect = lambda attribute: self.frame[2]
 
     def find_elements(self, by, value):
         if value == '//*[@content-desc="Permission granted"]':
             return [self.granted] if self.frame[0] else []
+        if value == '//*[@resource-id="writeImageButton"]':
+            return [self.confirmation] if len(self.frame) > 2 else []
         return [self.ok] if self.frame[1] else []
 
     def until(self, predicate):
@@ -61,6 +66,43 @@ class UsbPermissionTest(unittest.TestCase):
         with self.assertRaises(TimeoutException):
             self.grant(trace)
         trace.ok.click.assert_called_once()
+
+    def test_ready_action_confirms_grant_when_ready_card_hides_the_checkmark(self):
+        # Real CI showed the footer enabled after the grant while the taller
+        # ready card moved the checkmark out of the accessibility viewport.
+        trace = PermissionTrace([
+            (False, False, "false"), (False, True, "false"), (False, False, "true"),
+        ])
+        self.grant(trace)
+        trace.ok.click.assert_called_once()
+        self.assertFalse(trace.frame[0])
+
+    def test_ready_action_can_confirm_existing_permission_without_a_dialog(self):
+        trace = PermissionTrace([(False, False, "true")])
+        self.grant(trace)
+        trace.ok.click.assert_not_called()
+
+    def test_a_disabled_action_and_no_checkmark_do_not_confirm_permission(self):
+        trace = PermissionTrace([(False, False, "false")])
+        with self.assertRaises(TimeoutException):
+            self.grant(trace)
+
+    def test_an_enabled_but_hidden_action_does_not_confirm_permission(self):
+        trace = PermissionTrace([(False, False, "true")])
+        trace.confirmation.is_displayed.return_value = False
+        with self.assertRaises(TimeoutException):
+            self.grant(trace)
+
+    def test_accepting_dialog_with_a_disabled_action_is_still_unconfirmed(self):
+        trace = PermissionTrace([(False, True, "false"), (False, False, "false")])
+        with self.assertRaises(TimeoutException):
+            self.grant(trace)
+        trace.ok.click.assert_called_once()
+
+    def test_capacity_blocked_action_can_still_complete_with_visible_checkmark(self):
+        trace = PermissionTrace([(True, False, "false")])
+        self.grant(trace)
+        trace.ok.click.assert_not_called()
 
 
 if __name__ == "__main__":
