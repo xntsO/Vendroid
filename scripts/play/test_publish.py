@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import MagicMock
 
 from publish import (PlayPublishError, VerifiedBundle, highest_version_code,
-                     publish_bundle, verified_bundle)
+                     publish_bundle, resolve_play_track, verified_bundle)
 from verify_bundle import UPLOAD_CERTIFICATE_SHA256
 
 
@@ -14,6 +14,20 @@ HASH = "b" * 64
 
 
 class PlayPublishingTest(unittest.TestCase):
+    def test_beta_defaults_to_closed_testing_until_open_beta_is_available(self):
+        self.assertEqual("alpha", resolve_play_track("beta"))
+        self.assertEqual("alpha", resolve_play_track("beta", "alpha"))
+        self.assertEqual("beta", resolve_play_track("beta", "beta"))
+
+    def test_testing_configuration_cannot_reroute_production(self):
+        for configured in ("", "alpha", "beta"):
+            self.assertEqual("production", resolve_play_track("production", configured))
+        for configured in ("production", "internal", " beta", "beta\n"):
+            with self.assertRaises(PlayPublishError):
+                resolve_play_track("beta", configured)
+        with self.assertRaises(PlayPublishError):
+            resolve_play_track("alpha")
+
     def client(self, *, tracks=None, bundles=None, apks=None):
         client = MagicMock()
         edits = client.edits.return_value
@@ -29,7 +43,7 @@ class PlayPublishingTest(unittest.TestCase):
         return publish_bundle(client, bundle, track=track, release_name="v0.2.0-beta.1", media_body=object())
 
     def test_success_validates_commits_and_targets_only_selected_track(self):
-        for track in ("beta", "production"):
+        for track in ("alpha", "beta", "production"):
             with self.subTest(track=track):
                 client = self.client(tracks={"tracks": [{"track": "internal", "releases": [{"versionCodes": ["30"]}]}]})
                 result = self.publish(client, track)

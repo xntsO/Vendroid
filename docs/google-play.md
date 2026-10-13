@@ -46,8 +46,9 @@ validation gates in [validation.md](validation.md) pass.
 
 The `Prepare or publish Google Play` workflow validates the selected commit, builds and
 checks the signed bundle, then uploads it through the Android Publisher API.
-Publishing a GitHub prerelease selects Play `beta`; publishing a stable GitHub
-release selects `production`. Draft releases and ordinary commits do not upload.
+Publishing a GitHub prerelease selects the Vendroid beta channel. It uploads to
+Play's closed `alpha` track by default. Publishing a stable GitHub release selects
+`production`. Draft releases and ordinary commits do not upload.
 Google review, testing eligibility, and managed publishing can still delay availability.
 
 Before enabling uploads, create a dedicated service account with Android Publisher
@@ -57,6 +58,13 @@ access requires the owner's approval. Store the service-account JSON as the GitH
 Actions secret `VENDROID_PLAY_SERVICE_ACCOUNT_JSON`; never commit it or paste it
 into chat. Enable the repository variable `VENDROID_PLAY_PUBLISHING_ENABLED=true`
 only after first-listing setup, signing, and API access have been checked.
+
+The current Console account requires at least 12 closed testers opted in for 14
+continuous days before requesting production access. Open testing is also
+unavailable during this initial stage. Leave `VENDROID_PLAY_BETA_TRACK` unset or
+set it to `alpha` for closed testing. Set it to `beta` only after Play makes open
+testing available and the owner chooses that track. Other values are rejected.
+This setting affects only the beta channel; production always uses `production`.
 
 The workflow's manual `prepare` mode needs only the existing four release-signing
 secrets and creates an artifact without contacting the publishing API. Manual
