@@ -1,5 +1,8 @@
 package io.github.xntso.vendroid.ventoy
 
+import io.github.xntso.vendroid.online.OnlineAccess
+import io.github.xntso.vendroid.online.OnlineEligibility
+import io.github.xntso.vendroid.online.requireOnlineEligibility
 import org.json.JSONObject
 import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
@@ -103,6 +106,7 @@ class VentoyPayloadCache(
 class VentoyOnlineUpdater(
     private val payloadCache: VentoyPayloadCache,
     private val releaseApiUrl: String = LATEST_RELEASE_API,
+    private val eligibility: () -> OnlineEligibility = { OnlineAccess.session.eligibility },
     private val connectionFactory: (URL) -> HttpURLConnection = { url ->
         url.openConnection() as HttpURLConnection
     },
@@ -261,13 +265,32 @@ class VentoyOnlineUpdater(
     }
 
     private fun openConnection(url: String, acceptJson: Boolean): HttpURLConnection {
-        val connection = connectionFactory(URL(url))
-        connection.instanceFollowRedirects = true
-        connection.connectTimeout = CONNECT_TIMEOUT_MS
-        connection.readTimeout = READ_TIMEOUT_MS
-        connection.setRequestProperty("User-Agent", "Vendroid/${javaClass.`package`?.implementationVersion ?: "dev"}")
-        if (acceptJson) connection.setRequestProperty("Accept", "application/vnd.github+json")
-        return connection
+        var target = URL(url)
+        repeat(MAX_REDIRECTS + 1) { redirectCount ->
+            // Enforce at every connection, including direct downloads, redirects, and retries.
+            requireOnlineEligibility(eligibility())
+            require(target.protocol == "https" && target.userInfo == null) {
+                "Ventoy requests require an HTTPS URL without credentials"
+            }
+            val connection = connectionFactory(target)
+            try {
+                connection.instanceFollowRedirects = false
+                connection.connectTimeout = CONNECT_TIMEOUT_MS
+                connection.readTimeout = READ_TIMEOUT_MS
+                connection.setRequestProperty("User-Agent", "Vendroid/${javaClass.`package`?.implementationVersion ?: "dev"}")
+                if (acceptJson) connection.setRequestProperty("Accept", "application/vnd.github+json")
+                if (connection.responseCode !in REDIRECT_STATUSES) return connection
+                require(redirectCount < MAX_REDIRECTS) { "Too many Ventoy download redirects" }
+                val location = connection.getHeaderField("Location")
+                    ?: throw IOException("Ventoy redirect has no destination")
+                target = URL(target, location)
+            } catch (error: Exception) {
+                connection.disconnect()
+                throw error
+            }
+            connection.disconnect()
+        }
+        throw IOException("Too many Ventoy download redirects")
     }
 
     private fun HttpURLConnection.readSuccessfulResponse(maxBytes: Int): ByteArray {
@@ -326,6 +349,8 @@ class VentoyOnlineUpdater(
         private const val DOWNLOAD_BUFFER_BYTES = 64 * 1024
         private const val MAX_RELEASE_METADATA_BYTES = 1024 * 1024
         private const val MAX_ARCHIVE_BYTES = 256L * 1024L * 1024L
+        private const val MAX_REDIRECTS = 5
+        private val REDIRECT_STATUSES = setOf(301, 302, 303, 307, 308)
 
         internal fun parseAssetSha256(digest: String): String? {
             val match = Regex("""(?i)^sha256:([0-9a-f]{64})$""").matchEntire(digest.trim())
