@@ -12,10 +12,15 @@ validation gates in [validation.md](validation.md) pass.
    language and the existing package name. The owner must review Google's policy
    and export declarations. Creating a draft does not publish an app or resolve
    an inactivity warning by itself.
-2. Enroll in Play App Signing using the **existing Vendroid app signing key**.
-   Follow the Console's supported export/import flow. A Google-generated replacement
+2. Configure Play App Signing using the **existing Vendroid app signing key**.
+   The first listing created on 13 October 2026 was automatically enrolled with a
+   Google-generated key. Its displayed SHA-256 fingerprint starts with `2E:3F:28:D0`,
+   which does not match Vendroid. Before the first upload, use **Protected with Play →
+   Play Store protection → Manage Play app signing → Change key** and complete the
+   supported existing-key export/import flow with the owner. Do not export an
+   unencrypted private key as a CI artifact. A Google-generated replacement
    key would prevent updates over existing GitHub APK installations. Compare the
-   app signing certificate SHA-256 with
+   classical app signing certificate SHA-256 with
    `b388ad9d2290967480630cbd4a48f4f8c6784305c05da3541ad780821d9fbeb1`.
    Keep the existing keystore and credentials private. Do not rotate keys during
    first-time setup. The CI bundle uses that key as its upload signer initially.
