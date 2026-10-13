@@ -15,6 +15,7 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import io.github.xntso.vendroid.Intents
+import io.github.xntso.vendroid.AppLocales
 import io.github.xntso.vendroid.JobStatusInfo
 import io.github.xntso.vendroid.R
 import io.github.xntso.vendroid.VentoyJobOptions
@@ -164,18 +165,18 @@ class WorkerService : LifecycleService() {
                         .Builder(this@WorkerService, JOB_PROGRESS_CHANNEL)
                         .setSmallIcon(R.drawable.ic_write_to_usb_anim)
                         .setContentTitle(
-                            getString(
+                            AppLocales.getString(this@WorkerService,
                                 if (status.isVerifying) R.string.notification_verify_progress_title
                                 else R.string.notification_write_progress_title
                             )
                         )
                         .setContentText(
-                            if (status.isVerifying) getString(
+                            if (status.isVerifying) AppLocales.getString(this@WorkerService,
                                 R.string.notification_verify_progress_content,
                                 mDestDevice.name,
                                 filenameStr
                             )
-                            else getString(
+                            else AppLocales.getString(this@WorkerService,
                                 R.string.notification_write_progress_content,
                                 filenameStr,
                                 mDestDevice.name
@@ -223,7 +224,7 @@ class WorkerService : LifecycleService() {
                         .Builder(this@WorkerService, JOB_RESULT_CHANNEL)
                         .setSmallIcon(R.drawable.ic_write_to_usb_failed)
                         .setContentTitle(
-                            getString(
+                            AppLocales.getString(this@WorkerService,
                                 if (status.exception is FatalException) R.string.write_failed
                                 else R.string.action_required
                             )
@@ -259,9 +260,9 @@ class WorkerService : LifecycleService() {
                     mJobId, NotificationCompat
                         .Builder(this@WorkerService, JOB_RESULT_CHANNEL)
                         .setSmallIcon(R.drawable.ic_written_to_usb)
-                        .setContentTitle(getString(R.string.write_finished))
+                        .setContentTitle(AppLocales.getString(this@WorkerService, R.string.write_finished))
                         .setContentText(
-                            getString(
+                            AppLocales.getString(this@WorkerService,
                                 R.string.success_notif_content_text, filenameStr, mDestDevice.name
                             )
                         )
@@ -695,9 +696,9 @@ class WorkerService : LifecycleService() {
 
     private val filenameStr: String by lazy {
         if (Intents.isVentoyOperation(mOperation)) {
-            getString(R.string.ventoy_installer_name)
+            AppLocales.getString(this@WorkerService, R.string.ventoy_installer_name)
         } else {
-            mSourceUri.getDisplayName(this) ?: getString(R.string.unknown_filename)
+            mSourceUri.getDisplayName(this) ?: AppLocales.getString(this@WorkerService, R.string.unknown_filename)
         }
     }
 
@@ -705,9 +706,9 @@ class WorkerService : LifecycleService() {
         get() = NotificationCompat
             .Builder(this, JOB_PROGRESS_CHANNEL)
             .setSmallIcon(R.drawable.ic_write_to_usb_anim)
-            .setContentTitle(getString(R.string.notification_write_progress_title))
+            .setContentTitle(AppLocales.getString(this@WorkerService, R.string.notification_write_progress_title))
             .setContentText(
-                getString(
+                AppLocales.getString(this@WorkerService,
                     if (notificationsAllowed) R.string.notification_write_tap_for_progress_text
                     else R.string.notification_write_no_notifications_text,
                     filenameStr,
@@ -723,18 +724,18 @@ class WorkerService : LifecycleService() {
         try {
             mNotificationManager.createNotificationChannel(
                 NotificationChannel(
-                    JOB_PROGRESS_CHANNEL, getString(R.string.notif_channel_job_progress_name),
+                    JOB_PROGRESS_CHANNEL, AppLocales.getString(this@WorkerService, R.string.notif_channel_job_progress_name),
                     NotificationManager.IMPORTANCE_LOW
                 ).apply {
-                    description = getString(R.string.notif_channel_job_progress_desc)
+                    description = AppLocales.getString(this@WorkerService, R.string.notif_channel_job_progress_desc)
                     setShowBadge(false)
                 })
             mNotificationManager.createNotificationChannel(
                 NotificationChannel(
-                    JOB_RESULT_CHANNEL, getString(R.string.notif_channel_job_result_name),
+                    JOB_RESULT_CHANNEL, AppLocales.getString(this@WorkerService, R.string.notif_channel_job_result_name),
                     NotificationManager.IMPORTANCE_DEFAULT
                 ).apply {
-                    description = getString(R.string.notif_channel_job_result_desc)
+                    description = AppLocales.getString(this@WorkerService, R.string.notif_channel_job_result_desc)
                 })
 
             mNotificationsSetUp = true

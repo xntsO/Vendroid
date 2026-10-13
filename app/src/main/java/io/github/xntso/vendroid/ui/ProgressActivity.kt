@@ -225,7 +225,10 @@ class ProgressActivity : ActivityBase() {
             mViewModel.refreshSettings(this)
         }
         refreshNotificationsPermission()
-        mViewModel.updateFromIntent(intent)
+        if (mViewModel.state.value.sourceUri == null) {
+            // Locale/rotation recreation retains the ViewModel; do not replay stale launch progress.
+            mViewModel.updateFromIntent(intent)
+        }
 
         Telemetry.configureScope {
             val state = mViewModel.state.value

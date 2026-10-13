@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.xntso.vendroid.AppSettings
+import io.github.xntso.vendroid.AppLanguage
 import io.github.xntso.vendroid.Intents
 import io.github.xntso.vendroid.JobStatusInfo
 import io.github.xntso.vendroid.SettingChangeListener
@@ -95,6 +96,7 @@ class ThemeViewModel : ViewModel(), SettingChangeListener, IThemeViewModel<Theme
 data class MainActivityState(
     override val dynamicColors: Boolean = false,
     override val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val language: AppLanguage = AppLanguage.AUTOMATIC,
     val showWindowsAlertForUri: Uri? = null,
     val openedImage: Uri? = null,
     val massStorageDevices: Set<UsbMassStorageDeviceDescriptor> = emptySet(),
@@ -114,6 +116,7 @@ class MainActivityViewModel : ViewModel(), SettingChangeListener, IThemeViewMode
             it.copy(
                     dynamicColors = settings.dynamicColors,
                     themeMode = settings.themeMode,
+                    language = settings.language,
             )
         }
     }

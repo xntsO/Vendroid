@@ -40,6 +40,7 @@
             android:windowSoftInputMode="adjustResize" />
         <activity
             android:name=".ui.ProgressActivity"
+            android:configChanges="locale|layoutDirection"
             android:exported="false"
             android:label="@string/writing_image"
             android:theme="@style/AppTheme"

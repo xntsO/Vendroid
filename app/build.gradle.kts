@@ -180,6 +180,7 @@ kotlin {
 
 dependencies {
     implementation(libs.activity.compose)
+    implementation(libs.appcompat)
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
     implementation(libs.compose.ui)

@@ -158,6 +158,12 @@
     <string name="please_report_fatal_issue" comment="Displayed in the fatal error screen, prompting the users to report the issue on GitHub along with the steps to reproduce it">If you can, please report this issue on GitHub along with the steps that led to this error.</string>
     <string name="view_github_issues" comment="Displayed in the fatal error screen, in a small button. When pressed, the app opens the GitHub issues page. Since the button is small, please keep this short. You can replace it with &quot;GitHub issues&quot; if &quot;View GitHub issues&quot; is too long in your language.">View GitHub issues</string>
     <string name="close">Close</string>
+    <string name="menu">Menu</string>
+    <string name="language">Language</string>
+    <string name="language_automatic">Automatic (device language)</string>
+    <string name="language_english">English</string>
+    <string name="language_arabic">العربية</string>
+    <string name="privacy_policy_language_note">The policy below is provided in English.</string>
     <string name="project_website">Project website</string>
     <string name="help_and_contact">Help and contact</string>
     <string name="ventoy_mirror_name">Vendroid update mirror</string>

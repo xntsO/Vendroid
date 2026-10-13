@@ -78,6 +78,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import io.github.xntso.vendroid.AppSettings
+import io.github.xntso.vendroid.AppLanguage
+import io.github.xntso.vendroid.AppLocales
 import io.github.xntso.vendroid.BuildConfig
 import io.github.xntso.vendroid.R
 import io.github.xntso.vendroid.ThemeMode
@@ -89,6 +91,7 @@ import io.github.xntso.vendroid.massstorage.UsbMassStorageDeviceDescriptor
 import io.github.xntso.vendroid.plugins.telemetry.Telemetry
 import io.github.xntso.vendroid.plugins.telemetry.TelemetryLevel
 import io.github.xntso.vendroid.ui.composables.MainView
+import io.github.xntso.vendroid.ui.composables.LanguagePickerDialog
 import io.github.xntso.vendroid.ui.composables.ScreenSizeLayoutSelector
 import io.github.xntso.vendroid.ui.composables.appiumTag
 import io.github.xntso.vendroid.utils.broadcastReceiver
@@ -252,6 +255,10 @@ class MainActivity : ActivityBase() {
                     mViewModel,
                     setThemeMode = { mSettings.themeMode = it },
                     setDynamicTheme = { mSettings.dynamicColors = it },
+                    setLanguage = {
+                        mSettings.language = it
+                        AppLocales.apply(this)
+                    },
                     onCTAClick = {
                         Telemetry.addBreadcrumb {
                             message = "User clicked on Install Ventoy"
@@ -436,12 +443,14 @@ fun StartView(
     viewModel: MainActivityViewModel,
     setThemeMode: (ThemeMode) -> Unit = {},
     setDynamicTheme: (Boolean) -> Unit = {},
+    setLanguage: (AppLanguage) -> Unit = {},
     onCTAClick: () -> Unit = {},
     onForceInstallClick: () -> Unit = {},
     openAboutView: () -> Unit = {},
 ) {
     val uiState by viewModel.state.collectAsState()
     var menuOpen by remember { mutableStateOf(false) }
+    var languagePickerOpen by rememberSaveable { mutableStateOf(false) }
 
     val menuScrollState = rememberScrollState()
 
@@ -481,11 +490,11 @@ fun StartView(
             }
         },
         menuButton = {
-            IconButton(onClick = { menuOpen = true }) {
+            IconButton(modifier = Modifier.appiumTag("settingsMenuButton"), onClick = { menuOpen = true }) {
                 Icon(
                     modifier = Modifier.size(20.dp),
                     imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Menu"
+                    contentDescription = stringResource(R.string.menu)
                 )
             }
         },
@@ -543,6 +552,15 @@ fun StartView(
                 HorizontalDivider()
 
                 DropdownMenuItem(
+                    modifier = Modifier.appiumTag("languageMenuItem"),
+                    onClick = {
+                        menuOpen = false
+                        languagePickerOpen = true
+                    },
+                    text = { Text(stringResource(R.string.language)) },
+                )
+
+                DropdownMenuItem(
                     onClick = { openAboutView() },
                     text = { Text(stringResource(R.string.about)) }, leadingIcon = {
                         Icon(
@@ -553,6 +571,16 @@ fun StartView(
             }
         },
     ) {}
+    if (languagePickerOpen) {
+        LanguagePickerDialog(
+            selected = uiState.language,
+            onSelect = {
+                languagePickerOpen = false
+                setLanguage(it)
+            },
+            onDismiss = { languagePickerOpen = false },
+        )
+    }
 }
 
 @Composable
@@ -575,7 +603,7 @@ fun WindowsImageAlertDialog(
     }, icon = {
         Icon(
             imageVector = ImageVector.vectorResource(id = R.drawable.ic_windows),
-            contentDescription = "Windows logo"
+            contentDescription = null
         )
     }, confirmButton = {
         TextButton(
@@ -642,7 +670,7 @@ fun UsbDevicePickerBottomSheet(
                                 imageVector = ImageVector.vectorResource(
                                     id = R.drawable.ic_usb_stick
                                 ),
-                                contentDescription = "USB drive"
+                                contentDescription = null
                             )
                         },
                     )

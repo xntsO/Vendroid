@@ -26,6 +26,9 @@ class AppSettings(context: Context, val tileId: Int? = null) : SettingsChangeNot
     }
 
     var themeMode: ThemeMode by settings.delegate("theme_mode", ThemeMode.SYSTEM)
+    var language: AppLanguage by settings.delegate(
+        "language", AppLanguage.AUTOMATIC, unmarshal = { AppLanguage.fromPreference(it) },
+    )
     var dynamicColors: Boolean by settings.delegate("dynamic_colors", false)
     var showNotificationsBanner: Boolean by settings.delegate("show_notifications_banner", true)
 }

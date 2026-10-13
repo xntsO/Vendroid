@@ -1,6 +1,8 @@
 package io.github.xntso.vendroid.ui.composables
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -26,13 +28,16 @@ fun PrivacyPolicyDialog(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.privacy_policy)) },
         text = {
-            SelectionContainer {
-                // Plain selectable text keeps the complete policy and URLs accessible offline.
-                Text(
-                    text = policy,
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp)
-                        .verticalScroll(rememberScrollState()).appiumTag("localPrivacyPolicy"),
-                )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.privacy_policy_language_note))
+                SelectionContainer {
+                    // Plain selectable text keeps the complete policy and URLs accessible offline.
+                    Text(
+                        text = policy,
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp)
+                            .verticalScroll(rememberScrollState()).appiumTag("localPrivacyPolicy"),
+                    )
+                }
             }
         },
         confirmButton = {
