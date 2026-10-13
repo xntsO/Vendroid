@@ -229,7 +229,7 @@ class WorkerService : LifecycleService() {
                                 else R.string.action_required
                             )
                         )
-                        .setContentText(status.exception.getUiMessage(this@WorkerService))
+                        .setContentText(status.exception.getUiMessage(AppLocales.localizedContext(this@WorkerService)))
                         .setContentIntent(
                             getErrorIntent(
                                 mSourceUri,
@@ -694,13 +694,14 @@ class WorkerService : LifecycleService() {
         ).enqueueJobStatus(this@WorkerService)
     }
 
-    private val filenameStr: String by lazy {
-        if (Intents.isVentoyOperation(mOperation)) {
+    private val sourceFilename: String? by lazy { mSourceUri.getDisplayName(this) }
+
+    private val filenameStr: String
+        get() = if (Intents.isVentoyOperation(mOperation)) {
             AppLocales.getString(this@WorkerService, R.string.ventoy_installer_name)
         } else {
-            mSourceUri.getDisplayName(this) ?: AppLocales.getString(this@WorkerService, R.string.unknown_filename)
+            sourceFilename ?: AppLocales.getString(this@WorkerService, R.string.unknown_filename)
         }
-    }
 
     private val basicForegroundNotification: Notification
         get() = NotificationCompat

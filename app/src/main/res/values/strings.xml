@@ -124,7 +124,7 @@
     <string name="getting_ready" comment="Displayed in the progress info indicator while no progress data is available">Getting ready…</string>
     <string name="skip_verification" comment="Displayed on a button that, when pressed, skips the verification of the written image">Skip verification</string>
     <string name="image_written_successfully" comment="Title of the success page">Image written successfully!</string>
-    <string name="ventoy_installer_name" translatable="false">Ventoy installer</string>
+    <string name="ventoy_installer_name">Ventoy installer</string>
     <string name="write_a_review" comment="Displayed in a button on the success page">Write a review</string>
     <string name="star_on_github" comment="Displayed in a button on the success page">Star on GitHub</string>
     <string name="there_was_an_error" comment="Title of the non-recoverable error page">There was an error</string>
