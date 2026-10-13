@@ -14,8 +14,11 @@ validation gates in [validation.md](validation.md) pass.
    an inactivity warning by itself.
 2. Configure Play App Signing using the **existing Vendroid app signing key**.
    The first listing created on 13 October 2026 was automatically enrolled with a
-   Google-generated key. Its displayed SHA-256 fingerprint starts with `2E:3F:28:D0`,
-   which does not match Vendroid. Before the first upload, use **Protected with Play →
+   Google-generated key whose fingerprint started with `2E:3F:28:D0`. The existing
+   Vendroid key was imported successfully on the same day using the encrypted
+   export from Actions run `38355954349`. Play Console then displayed the matching
+   certificate in its app-link configuration and upload-key section. For a future
+   fresh listing, before the first upload, use **Protected with Play →
    Play Store protection → Manage Play app signing → Change key** and complete the
    supported existing-key export/import flow with the owner. Do not export an
    unencrypted private key as a CI artifact. A Google-generated replacement
@@ -43,8 +46,9 @@ validation gates in [validation.md](validation.md) pass.
    launcher icon. Complete content rating, audience, app access, ads, Data safety,
    countries, contact details, and foreground-service declarations in the Console.
    Use `contact@fhas.sa` for public developer and support contact. The owner has
-   enabled a Vendroid website at `https://vendroid.fhas.sa`; add it to the listing
-   only after deployment, DNS, and HTTPS are verified.
+   enabled a Vendroid website at `https://vendroid.fhas.sa`. The website was made
+   public on 13 October 2026 after verifying its DNS records and HTTPS certificate;
+   its website and privacy-policy URLs were saved in the Play listing draft.
    App access needs no login. USB operations require a USB host-capable Android
    device, a USB drive, and permission to access it. Declare the connected-device
    foreground service with a demonstration of a user-started USB operation.
