@@ -5,7 +5,7 @@ Vendroid is a no-root Android app for installing Ventoy on external USB drives a
 ## Features
 
 - Install, repair, and update an MBR Ventoy layout on a USB drive.
-- Experiment with GPT installs in the separately installable V-Preview build.
+- Experiment with GPT installs in Vendroid beta.
 - Manage supported boot image files through Android's Storage Access Framework.
 - Bundle and verify a pinned official Ventoy payload.
 - Optionally download a newer compatible Ventoy payload from the official GitHub release,
@@ -15,7 +15,7 @@ Vendroid is a no-root Android app for installing Ventoy on external USB drives a
 ## Current limitations
 
 - External USB drives only; Android does not expose internal SD card slots as writable block devices.
-- Stable builds support MBR only; V-Preview contains experimental GPT support.
+- Stable builds support MBR only; Vendroid beta contains experimental GPT support.
 - MBR installs reject drives larger than 2 TiB.
 - The data partition uses exFAT.
 - Secure Boot support is enabled by default.
@@ -25,14 +25,20 @@ Vendroid is a no-root Android app for installing Ventoy on external USB drives a
 
 Vendroid currently has one `foss` product flavor. It requires Java 17 and the Android SDK.
 
-The `fossPreview` build type uses the package ID `io.github.xntso.vendroid.preview` and
-the launcher name `V-Preview`, so it can be installed beside the stable app. GitHub Actions
-publishes its debug-signed APK as a workflow artifact from the `preview` branch.
+The `fossPreview` build type is Vendroid beta. It shares the stable package
+`io.github.xntso.vendroid` and launcher name, uses an optimized build, and adds `-beta`
+to its version name. Beta replaces the installed stable app. The former separate
+V-Preview package does not migrate automatically. See [Google Play publishing](docs/google-play.md)
+for first-time setup, shared version codes, and automatic uploads from published GitHub releases.
 
-The app bundles Ventoy `1.1.16`. Download the official Linux archive before building:
+The app bundles Ventoy `1.1.16`. CI rebuilds the pinned USB libraries for 16 KB pages
+before Gradle resolves dependencies. These commands document the CI inputs; builds
+and tests run in GitHub Actions:
 
 ```sh
 mkdir -p .vendroid-cache
+sdkmanager 'ndk;28.2.13676358' 'cmake;3.22.1'
+python3 scripts/native/prepare.py --sdk-root "$ANDROID_HOME"
 curl -fL -o .vendroid-cache/ventoy-1.1.16-linux.tar.gz \
   https://github.com/ventoy/Ventoy/releases/download/v1.1.16/ventoy-1.1.16-linux.tar.gz
 ./gradlew assembleFossDebug

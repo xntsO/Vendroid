@@ -11,7 +11,7 @@ Vendroid is a no-root Android application for installing and managing Ventoy on 
 - `fastlane/` – Android store metadata inherited from the project history.
 - `.github/workflows/` – authoritative build and verification automation.
 
-There is no GPlay flavor, Sentry build, donation site, or Vendroid website. Do not add links or instructions for those services unless the project owner explicitly enables them.
+Google Play uses the FOSS flavor and one Vendroid package for beta and production. Read [docs/google-play.md](docs/google-play.md) for release setup and automation. There is no separate GPlay flavor, Sentry build, donation site, or Vendroid website.
 
 ## Development conventions
 

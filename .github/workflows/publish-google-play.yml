@@ -1,0 +1,244 @@
+name: Prepare or publish Google Play
+run-name: Google Play ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.mode }} at ${{ github.sha }}
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Prepare a signed bundle for Console setup, or publish after setup
+        type: choice
+        options: [prepare, publish]
+        default: prepare
+      track:
+        description: Beta is the Vendroid testing channel; production requires a published stable release
+        type: choice
+        options: [beta, production]
+        default: beta
+      version_code:
+        description: Optional explicit code for prepare/beta; each new distributed code must increase
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+# Serialize both tracks so their shared versionCode inventory cannot race.
+concurrency:
+  group: vendroid-google-play-distribution
+  cancel-in-progress: false
+
+env:
+  VENTOY_VERSION: '1.1.16'
+  BUNDLETOOL_VERSION: '1.18.3'
+  BUNDLETOOL_SHA256: a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29
+  VENDROID_SIGNER_SHA256: b388ad9d2290967480630cbd4a48f4f8c6784305c05da3541ad780821d9fbeb1
+
+jobs:
+  plan:
+    name: Resolve distribution and setup gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      execute: ${{ steps.plan.outputs.execute }}
+      publish: ${{ steps.plan.outputs.publish }}
+      track: ${{ steps.plan.outputs.track }}
+      variant: ${{ steps.plan.outputs.variant }}
+      version_code: ${{ steps.plan.outputs.version_code }}
+      version_name: ${{ steps.plan.outputs.version_name }}
+      release_name: ${{ steps.plan.outputs.release_name }}
+      bundle_task: ${{ steps.plan.outputs.bundle_task }}
+      apk_task: ${{ steps.plan.outputs.apk_task }}
+      commit: ${{ steps.plan.outputs.commit }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolve the exact tested release
+        id: plan
+        env:
+          PLAY_PUBLISHING_ENABLED: ${{ vars.VENDROID_PLAY_PUBLISHING_ENABLED }}
+          INPUT_MODE: ${{ inputs.mode }}
+          INPUT_TRACK: ${{ inputs.track }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          extra=()
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] && [ "$INPUT_MODE" = publish ] && [ "$INPUT_TRACK" = production ]; then
+            version="$(python3 -c 'import sys; from pathlib import Path; sys.path.insert(0, "scripts/play"); from release_plan import checked_in_version; print(checked_in_version(Path("app/build.gradle.kts").read_text())[1])')"
+            gh release view "v${version}" --json isDraft,isPrerelease,tagName \
+              --jq '{draft:.isDraft,prerelease:.isPrerelease,tag_name:.tagName}' > "$RUNNER_TEMP/stable-release.json"
+            stable_commit="$(git rev-parse "refs/tags/v${version}^{commit}")"
+            extra=(--published-stable-release "$RUNNER_TEMP/stable-release.json" --published-stable-commit "$stable_commit")
+          fi
+          python3 scripts/play/release_plan.py \
+            --event-name "$GITHUB_EVENT_NAME" --event-file "$GITHUB_EVENT_PATH" \
+            --gradle-file app/build.gradle.kts --commit "$(git rev-parse HEAD)" \
+            --expected-commit "$GITHUB_SHA" --publishing-enabled "$PLAY_PUBLISHING_ENABLED" \
+            --plan-output play-plan.json --github-output "$GITHUB_OUTPUT" "${extra[@]}"
+      - name: Retain the release plan
+        uses: actions/upload-artifact@v5
+        with:
+          name: vendroid-play-plan
+          path: play-plan.json
+          retention-days: 30
+          if-no-files-found: error
+
+  verification:
+    name: Full validation of the distribution commit
+    needs: plan
+    if: needs.plan.outputs.execute == 'true'
+    # The reusable workflow declares a tag-only release job with this permission.
+    # Its active validation jobs retain contents:read; no signing secrets are passed.
+    permissions:
+      contents: write
+    uses: ./.github/workflows/build-test-debug.yml
+
+  bundle:
+    name: Build and verify signed Play artifacts
+    needs: [plan, verification]
+    if: needs.plan.outputs.execute == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      JAVA_TOOL_OPTIONS: -Xmx4g
+      DISTRIBUTION_VARIANT: ${{ needs.plan.outputs.variant }}
+      DISTRIBUTION_VERSION: ${{ needs.plan.outputs.version_name }}
+      VENDROID_VERSION_CODE: ${{ needs.plan.outputs.version_code }}
+      BUNDLE_TASK: ${{ needs.plan.outputs.bundle_task }}
+      APK_TASK: ${{ needs.plan.outputs.apk_task }}
+      VENDROID_KEYSTORE_BASE64: ${{ secrets.VENDROID_KEYSTORE_BASE64 }}
+      VENDROID_KEYSTORE_PASSWORD: ${{ secrets.VENDROID_KEYSTORE_PASSWORD }}
+      VENDROID_KEY_ALIAS: ${{ secrets.VENDROID_KEY_ALIAS }}
+      VENDROID_KEY_PASSWORD: ${{ secrets.VENDROID_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: wrapper
+          add-job-summary: on-failure
+      - uses: android-actions/setup-android@v4
+      - name: Require the existing signing credentials
+        run: |
+          test -n "$VENDROID_KEYSTORE_BASE64" || { echo 'Missing VENDROID_KEYSTORE_BASE64'; exit 1; }
+          test -n "$VENDROID_KEYSTORE_PASSWORD" || { echo 'Missing VENDROID_KEYSTORE_PASSWORD'; exit 1; }
+          test -n "$VENDROID_KEY_ALIAS" || { echo 'Missing VENDROID_KEY_ALIAS'; exit 1; }
+          test -n "$VENDROID_KEY_PASSWORD" || { echo 'Missing VENDROID_KEY_PASSWORD'; exit 1; }
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Prepare native dependencies and signed build inputs
+        run: |
+          sdkmanager 'ndk;28.2.13676358' 'cmake;3.22.1' 'build-tools;36.0.0'
+          python3 scripts/native/prepare.py --sdk-root "$ANDROID_HOME"
+          mkdir -p .vendroid-cache play-artifacts
+          curl --fail --location --retry 3 --connect-timeout 15 --max-time 300 \
+            --output ".vendroid-cache/ventoy-${VENTOY_VERSION}-linux.tar.gz" \
+            "https://github.com/ventoy/Ventoy/releases/download/v${VENTOY_VERSION}/ventoy-${VENTOY_VERSION}-linux.tar.gz"
+          umask 077
+          printf '%s' "$VENDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/vendroid-release.jks"
+          printf '%s' "$VENDROID_KEYSTORE_PASSWORD" > "$RUNNER_TEMP/vendroid-keystore.pass"
+          printf '%s' "$VENDROID_KEY_PASSWORD" > "$RUNNER_TEMP/vendroid-key.pass"
+          echo "VENDROID_KEYSTORE_PATH=$RUNNER_TEMP/vendroid-release.jks" >> "$GITHUB_ENV"
+          curl --fail --location --retry 3 --connect-timeout 15 --max-time 180 \
+            --output "$RUNNER_TEMP/bundletool.jar" \
+            "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar"
+          printf '%s  %s\n' "$BUNDLETOOL_SHA256" "$RUNNER_TEMP/bundletool.jar" | sha256sum --check --strict
+      - name: Build the signed AAB and matching APK
+        run: ./gradlew "$BUNDLE_TASK" "$APK_TASK"
+      - name: Name artifacts and verify native compatibility
+        run: |
+          cp "app/build/outputs/bundle/foss${DISTRIBUTION_VARIANT^}/app-foss-${DISTRIBUTION_VARIANT}.aab" play-artifacts/vendroid.aab
+          cp "app/build/outputs/apk/foss/${DISTRIBUTION_VARIANT}/app-foss-${DISTRIBUTION_VARIANT}.apk" play-artifacts/vendroid.apk
+          cp .vendroid-cache/native-16kb/provenance.json play-artifacts/native-provenance.json
+          python3 scripts/native/verify.py play-artifacts/vendroid.aab --output play-artifacts/aab-native-16kb.json
+          python3 scripts/native/verify.py play-artifacts/vendroid.apk --output play-artifacts/apk-native-16kb.json
+          java -jar "$RUNNER_TEMP/bundletool.jar" build-apks \
+            --bundle=play-artifacts/vendroid.aab --output="$RUNNER_TEMP/vendroid.apks" --mode=universal \
+            --ks="$VENDROID_KEYSTORE_PATH" --ks-key-alias="$VENDROID_KEY_ALIAS" \
+            --ks-pass="file:$RUNNER_TEMP/vendroid-keystore.pass" --key-pass="file:$RUNNER_TEMP/vendroid-key.pass"
+          unzip -p "$RUNNER_TEMP/vendroid.apks" universal.apk > play-artifacts/vendroid-generated.apk
+          python3 scripts/native/verify.py play-artifacts/vendroid-generated.apk --output play-artifacts/generated-apk-native-16kb.json
+      - name: Verify package, version, and signing continuity
+        run: |
+          python3 scripts/play/verify_bundle.py --bundle play-artifacts/vendroid.aab \
+            --bundletool "$RUNNER_TEMP/bundletool.jar" --native-report play-artifacts/aab-native-16kb.json \
+            --version-code "$VENDROID_VERSION_CODE" --version-name "$DISTRIBUTION_VERSION" \
+            --commit "$GITHUB_SHA" --output play-artifacts/play-metadata.json
+          aapt="$ANDROID_HOME/build-tools/36.0.0/aapt"
+          apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          for kind in vendroid vendroid-generated; do
+            "$apksigner" verify --verbose --print-certs "play-artifacts/${kind}.apk" | tee "play-artifacts/${kind}-signature.txt"
+            signer="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "play-artifacts/${kind}-signature.txt")"
+            test "$signer" = "$VENDROID_SIGNER_SHA256"
+            test "$(grep -c '^Signer #[0-9][0-9]* certificate SHA-256 digest:' "play-artifacts/${kind}-signature.txt")" -eq 1
+            "$aapt" dump badging "play-artifacts/${kind}.apk" > "play-artifacts/${kind}-metadata.txt"
+            grep -q "package: name='io.github.xntso.vendroid'" "play-artifacts/${kind}-metadata.txt"
+            grep -q "versionCode='${VENDROID_VERSION_CODE}'" "play-artifacts/${kind}-metadata.txt"
+            grep -q "versionName='${DISTRIBUTION_VERSION}'" "play-artifacts/${kind}-metadata.txt"
+            grep -q "^application-label:'Vendroid'$" "play-artifacts/${kind}-metadata.txt"
+          done
+          git rev-parse HEAD > play-artifacts/commit.txt
+          (cd play-artifacts && sha256sum vendroid.aab vendroid.apk vendroid-generated.apk > SHA256SUMS)
+      - name: Retain signed bundles and verification evidence
+        uses: actions/upload-artifact@v5
+        with:
+          name: vendroid-play-${{ needs.plan.outputs.track }}-${{ needs.plan.outputs.version_code }}
+          path: play-artifacts/
+          retention-days: 30
+          if-no-files-found: error
+      - name: Remove temporary signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/vendroid-release.jks" "$RUNNER_TEMP/vendroid.apks" "$RUNNER_TEMP/vendroid-keystore.pass" "$RUNNER_TEMP/vendroid-key.pass"
+
+  publish:
+    name: Submit verified bundle to Google Play
+    needs: [plan, verification, bundle]
+    if: needs.plan.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PLAY_TRACK: ${{ needs.plan.outputs.track }}
+      PLAY_RELEASE_NAME: ${{ needs.plan.outputs.release_name }}
+      VENDROID_VERSION_CODE: ${{ needs.plan.outputs.version_code }}
+      DISTRIBUTION_VERSION: ${{ needs.plan.outputs.version_name }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v5
+        with:
+          name: vendroid-play-${{ needs.plan.outputs.track }}-${{ needs.plan.outputs.version_code }}
+          path: play-artifacts
+      - name: Install the official Google API clients
+        run: python3 -m pip install -r scripts/play/requirements.txt
+      - name: Submit one validated Play edit
+        env:
+          VENDROID_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.VENDROID_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          test -n "$VENDROID_PLAY_SERVICE_ACCOUNT_JSON" || { echo 'Missing VENDROID_PLAY_SERVICE_ACCOUNT_JSON'; exit 1; }
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          umask 077
+          printf '%s' "$VENDROID_PLAY_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/play-service-account.json"
+          python3 scripts/play/publish.py --credentials "$RUNNER_TEMP/play-service-account.json" \
+            --bundle play-artifacts/vendroid.aab --metadata play-artifacts/play-metadata.json \
+            --version-code "$VENDROID_VERSION_CODE" --version-name "$DISTRIBUTION_VERSION" --commit "$GITHUB_SHA" \
+            --track "$PLAY_TRACK" --release-name "$PLAY_RELEASE_NAME" --output play-publication.json
+      - name: Retain Play submission evidence
+        uses: actions/upload-artifact@v5
+        with:
+          name: vendroid-play-submission-${{ needs.plan.outputs.track }}-${{ needs.plan.outputs.version_code }}
+          path: play-publication.json
+          retention-days: 30
+          if-no-files-found: error
+      - name: Remove Play credentials
+        if: always()
+        run: rm -f "$RUNNER_TEMP/play-service-account.json"
