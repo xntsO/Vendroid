@@ -21,6 +21,15 @@ class PlayPublishError(ValueError):
     pass
 
 
+def resolve_play_track(channel: str, beta_track: str = "") -> str:
+    if channel not in {"beta", "production"}:
+        raise PlayPublishError("Only beta and production Vendroid channels are supported")
+    configured = beta_track or "alpha"
+    if configured not in {"alpha", "beta"}:
+        raise PlayPublishError("VENDROID_PLAY_BETA_TRACK must be alpha for closed testing or beta for open testing")
+    return configured if channel == "beta" else "production"
+
+
 @dataclass(frozen=True)
 class VerifiedBundle:
     path: Path
@@ -88,8 +97,8 @@ def highest_version_code(tracks: dict, bundles: dict, apks: dict) -> int:
 
 
 def publish_bundle(client, bundle: VerifiedBundle, *, track: str, release_name: str, media_body) -> dict:
-    if track not in {"beta", "production"}:
-        raise PlayPublishError("Only beta and production publishing are supported")
+    if track not in {"alpha", "beta", "production"}:
+        raise PlayPublishError("Only closed testing, open testing, and production publishing are supported")
     if not release_name or len(release_name) > 50 or "\n" in release_name:
         raise PlayPublishError("Play release names must contain 1 to 50 characters")
     edits = client.edits()
@@ -167,10 +176,12 @@ def main() -> int:
     parser.add_argument("--version-name", required=True)
     parser.add_argument("--commit", required=True)
     parser.add_argument("--track", choices=("beta", "production"), required=True)
+    parser.add_argument("--beta-track", default="", help="Play testing track: alpha (default closed) or beta (open)")
     parser.add_argument("--release-name", required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     try:
+        track = resolve_play_track(args.track, args.beta_track)
         bundle = verified_bundle(
             args.bundle, json.loads(args.metadata.read_text(encoding="utf-8")),
             version_code=args.version_code, version_name=args.version_name, commit=args.commit,
@@ -180,13 +191,14 @@ def main() -> int:
         client = google_client(args.credentials)
         try:
             proof = publish_bundle(
-                client, bundle, track=args.track, release_name=args.release_name,
+                client, bundle, track=track, release_name=args.release_name,
                 media_body=MediaFileUpload(str(bundle.path), mimetype="application/octet-stream", resumable=True),
             )
         finally:
             client.close()
+        proof["channel"] = args.track
         args.output.write_text(json.dumps(proof, indent=2) + "\n", encoding="utf-8")
-        print(f"Submitted versionCode {bundle.version_code} to Google Play {args.track}. Availability depends on Play review.")
+        print(f"Submitted versionCode {bundle.version_code} to Google Play {track} for the {args.track} channel. Availability depends on Play review.")
         return 0
     except (PlayPublishError, OSError, json.JSONDecodeError) as error:
         print(f"Play publishing failed: {error}", file=sys.stderr)

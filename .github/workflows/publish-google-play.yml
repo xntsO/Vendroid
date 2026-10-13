@@ -12,7 +12,7 @@ on:
         options: [prepare, publish]
         default: prepare
       track:
-        description: Beta is the Vendroid testing channel; production requires a published stable release
+        description: Beta uses closed testing until open beta is configured; production needs a published stable release
         type: choice
         options: [beta, production]
         default: beta
@@ -206,6 +206,7 @@ jobs:
     timeout-minutes: 15
     env:
       PLAY_TRACK: ${{ needs.plan.outputs.track }}
+      PLAY_BETA_TRACK: ${{ vars.VENDROID_PLAY_BETA_TRACK }}
       PLAY_RELEASE_NAME: ${{ needs.plan.outputs.release_name }}
       VENDROID_VERSION_CODE: ${{ needs.plan.outputs.version_code }}
       DISTRIBUTION_VERSION: ${{ needs.plan.outputs.version_name }}
@@ -231,7 +232,8 @@ jobs:
           python3 scripts/play/publish.py --credentials "$RUNNER_TEMP/play-service-account.json" \
             --bundle play-artifacts/vendroid.aab --metadata play-artifacts/play-metadata.json \
             --version-code "$VENDROID_VERSION_CODE" --version-name "$DISTRIBUTION_VERSION" --commit "$GITHUB_SHA" \
-            --track "$PLAY_TRACK" --release-name "$PLAY_RELEASE_NAME" --output play-publication.json
+            --track "$PLAY_TRACK" --beta-track "$PLAY_BETA_TRACK" \
+            --release-name "$PLAY_RELEASE_NAME" --output play-publication.json
       - name: Retain Play submission evidence
         uses: actions/upload-artifact@v5
         with:
