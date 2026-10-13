@@ -48,7 +48,7 @@ import io.github.xntso.vendroid.utils.ktexts.getDisplayName
 import io.github.xntso.vendroid.utils.ktexts.getFileName
 import io.github.xntso.vendroid.utils.ktexts.getFileSize
 import io.github.xntso.vendroid.utils.ktexts.safeParcelableExtra
-import io.github.xntso.vendroid.utils.ktexts.startForegroundSpecialUse
+import io.github.xntso.vendroid.utils.ktexts.startForegroundConnectedDevice
 import io.github.xntso.vendroid.utils.ktexts.threadIdCompat
 import io.github.xntso.vendroid.utils.ktexts.toHRSize
 import io.github.xntso.vendroid.utils.lateInit
@@ -362,7 +362,7 @@ class WorkerService : LifecycleService() {
                 category = "worker"
             }
 
-            startForegroundSpecialUse(mProgressNotificationId, basicForegroundNotification)
+            startForegroundConnectedDevice(mProgressNotificationId, basicForegroundNotification, mDestDevice.usbDevice)
         } catch (exception: Exception) {
             Telemetry.captureException("Failed to start worker service", exception)
             // mDestDevice (and mSourceUri/mJobId) may be unset if we failed before parsing
