@@ -123,7 +123,10 @@ jobs:
           sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
           sudo apt-get update -o Acquire::Retries=3
           sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
-            grub-pc-bin grub-efi-amd64-bin grub-common xorriso mtools qemu-system-x86
+            grub-pc-bin grub-efi-amd64-bin grub-common xorriso mtools qemu-system-x86 ffmpeg
+      - name: Verify Appium MJPEG recording with FFmpeg
+        working-directory: appium-tests
+        run: python3 -m scripts.check_mjpeg_recording
       - name: Verify repeated QMP image lifecycle
         working-directory: appium-tests
         run: uv run python -m scripts.check_qmp_lifecycle

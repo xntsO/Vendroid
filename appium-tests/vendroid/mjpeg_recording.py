@@ -49,9 +49,12 @@ class MjpegRecorder:
             raise ValueError("ADB returned an invalid allocated MJPEG port")
         self.port = int(forwarded)
         self.log = (self.directory / "mjpeg-recorder.log").open("wb")
+        # UiAutomator2 emits image/jpg parts, rejected by FFmpeg's mpjpeg MIME
+        # parser. The raw MJPEG parser reads the JPEG frames across those headers.
         self.process = subprocess.Popen([
             "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "warning", "-y",
-            "-use_wallclock_as_timestamps", "1", "-analyzeduration", "1000000", "-f", "mpjpeg",
+            "-use_wallclock_as_timestamps", "1", "-analyzeduration", "1000000",
+            "-f", "mjpeg", "-framerate", "3",
             "-i", f"http://127.0.0.1:{self.port}", "-an",
             "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
             "-b:v", "1000000", "-maxrate", "1000000", "-bufsize", "2000000",
