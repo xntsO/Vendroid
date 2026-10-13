@@ -55,7 +55,9 @@ validation gates in [validation.md](validation.md) pass.
 5. Link the published [privacy policy](https://vendroid.fhas.sa/privacy/)
    and verify that Google accepts and can access it. Review Data safety against the
    current code: no accounts, ads, analytics, or remote crash reporting; optional
-   GitHub downloads disclose ordinary network information to GitHub. Local file
+   downloads from Vendroid's mirror disclose ordinary network information to its
+   hosting provider. The updater does not contact GitHub from the user's device
+   and does not ask for a birth date. Local file
    access and network-provider handling must not be conflated.
 6. Review Play's automatic installer protection before publication. It can prompt
    people who install protected APKs from another source to install from Play.
@@ -73,8 +75,16 @@ Google review, testing eligibility, and managed publishing can still delay avail
 
 Before enabling uploads, create a dedicated service account with Android Publisher
 API access and give it release access to **Vendroid only** in Play Console. Use
-the minimum permissions needed for the beta and production tracks. Granting this
-access requires the owner's approval. Store the service-account JSON as the GitHub
+the minimum permissions needed for the beta and production tracks. The owner
+approved testing and production release access on 13 October 2026, including the
+device-exclusion and Play App Signing controls bundled with Google's production
+permission. The workflow only publishes releases. The dedicated Cloud project is
+`vendroid-publishing`; Android Publisher API is enabled and its service account is
+`vendroid-play-publisher@vendroid-publishing.iam.gserviceaccount.com`, with no Cloud
+project roles. The Console confirms the publisher is active for Vendroid only;
+the owner also approved Google's mandatory policy-declaration and deep-link
+permissions. The publishing JSON was installed as the repository secret on
+13 October 2026. Store the service-account JSON as the GitHub
 Actions secret `VENDROID_PLAY_SERVICE_ACCOUNT_JSON`; never commit it or paste it
 into chat. Enable the repository variable `VENDROID_PLAY_PUBLISHING_ENABLED=true`
 only after first-listing setup, signing, and API access have been checked.
@@ -104,6 +114,29 @@ evidence. This is an artifact-only preparation path and never calls Google Play.
 Production retains the existing physical release gate. Validate the candidate,
 record the affected physical USB checks and the owner's promotion decision, then
 publish the GitHub release explicitly. CI success alone is not physical evidence.
+
+## Ventoy payload updates
+
+Ventoy payload checks are independent of Google Play app updates. The app reads
+the version manifest and verified archive from `https://updates.vendroid.fhas.sa`.
+The scheduled [mirror sync](../scripts/mirror/README.md) copies official upstream
+releases and verifies their SHA-256 before making them available. Users still
+choose when to download a payload and apply it to a USB drive. No age prompt is
+used. The bundled payload remains available offline.
+
+The owner chose to keep the Sites/R2 host after being informed that Sites terms
+restrict services designed for children under 13, and plans to contact the host
+if necessary. This choice does not establish compliance with those terms or
+authorize the separate Play all-ages legal certification. Initial Python requests
+using the generic urllib user agent received a hosting-layer HTTP 403; an honest
+`Vendroid-Mirror/1.0` user agent reached the service. Initial publication of
+Ventoy 1.1.18 succeeded on 13 October 2026, including anonymous full-archive
+SHA-256 verification and manifest readback. The archive is 20,320,548 bytes and
+matches upstream SHA-256
+`d86ff9de63d94c8b8f1f6b14d23c55af4b88e8207bf2893890892a6a97b1ad54`.
+The scheduled workflow still needs registration on the default branch and
+activation after CI validation. The owner's all-ages legal
+certification and final Data safety declarations remain pending.
 
 ## Version codes and upgrades
 
