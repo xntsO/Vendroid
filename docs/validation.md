@@ -26,7 +26,7 @@ Candidate distribution consumes its versionCode. The first 0.2.0 candidate uses 
 
 ## Automated evidence
 
-- Android debug, optimized, Preview, and GPT candidate builds, existing unit tests, and lint.
+- Android debug, optimized, beta (the internal Preview build type), and GPT candidate builds, existing unit tests, and lint. The beta uses the same Vendroid package and an optimized non-debuggable build.
 - Independent disk-image verifier tests, including invalid layout/CRC rejection.
 - Fifty immediate virtual-USB reconnect cycles that verify explicit QEMU image-node cleanup before Android tests start.
 - Stable MBR, Preview GPT, and GPT candidate with emulated UHCI and xHCI USB controllers. The candidate runs with the stable package and stable capacity gate.
@@ -46,6 +46,12 @@ The disk image is detached from QEMU and its block backend released before host 
 
 Android's normal storage services remain running. Bliss OS mounts GPT's VTOYEFI partition and runs `fsck_msdos`, so an entire-image hash can change independently of Vendroid. The downgrade gate checks the disabled action, newer version after reconnection, first MiB boot-region hash, partition metadata, and ordinary file hashes. Full-image hashes are retained as diagnostics. This does not prove zero I/O writes or unchanged VTOYEFI filesystem bytes. No ADB root or service shutdown is required.
 
+## Google Play and native libraries
+
+See [Google Play publishing](google-play.md) for bundle preparation, signing enrollment, track selection, and first-listing requirements. CI rebuilds the pinned libaums JNI and libusb libraries with NDK 28 for 16 KB page compatibility before Gradle runs. Every packaged APK and Play AAB must pass the independent native-library checker. The checker fixtures cover malformed ELF files and insufficient alignment; publishing fixtures cover release routing, version-code collisions, metadata rejection, and failed API edits. These checks supplement the six USB lifecycle cases.
+
+Play distribution reuses this full workflow on the same source revision before accessing signing credentials. The preview branch also runs the full validation workflow. Beta and production share one package, signer, and increasing version-code sequence; historical evidence for the former separate V-Preview remains historical.
+
 ## Read the result
 
 Download the workflow artifacts. They retain APKs, unit/lint reports, JUnit, package metadata, APK checksums, the tested commit, lifecycle checkpoints, large-drive results, and boot serial logs for 30 days, including successful runs. Keep the release evidence before artifacts expire. A missing final `passed: true` or a missing expected report is not a pass. The workflow status and JUnit failures remain authoritative; earlier successful checkpoints do not override a later failure. All six lifecycle cases must report the expected package and partition style. A skipped signed-candidate job on a normal PR is expected; an explicitly requested signed-candidate job must pass.
@@ -60,7 +66,7 @@ Use the available USB on the available Android device. Fresh installation erases
 
 1. Install MBR, copy a small ISO and some ordinary files, then reconnect and confirm detection.
 2. Run repair and compare file hashes. Boot the ISO on the available computer if possible.
-3. Repeat with GPT in the signed GPT candidate. Confirm the stable package is installed, rather than the separately installable V-Preview. Before release publication, repeat a GPT smoke check with the final signed stable APK after promotion.
+3. Repeat with GPT in the signed GPT candidate. Confirm the version is the signed GPT candidate, rather than the beta: both now use the same Vendroid package. Before release publication, repeat a GPT smoke check with the final signed stable APK after promotion.
 
 Reuse evidence for changes that do not affect storage, USB handling, payloads, or release packaging. Repeat affected checks after those areas change. UI wording changes do not require repeating the full physical sequence. Check an Android APK upgrade against the existing signed 0.1.2 installation when available, without uninstalling it first. Record that app launch and USB detection still work after the upgrade.
 

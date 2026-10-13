@@ -298,6 +298,11 @@ def test_ventoy_lifecycle_and_firmware(
     selector = wait_for_element(driver, '//*[@resource-id="ventoyInstallPartitionStyleButton"]', timeout=30)
     assert selector.is_displayed(), "Partition style must be shown before opening Advanced options"
     wait_for_element(driver, '//*[@text="MBR (Recommended)"]', timeout=15)
+    if style == "mbr":
+        beta_button = wait_for_element(
+            driver, '//*[@text="Join Vendroid beta"]/ancestor-or-self::*[@clickable="true"][1]', timeout=15,
+        )
+        assert beta_button.get_attribute("enabled") == "true"
     selector.click()
     gpt_label = "GPT (Preview)" if profile.channel == "preview" else "GPT"
     # Compose exposes the label as enabled even when its owning menu item is disabled.
@@ -413,6 +418,10 @@ def test_large_sparse_drive_policy(driver, validation_drive):
     evidence = Path(os.environ["VENDROID_EVIDENCE_DIR"])
     if not profile.supports_large_drives:
         wait_for_element(driver, '//*[@resource-id="ventoyRequiresPreview"]', timeout=30)
+        beta_button = wait_for_element(
+            driver, '//*[@text="Join Vendroid beta"]/ancestor-or-self::*[@clickable="true"][1]', timeout=15,
+        )
+        assert beta_button.get_attribute("enabled") == "true"
         button = wait_for_element(driver, '//*[@resource-id="writeImageButton"]', timeout=15)
         assert button.get_attribute("enabled") == "false"
         driver.terminate_app(package_name)

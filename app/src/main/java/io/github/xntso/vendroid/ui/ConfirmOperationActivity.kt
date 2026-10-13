@@ -139,7 +139,7 @@ import kotlin.random.Random
 
 private const val TAG = "ConfirmOperationActivit"
 private const val V_PREVIEW_DOWNLOAD_URL =
-    "https://github.com/xntsO/Vendroid/actions/workflows/build-preview.yml"
+    "https://play.google.com/apps/testing/io.github.xntso.vendroid"
 
 class ConfirmOperationActivity : ActivityBase() {
     private val mViewModel: ConfirmOperationActivityViewModel by viewModels()

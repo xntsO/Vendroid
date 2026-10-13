@@ -96,6 +96,23 @@ class ValidationSummaryTest(unittest.TestCase):
                 self.write(path, {**original, field: value})
                 self.assertFalse(self.result()[1])
 
+    def test_preview_evidence_requires_same_app_beta_identity(self):
+        for name in ("lifecycle.json", "large-drive.json"):
+            path = self.path(name, channel="preview")
+            original = path.read_bytes()
+            report = json.loads(original)
+            self.assertEqual("io.github.xntso.vendroid", report["package"])
+            self.assertEqual("0.2.0-beta", report["version"])
+            for field, value in (("package", "io.github.xntso.vendroid.preview"),
+                                 ("version", "0.2.0-preview"), ("version", VERSION)):
+                with self.subTest(report=name, field=field, value=value):
+                    try:
+                        self.write(path, {**report, field: value})
+                        self.assertFalse(self.result()[1])
+                    finally:
+                        path.write_bytes(original)
+        self.assertTrue(self.result()[1])
+
     def test_every_candidate_gpt_repair_and_boot_checkpoint_is_required(self):
         path = self.path("lifecycle.json")
         original = json.loads(path.read_text())
@@ -170,6 +187,29 @@ class ValidationSummaryTest(unittest.TestCase):
                                            "VENDROID_PACKAGE_NAME": "io.github.xntso.vendroid.preview"}, clear=True):
             with self.assertRaises(ValueError):
                 configured_profile()
+
+    def test_preview_profile_accepts_shared_app_beta_configuration(self):
+        environment = {"VENDROID_TEST_CHANNEL": "preview", "VENDROID_VERSION": VERSION,
+                       "VENDROID_PACKAGE_NAME": "io.github.xntso.vendroid", "VENDROID_APP_NAME": "Vendroid",
+                       "VENDROID_EXPECTED_VERSION": "0.2.0-beta", "VENDROID_PARTITION_STYLE": "GPT (Preview)"}
+        with mock.patch.dict("os.environ", environment, clear=True):
+            profile = configured_profile()
+        self.assertEqual("preview", profile.channel)
+        self.assertEqual("io.github.xntso.vendroid", profile.package)
+        self.assertEqual("Vendroid", profile.app_name)
+        self.assertEqual("0.2.0-beta", profile.version(VERSION))
+        self.assertEqual("gpt", profile.layout)
+        self.assertTrue(profile.supports_large_drives)
+
+    def test_preview_profile_rejects_old_separate_app_configuration(self):
+        for name, value in (("VENDROID_PACKAGE_NAME", "io.github.xntso.vendroid.preview"),
+                            ("VENDROID_APP_NAME", "V-Preview"),
+                            ("VENDROID_EXPECTED_VERSION", "0.2.0-preview"),
+                            ("VENDROID_EXPECTED_VERSION", VERSION)):
+            with self.subTest(name=name, value=value):
+                with mock.patch.dict("os.environ", {"VENDROID_TEST_CHANNEL": "preview", name: value}, clear=True):
+                    with self.assertRaises(ValueError):
+                        configured_profile()
 
 
 if __name__ == "__main__":

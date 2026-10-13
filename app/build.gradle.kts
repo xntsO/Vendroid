@@ -23,9 +23,16 @@ val releaseSigningConfigured = listOf(
     releaseKeyAlias,
     releaseKeyPassword,
 ).all { !it.isNullOrBlank() }
-val previewVersionCode = providers.environmentVariable("GITHUB_RUN_NUMBER")
-    .orElse("30")
-    .map { runNumber -> 1_000_000 + runNumber.toInt() }
+val defaultVersionCode = 31
+val vendroidVersionCode = providers.environmentVariable("VENDROID_VERSION_CODE")
+    .orElse(defaultVersionCode.toString())
+    .map { value ->
+        val code = value.toIntOrNull()
+        require(code != null && code in defaultVersionCode..2_100_000_000) {
+            "VENDROID_VERSION_CODE must be an integer from $defaultVersionCode to 2100000000"
+        }
+        code
+    }
 val stableGptEnabled = false
 
 plugins {
@@ -47,7 +54,7 @@ android {
         applicationId = "io.github.xntso.vendroid"
         minSdk = sdkMin
         targetSdk = sdkTarget
-        versionCode = 30
+        versionCode = vendroidVersionCode.get()
         versionName = "0.2.0"
         buildConfigField("boolean", "IS_PREVIEW", "false")
         buildConfigField("boolean", "GPT_ENABLED", stableGptEnabled.toString())
@@ -82,14 +89,6 @@ android {
             isMinifyEnabled = false
             isPseudoLocalesEnabled = true
         }
-        create("preview") {
-            initWith(getByName("debug"))
-            applicationIdSuffix = ".preview"
-            versionNameSuffix = "-preview"
-            buildConfigField("boolean", "IS_PREVIEW", "true")
-            buildConfigField("boolean", "GPT_ENABLED", "true")
-            resValue("string", "app_name", "V-Preview")
-        }
         create("optimized") {
             // Optimized like release (minify + shrinkResources + proguard) but debug-signed
             // and non-debuggable, so it installs in CI and runs fast on the slow e2e VM.
@@ -98,6 +97,19 @@ android {
             isDebuggable = false
             isMinifyEnabled = true
             isShrinkResources = true
+        }
+        create("preview") {
+            // The beta track updates the same Vendroid app and retains Preview capabilities.
+            initWith(getByName("optimized"))
+            matchingFallbacks += listOf("release")
+            versionNameSuffix = "-beta"
+            buildConfigField("boolean", "IS_PREVIEW", "true")
+            buildConfigField("boolean", "GPT_ENABLED", "true")
+            signingConfig = if (releaseSigningConfigured) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
         create("gptCandidate") {
             // Exercise GPT in the stable package before its physical promotion gate.
@@ -154,14 +166,6 @@ android {
             it.maxHeapSize = "4g"
             it.systemProperty("robolectric.dependency.proxy.host", project.findProperty("systemProp.https.proxyHost") ?: System.getenv("ROBOLECTRIC_PROXY_HOST"))
             it.systemProperty("robolectric.dependency.proxy.port", project.findProperty("systemProp.https.proxyPort") ?: System.getenv("ROBOLECTRIC_PROXY_PORT"))
-        }
-    }
-}
-
-androidComponents {
-    onVariants(selector().withBuildType("preview")) { variant ->
-        variant.outputs.forEach { output ->
-            output.versionCode.set(previewVersionCode)
         }
     }
 }

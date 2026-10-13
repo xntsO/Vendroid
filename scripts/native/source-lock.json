@@ -1,0 +1,33 @@
+{
+  "ndk_version": "28.2.13676358",
+  "cmake_version": "3.22.1",
+  "android_api": 23,
+  "abis": ["arm64-v8a", "armeabi-v7a", "x86", "x86_64"],
+  "sources": {
+    "libaums": {
+      "commit": "af89120aa434ccd97b985a6d66420c1b7e30a1ad",
+      "url": "https://codeload.github.com/magnusja/libaums/tar.gz/af89120aa434ccd97b985a6d66420c1b7e30a1ad",
+      "sha256": "a75911646f42257bf46cace6123926b48e5067b0e681b8c71c5c3a9727f19acb"
+    },
+    "libusb": {
+      "version": "1.0.26",
+      "commit": "4239bc3a50014b8e6a5a2a59df1fff3b7469543b",
+      "url": "https://codeload.github.com/libusb/libusb/tar.gz/4239bc3a50014b8e6a5a2a59df1fff3b7469543b",
+      "sha256": "340ad62654c88c84562246bc338aef110e744d009a336060212a84d65f3a5d15"
+    }
+  },
+  "artifacts": {
+    "core": {
+      "version": "0.10.0",
+      "aar_sha256": "20b30c2ee360af7ac19f4aa3e601dae36987d690f23bb3d73c72e37e0f8fda7f",
+      "pom_sha256": "f007bdaa466642e0c714f6eb102de659fb20b2213d0ebfca5d2863a7a81abdd7",
+      "libraries": ["liberrno-lib.so", "libusb-lib.so"]
+    },
+    "libusbcommunication": {
+      "version": "0.3.0",
+      "aar_sha256": "2ece017db61c428b5c652b7810d64aaf38753a2dec231712e6f6f7cfa133a0b5",
+      "pom_sha256": "f9319b446225b78160cbe90f7eca82510296c6d2a83ae3c14b36dc35e71f0982",
+      "libraries": ["liblibusb.so", "liblibusbcom.so"]
+    }
+  }
+}

@@ -1,1 +1,1 @@
-Write operating system ISO images to USB drives, no root required
+Install and manage Ventoy on USB drives from Android. No root required.

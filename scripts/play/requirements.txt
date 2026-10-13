@@ -1,0 +1,5 @@
+# Official Google clients; authentication remains in google-auth.
+google-api-python-client==2.201.0
+google-auth==2.62.0
+google-auth-httplib2==0.4.4
+httplib2==0.32.0

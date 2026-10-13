@@ -23,7 +23,7 @@ PROFILES = {
         "stable", "io.github.xntso.vendroid", "Vendroid", "", "MBR (Recommended)", "mbr", False,
     ),
     "preview": ValidationProfile(
-        "preview", "io.github.xntso.vendroid.preview", "V-Preview", "-preview", "GPT (Preview)", "gpt", True,
+        "preview", "io.github.xntso.vendroid", "Vendroid", "-beta", "GPT (Preview)", "gpt", True,
     ),
     "gpt-candidate": ValidationProfile(
         "gpt-candidate", "io.github.xntso.vendroid", "Vendroid", "-gpt-candidate", "GPT", "gpt", False,

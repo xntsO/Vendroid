@@ -1,25 +1,20 @@
-Vendroid is an open-source application that helps you write images to USB drives.
-Use it to make a bootable operating system USB drive when your laptop is dead.
+Install and manage Ventoy on external USB drives from Android, without root.
 
-⭐️ Supported devices ⭐️
+Vendroid prepares a USB drive so you can keep multiple boot images on it and choose an image when booting a compatible computer. Use Android's file picker to manage supported boot image files.
 
-✅ USB flash drives
-✅ USB SD card adapters
-❌ USB hard drives / SSDs
-❌ USB docks and hubs
-❌ Internal SD card slot
-❌ Optical or floppy disk drives
-❌ Thunderbolt-only devices
+Features
+• Install Ventoy with an exFAT data partition.
+• Detect, update, and repair supported existing Ventoy layouts.
+• Use the bundled official Ventoy payload offline.
+• Optionally download a compatible Ventoy update from its official GitHub release and verify its published checksum.
+• Work directly with USB mass-storage devices after you grant USB permission.
 
+You need an Android device with USB host support, a compatible USB drive, and an appropriate cable or adapter. Internal SD card slots are not supported. Hardware and boot-image compatibility varies.
 
-⭐️ Supported disk image types ⭐️
+Back up your USB drive before use. Installing Ventoy erases the selected drive. Keep it connected throughout an operation. Update and repair are intended to preserve ordinary files, but backups remain essential.
 
-✅ Modern GNU/Linux operating system images, including Arch Linux, Ubuntu, Debian, Fedora, pop!_OS, Linux Mint, FreeBSD, BlissOS and many more
-✅ Raspberry PI SD card images (but you must unzip them first!)
-❌ Official Microsoft Windows ISOs
-⚠️ Community-built Windows images, made for Vendroid (be careful: they may contain viruses!)
-❌ Apple DMG disk images
-❌ Older GNU/Linux OS images < 2010 such as Damn Small Linux
+Stable releases currently support MBR drives up to 2 TiB. The Vendroid beta channel includes experimental GPT and larger-drive support. Beta replaces the stable Vendroid installation and may contain unfinished features.
 
+Vendroid is open source and has no ads or account requirement. It uses work from Ventoy and EtchDroid and is not an official Ventoy project.
 
-Source code is on GitHub: https://github.com/Vendroid/Vendroid
+Source and issue reports: https://github.com/xntsO/Vendroid

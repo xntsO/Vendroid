@@ -280,6 +280,18 @@ fun AboutView() {
             ) {
                 Text("Ventoy")
             }
+            OutlinedButton(
+                onClick = {
+                    activity?.startActivity(
+                        Intent(
+                            Intent.ACTION_VIEW,
+                            "https://github.com/xntsO/Vendroid/blob/main/docs/privacy-policy.md".toUri()
+                        )
+                    )
+                }
+            ) {
+                Text(stringResource(R.string.privacy_policy))
+            }
             val reviewHelper = remember { activity?.let { WriteReviewHelper(it) } }
             if (reviewHelper != null) {
                 OutlinedButton(onClick = { reviewHelper.launchReviewFlow() }) {
