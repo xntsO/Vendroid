@@ -2,6 +2,7 @@
 
 import argparse
 import copy
+import difflib
 import hashlib
 import json
 import os
@@ -125,6 +126,43 @@ def extract_source(archive, destination, cache_boundary):
     return destination
 
 
+def apply_jni_release_mode_patch(source_root, spec, patch_bytes):
+    """Apply only the three pinned JNI integer-mode corrections, without fuzzy matching."""
+    relative = "libusbcommunication/src/c/usb.c"
+    if spec["source_file"] != relative:
+        raise ValueError("JNI patch must target the pinned libusbcommunication adapter")
+    if hashlib.sha256(patch_bytes).hexdigest() != spec["sha256"]:
+        raise ValueError("JNI patch checksum differs from source-lock.json")
+    source = source_root / relative
+    original = source.read_bytes()
+    if hashlib.sha256(original).hexdigest() != spec["source_sha256"]:
+        raise ValueError("JNI patch preimage differs from the pinned upstream source")
+    corrected = original
+    calls = (
+        b"    (*env)->ReleaseLongArrayElements(env, handle, body, NULL);",
+        b"    (*env)->ReleaseByteArrayElements(env, data, c_data, NULL);",
+        b"    (*env)->ReleaseByteArrayElements(env, buffer, c_data, NULL);",
+    )
+    for old in calls:
+        if original.splitlines().count(old) != 1:
+            raise ValueError("JNI patch requires exactly one occurrence of each pinned release call")
+        corrected = corrected.replace(old, old.replace(b", NULL);", b", 0);"), 1)
+    expected_patch = "".join(difflib.unified_diff(
+        original.decode("utf-8").splitlines(keepends=True),
+        corrected.decode("utf-8").splitlines(keepends=True),
+        fromfile=f"a/{relative}", tofile=f"b/{relative}", n=0,
+    )).encode("utf-8")
+    if expected_patch != patch_bytes:
+        raise ValueError("JNI patch must contain only the three NULL-to-zero release-mode corrections")
+    corrected_hash = hashlib.sha256(corrected).hexdigest()
+    if corrected_hash != spec["patched_source_sha256"]:
+        raise ValueError("JNI patch result differs from source-lock.json")
+    source.write_bytes(corrected)
+    return {"file": spec["file"], "sha256": spec["sha256"], "source_file": relative,
+            "original_source_sha256": spec["source_sha256"],
+            "patched_source_sha256": corrected_hash, "integer_mode_corrections": 3}
+
+
 def replace_native_entries(original, output, replacements, assets):
     """Keep upstream bytecode, manifest, resources, and consumer rules byte-for-byte."""
     with zipfile.ZipFile(original) as source:
@@ -173,6 +211,9 @@ def prepare(sdk_root, cache_root, parallel):
         archive = pinned_download(spec["url"], spec["sha256"], cache_root / "downloads" / f"{name}.tar.gz")
         downloaded[name] = archive
         sources[name] = extract_source(archive, cache_root / "sources" / name, cache_root)
+    patch_spec = lock["jni_release_mode_patch"]
+    patch_bytes = (SCRIPT_DIRECTORY / patch_spec["file"]).read_bytes()
+    source_patch = apply_jni_release_mode_patch(sources["libaums"], patch_spec, patch_bytes)
     compiled = {}
     for abi in lock["abis"]:
         build = cache_root / "build" / abi
@@ -190,6 +231,7 @@ def prepare(sdk_root, cache_root, parallel):
     provenance = {"schema": 1, "source_lock": lock,
                   "source_lock_sha256": hashlib.sha256(lock_bytes).hexdigest(),
                   "elf_max_page_size": 16384, "elf_common_page_size": 16384,
+                  "source_patches": [source_patch],
                   "artifacts": []}
     for name, spec in lock["artifacts"].items():
         version = spec["version"]
@@ -202,12 +244,15 @@ def prepare(sdk_root, cache_root, parallel):
         output = module_root / f"{filename}.aar"
         asset_root = f"assets/native-source/{name}"
         notice = (f"Vendroid rebuilds {name} {version} with 16 KB ELF alignment.\n"
-                  "Upstream Java/Kotlin bytecode and native adapter source are unchanged.\n"
+                  "Upstream Java/Kotlin bytecode is unchanged.\n"
+                  "The libusb JNI adapter has only three NULL-to-integer-0 release-mode corrections.\n"
+                  "Original source archives and the checked patch are included beside this notice.\n"
                   "libaums by Magnus Jahnen and contributors, Apache License 2.0.\n"
                   f"https://github.com/magnusja/libaums/tree/{lock['sources']['libaums']['commit']}\n"
                   "Rebuild recipe: scripts/native in https://github.com/xntsO/Vendroid .\n")
         assets = {f"{asset_root}/NOTICE.txt": notice.encode(),
                   f"{asset_root}/source-lock.json": lock_bytes,
+                  f"{asset_root}/{patch_spec['file']}": patch_bytes,
                   f"{asset_root}/LICENSE-libaums.txt": (sources["libaums"] / "LICENSE").read_bytes(),
                   f"{asset_root}/libaums-source.tar.gz": downloaded["libaums"].read_bytes()}
         if name == "libusbcommunication":

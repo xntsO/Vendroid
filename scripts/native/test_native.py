@@ -2,6 +2,7 @@
 
 import hashlib
 import io
+import json
 from pathlib import Path
 import struct
 import subprocess
@@ -11,7 +12,7 @@ import tempfile
 import unittest
 import zipfile
 
-from prepare import extract_source, replace_native_entries
+from prepare import apply_jni_release_mode_patch, extract_source, replace_native_entries
 from verify import ABI_MACHINES, USB_LIBRARIES, VerificationError, bundle_alignment, inspect_artifact, inspect_elf
 
 
@@ -150,6 +151,85 @@ class ArtifactFixtures(unittest.TestCase):
                                      str(path), "--output", str(report)], capture_output=True, text=True)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('"native_16kb_passed": false', report.read_text())
+
+
+class JniPatchFixtures(unittest.TestCase):
+    original = b"""void fixture() {
+    (*env)->ReleaseLongArrayElements(env, handle, body, NULL);
+    keepPointer(NULL);
+    (*env)->ReleaseByteArrayElements(env, data, c_data, NULL);
+    keepPointer(NULL);
+    (*env)->ReleaseByteArrayElements(env, buffer, c_data, NULL);
+}
+"""
+    corrected = b"""void fixture() {
+    (*env)->ReleaseLongArrayElements(env, handle, body, 0);
+    keepPointer(NULL);
+    (*env)->ReleaseByteArrayElements(env, data, c_data, 0);
+    keepPointer(NULL);
+    (*env)->ReleaseByteArrayElements(env, buffer, c_data, 0);
+}
+"""
+    patch = b"""--- a/libusbcommunication/src/c/usb.c
++++ b/libusbcommunication/src/c/usb.c
+@@ -2 +2 @@
+-    (*env)->ReleaseLongArrayElements(env, handle, body, NULL);
++    (*env)->ReleaseLongArrayElements(env, handle, body, 0);
+@@ -4 +4 @@
+-    (*env)->ReleaseByteArrayElements(env, data, c_data, NULL);
++    (*env)->ReleaseByteArrayElements(env, data, c_data, 0);
+@@ -6 +6 @@
+-    (*env)->ReleaseByteArrayElements(env, buffer, c_data, NULL);
++    (*env)->ReleaseByteArrayElements(env, buffer, c_data, 0);
+"""
+
+    def fixture(self, root):
+        path = root / "libusbcommunication/src/c/usb.c"
+        path.parent.mkdir(parents=True)
+        path.write_bytes(self.original)
+        spec = {"file": "jni-release-modes.patch", "source_file": "libusbcommunication/src/c/usb.c",
+                "sha256": hashlib.sha256(self.patch).hexdigest(),
+                "source_sha256": hashlib.sha256(self.original).hexdigest(),
+                "patched_source_sha256": hashlib.sha256(self.corrected).hexdigest()}
+        return path, spec
+
+    def test_exact_patch_changes_only_three_integer_modes_and_records_proof(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path, spec = self.fixture(root)
+            proof = apply_jni_release_mode_patch(root, spec, self.patch)
+            self.assertEqual(path.read_bytes(), self.corrected)
+            self.assertEqual(proof["integer_mode_corrections"], 3)
+            self.assertEqual(proof["original_source_sha256"], spec["source_sha256"])
+            self.assertEqual(proof["patched_source_sha256"], spec["patched_source_sha256"])
+
+    def test_mismatched_source_patch_and_result_are_rejected_without_writes(self):
+        for failure in ("source", "checksum", "wrong-mode", "result", "duplicate-call"):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                path, spec = self.fixture(root)
+                patch = self.patch
+                if failure == "source":
+                    path.write_bytes(self.original + b"// unexpected source revision\n")
+                elif failure == "checksum":
+                    patch += b"// unexpected patch change\n"
+                elif failure == "wrong-mode":
+                    patch = patch.replace(b", c_data, 0);", b", c_data, 1);", 1)
+                    spec["sha256"] = hashlib.sha256(patch).hexdigest()
+                elif failure == "result":
+                    spec["patched_source_sha256"] = "0" * 64
+                else:
+                    path.write_bytes(self.original + self.original.splitlines(keepends=True)[1])
+                    spec["source_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+                before = path.read_bytes()
+                with self.assertRaises(ValueError):
+                    apply_jni_release_mode_patch(root, spec, patch)
+                self.assertEqual(path.read_bytes(), before)
+
+    def test_distributed_patch_matches_checked_in_source_lock(self):
+        directory = Path(__file__).parent
+        spec = json.loads((directory / "source-lock.json").read_text())["jni_release_mode_patch"]
+        self.assertEqual(hashlib.sha256((directory / spec["file"]).read_bytes()).hexdigest(), spec["sha256"])
 
 
 class SourcePackagingFixtures(unittest.TestCase):
