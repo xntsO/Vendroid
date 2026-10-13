@@ -112,9 +112,9 @@ class ConnectedDeviceServiceTest {
             ComponentName(application, WorkerService::class.java), 0,
         )
         assertEquals(ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE, serviceInfo.foregroundServiceType)
-        val permissions = application.packageManager.getPackageInfo(
+        val permissions = requireNotNull(application.packageManager.getPackageInfo(
             application.packageName, PackageManager.GET_PERMISSIONS,
-        ).requestedPermissions.toSet()
+        ).requestedPermissions) { "Merged manifest must declare foreground-service permissions" }.toSet()
         assertTrue(Manifest.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE in permissions)
         assertFalse(Manifest.permission.FOREGROUND_SERVICE_SPECIAL_USE in permissions)
     }
