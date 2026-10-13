@@ -40,6 +40,69 @@ class PermissionTrace:
         raise TimeoutException("Permission was never confirmed")
 
 
+class DeviceSelectionTrace:
+    def __init__(self, frames):
+        self.frames = frames
+        self.frame = None
+        self.row = Mock()
+        self.row.is_displayed.return_value = True
+        self.row.get_attribute.return_value = "true"
+        self.confirmation = Mock()
+        self.confirmation.is_displayed.return_value = True
+        self.queries = []
+
+    def find_elements(self, by, value):
+        self.queries.append(value)
+        if value == '//*[@resource-id="usbDeviceListItem"]':
+            return [self.row] if self.frame == "picker" else []
+        if value == '//*[@resource-id="writeImageButton"]':
+            return [self.confirmation] if self.frame == "confirmation" else []
+        raise AssertionError("Device selection must use actionable tags, not decorative descriptions")
+
+    def until(self, predicate):
+        for frame in self.frames:
+            self.frame = frame
+            if predicate(self):
+                return True
+        raise TimeoutException("USB selection never reached confirmation")
+
+
+class UsbDeviceSelectionTest(unittest.TestCase):
+    def select(self, trace):
+        with patch.object(actions, "get_wait", return_value=trace) as wait:
+            actions.select_first_usb_device_if_multiple(trace)
+        wait.assert_called_once_with(trace, 15)
+
+    def test_delayed_row_without_a_decorative_icon_reaches_confirmation(self):
+        # Real CI stayed on the one-device sheet after its decorative USB icon
+        # lost its content description. Delayed UI must not be skipped either.
+        trace = DeviceSelectionTrace(["waiting", "picker", "picker", "confirmation"])
+        self.select(trace)
+        trace.row.click.assert_called_once()
+        self.assertEqual(trace.frame, "confirmation")
+
+    def test_an_already_selected_device_needs_no_picker_click(self):
+        trace = DeviceSelectionTrace(["confirmation"])
+        self.select(trace)
+        trace.row.click.assert_not_called()
+
+    def test_missing_picker_and_confirmation_is_a_failure(self):
+        trace = DeviceSelectionTrace(["waiting", "waiting"])
+        with self.assertRaises(TimeoutException):
+            self.select(trace)
+        trace.row.click.assert_not_called()
+
+    def test_hidden_or_disabled_rows_do_not_select_a_device(self):
+        for displayed, enabled in ((False, "true"), (True, "false")):
+            with self.subTest(displayed=displayed, enabled=enabled):
+                trace = DeviceSelectionTrace(["picker"])
+                trace.row.is_displayed.return_value = displayed
+                trace.row.get_attribute.return_value = enabled
+                with self.assertRaises(TimeoutException):
+                    self.select(trace)
+                trace.row.click.assert_not_called()
+
+
 class UsbPermissionTest(unittest.TestCase):
     def grant(self, trace):
         button = Mock()
