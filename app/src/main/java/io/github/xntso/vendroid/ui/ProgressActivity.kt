@@ -92,8 +92,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
-import io.github.xntso.vendroid.online.ExternalProjectLinks
-import io.github.xntso.vendroid.ui.composables.rememberOnlineAccessGate
+import io.github.xntso.vendroid.utils.ProjectLinks
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.airbnb.lottie.LottieProperty
 import com.airbnb.lottie.compose.LottieAnimation
@@ -901,7 +900,6 @@ fun SuccessViewLayout(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SuccessView(operation: String = Intents.OPERATION_WRITE_IMAGE) {
-    val onlineAccessGate = rememberOnlineAccessGate()
     val isVentoyOperation = Intents.isVentoyOperation(operation)
     val isVentoyUpdate = operation == Intents.OPERATION_VENTOY_UPDATE
     SuccessViewLayout(
@@ -957,7 +955,7 @@ fun SuccessView(operation: String = Intents.OPERATION_WRITE_IMAGE) {
             val reviewHelper = remember { activity?.let { WriteReviewHelper(it) } }
 
             if (reviewHelper != null) {
-                OutlinedButton(onClick = { onlineAccessGate { reviewHelper.launchReviewFlow() } }) {
+                OutlinedButton(onClick = { reviewHelper.launchReviewFlow() }) {
                     Text(
                         text = if (reviewHelper.isGPlayFlavor) stringResource(
                             R.string.write_a_review
@@ -1083,7 +1081,6 @@ fun FatalErrorView(
     jobId: Int,
     device: UsbMassStorageDeviceDescriptor,
 ) {
-    val onlineAccessGate = rememberOnlineAccessGate()
     FatalErrorViewLayout(
         modifier = Modifier.fillMaxSize(),
         title = {
@@ -1125,11 +1122,10 @@ fun FatalErrorView(
         buttons = {
             val context = LocalContext.current
             val activity = context.activity
-            val externalLinks = remember { ExternalProjectLinks() }
             OutlinedButton(onClick = {
-                onlineAccessGate { externalLinks.open(context, "https://github.com/xntsO/Vendroid/issues") }
+                ProjectLinks.open(context, ProjectLinks.HELP)
             }) {
-                Text(text = stringResource(R.string.view_github_issues))
+                Text(text = stringResource(R.string.help_and_contact))
             }
 
             if (exception is VerificationFailedException && activity != null) {

@@ -6,7 +6,7 @@ Features
 • Install Ventoy with an exFAT data partition.
 • Detect, update, and repair supported existing Ventoy layouts.
 • Use the bundled official Ventoy payload offline.
-• Optionally download a compatible Ventoy update from its official GitHub release and verify its published checksum.
+• Optionally download a compatible official Ventoy release through Vendroid's update mirror and verify its published checksum, without waiting for a new app release.
 • Work directly with USB mass-storage devices after you grant USB permission.
 
 You need an Android device with USB host support, a compatible USB drive, and an appropriate cable or adapter. Internal SD card slots are not supported. Hardware and boot-image compatibility varies.

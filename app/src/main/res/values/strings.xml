@@ -110,7 +110,6 @@
     <string name="project_source">Project source code: %1$s.</string>
     <string name="upstream_projects">Uses %1$s and is based on %2$s.</string>
     <string name="gpl_license_notice">Licensed under the GNU GPLv3 license.</string>
-    <string name="project_on_github">Project on GitHub</string>
     <string name="contributors" comment="Part of the following sentence: &quot;Developed by Author Name and other contributors&quot;">contributors</string>
     <string name="verifying_image" comment="Title of the progress page while an image is being verified">Verifying image</string>
     <string name="writing_image" comment="Title of the progress page while an image is being written">Writing image</string>
@@ -158,16 +157,9 @@
     <string name="worker_null_device_error" comment="Error message displayed when users get a mysterious NullPointerException while starting a new write. The original translation tries to give the user a general idea of the issue without being too technical.">A write attempt was started but unfortunately some info got lost along the way. Please try again.</string>
     <string name="please_report_fatal_issue" comment="Displayed in the fatal error screen, prompting the users to report the issue on GitHub along with the steps to reproduce it">If you can, please report this issue on GitHub along with the steps that led to this error.</string>
     <string name="view_github_issues" comment="Displayed in the fatal error screen, in a small button. When pressed, the app opens the GitHub issues page. Since the button is small, please keep this short. You can replace it with &quot;GitHub issues&quot; if &quot;View GitHub issues&quot; is too long in your language.">View GitHub issues</string>
-    <string name="online_age_check">Optional online features</string>
-    <string name="online_connection_disclosure">Update checks and downloads contact GitHub. GitHub and its delivery providers receive your IP address and user-agent and may log requests. Project links open external sites with their own privacy policies.</string>
-    <string name="online_birth_date_explanation">Enter your birth date for a local eligibility check, or continue offline. Your birth date is not saved or sent. Only the eligibility decision remains during this app session.</string>
-    <string name="birth_day">Day</string>
-    <string name="birth_month">Month</string>
-    <string name="birth_year">Year</string>
-    <string name="invalid_birth_date">Enter a valid birth date.</string>
-    <string name="continue_action">Continue</string>
-    <string name="continue_offline">Continue offline</string>
-    <string name="online_features_unavailable">Continue using Vendroid offline</string>
-    <string name="online_features_offline_explanation">These optional online features are unavailable for this session. You can still install, inspect, update, and repair Ventoy using the bundled or previously downloaded payload, and read the privacy policy.</string>
     <string name="close">Close</string>
+    <string name="project_website">Project website</string>
+    <string name="help_and_contact">Help and contact</string>
+    <string name="ventoy_mirror_name">Vendroid update mirror</string>
+    <string name="ventoy_mirror_disclosure">Optional downloads use Vendroid\'s update mirror. The service receives your IP address and request information. See About → Privacy policy.</string>
 </resources>

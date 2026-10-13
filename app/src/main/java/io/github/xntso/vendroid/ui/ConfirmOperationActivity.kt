@@ -129,7 +129,6 @@ import io.github.xntso.vendroid.ventoy.VentoyDiskScanner
 import io.github.xntso.vendroid.ventoy.VentoyClusterSize
 import io.github.xntso.vendroid.ventoy.VentoyPayload
 import io.github.xntso.vendroid.ventoy.VentoyOnlineUpdater
-import io.github.xntso.vendroid.ui.composables.rememberOnlineAccessGate
 import io.github.xntso.vendroid.ventoy.VentoyPartitionStyle
 import io.github.xntso.vendroid.ventoy.VentoyVersion
 import io.github.xntso.vendroid.ventoy.VentoyVersionRelation
@@ -380,7 +379,6 @@ class ConfirmOperationActivity : ActivityBase() {
                 val uiState by mViewModel.state.collectAsState()
                 var showLayFlatDialog by rememberSaveable { mutableStateOf(false) }
                 var showAdvancedOptions by rememberSaveable { mutableStateOf(false) }
-                val onlineAccessGate = rememberOnlineAccessGate()
 
                 // Scanning keeps the same request key instead of cancelling its own IO.
                 LaunchedEffect(uiState.ventoyScanRequest) {
@@ -406,11 +404,9 @@ class ConfirmOperationActivity : ActivityBase() {
                 }, onRetryVentoyScan = {
                     mViewModel.retryVentoyScan()
                 }, onCheckOnlineVentoy = {
-                    onlineAccessGate {
-                        val bundled = mViewModel.state.value.bundledVentoyVersion
-                        if (bundled != null) {
-                            mViewModel.checkForOnlinePayload(mVentoyOnlineUpdater, bundled)
-                        }
+                    val bundled = mViewModel.state.value.bundledVentoyVersion
+                    if (bundled != null) {
+                        mViewModel.checkForOnlinePayload(mVentoyOnlineUpdater, bundled)
                     }
                 }, askUsbPermission = {
                     val usbManager = getSystemService(USB_SERVICE) as UsbManager
@@ -1058,6 +1054,18 @@ private fun VentoyOnlineUpdateControls(
         modifier = Modifier.padding(top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
+        Text(
+            text = stringResource(R.string.ventoy_mirror_disclosure),
+            modifier = Modifier.appiumTag("ventoyMirrorDisclosure"),
+            style = MaterialTheme.typography.labelSmall,
+        )
+        if (state.onlineState != VentoyOnlineState.Idle) {
+            Text(
+                text = stringResource(R.string.ventoy_mirror_name),
+                modifier = Modifier.appiumTag("ventoyMirrorRequestStarted"),
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
         when (state.onlineState) {
             VentoyOnlineState.Idle -> OutlinedButton(
                 modifier = Modifier.appiumTag("ventoyOnlineUpdateButton"),
