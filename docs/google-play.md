@@ -41,9 +41,11 @@ validation gates in [validation.md](validation.md) pass.
    internal or closed testing before the account can use open beta or production.
    The Console determines which testing requirements apply to this account.
 4. Use the reviewed English listing under `fastlane/metadata/android/en-US`.
-   Other inherited translations and screenshots have not been reviewed for Vendroid;
-   do not bulk-upload them. Capture current Vendroid screenshots and use its current
-   launcher icon. Complete content rating, audience, app access, ads, Data safety,
+   Other inherited translations have not been reviewed for Vendroid; do not
+   bulk-upload them. The obsolete EtchDroid screenshots and Italian store icon
+   have been removed. Capture current Vendroid screenshots using the store-screenshot
+   checks in GitHub Actions, and use the reviewed English listing's Vendroid icon and
+   feature graphic. Complete content rating, audience, app access, ads, Data safety,
    countries, contact details, and foreground-service declarations in the Console.
    Use `contact@fhas.sa` for public developer and support contact. The owner has
    enabled a Vendroid website at `https://vendroid.fhas.sa`. The website was made
