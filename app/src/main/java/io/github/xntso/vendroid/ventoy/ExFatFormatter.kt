@@ -50,15 +50,20 @@ class ExFatFormatter(
         device.write(partitionOffsetBytes, bootRegion)
         device.write(partitionOffsetBytes + BACKUP_BOOT_REGION_SECTOR * VentoyDiskLayout.SECTOR_SIZE, bootRegion)
 
+        // The FAT and bitmap scale with the drive and can take minutes on a big slow one.
+        val fatOffset = partitionOffsetBytes + layout.fatOffsetSector * VentoyDiskLayout.SECTOR_SIZE
         val fatBytes = layout.fatLengthSectors * VentoyDiskLayout.SECTOR_SIZE
-        // The FAT is the only large write here, and can take minutes on a big slow drive.
-        device.writeZeros(
-            partitionOffsetBytes + layout.fatOffsetSector * VentoyDiskLayout.SECTOR_SIZE,
-            fatBytes,
-        ) { processedBytes -> onProgress(processedBytes, fatBytes) }
-        writeFat(device, partitionOffsetBytes, layout)
+        val bitmap = buildAllocationBitmap(layout)
+        val totalBytes = fatBytes + bitmap.size
+        device.writeZeros(fatOffset, fatBytes) { processedBytes ->
+            onProgress(processedBytes, totalBytes)
+        }
+        device.write(fatOffset, buildFatHead(layout))
+        device.writeInChunks(
+            clusterOffset(partitionOffsetBytes, layout, layout.allocationBitmapFirstCluster),
+            bitmap,
+        ) { processedBytes -> onProgress(fatBytes + processedBytes, totalBytes) }
 
-        writeAllocationBitmap(device, partitionOffsetBytes, layout)
         writeUpcaseTable(device, partitionOffsetBytes, layout)
         writeRootDirectory(device, partitionOffsetBytes, layout, label)
         device.flush()
@@ -172,48 +177,40 @@ class ExFatFormatter(
         return bootRegion
     }
 
-    private fun writeFat(device: RawBlockDevice, partitionOffsetBytes: Long, layout: ExFatFormatInfo) {
-        fun writeEntry(cluster: Long, value: Long) {
-            val bytes = ByteArray(4)
-            bytes.writeUInt32Le(0, value)
-            device.write(
-                partitionOffsetBytes + layout.fatOffsetSector * VentoyDiskLayout.SECTOR_SIZE + cluster * 4,
-                bytes,
-            )
-        }
+    /** Metadata clusters are contiguous from cluster 2, so their entries fit in one write. */
+    private fun buildFatHead(layout: ExFatFormatInfo): ByteArray {
+        val fat = ByteArray(((layout.rootDirectoryFirstCluster + 1) * 4).toInt())
 
-        writeEntry(0, 0xFFFF_FFF8L)
-        writeEntry(1, 0xFFFF_FFFFL)
+        fun setEntry(cluster: Long, value: Long) = fat.writeUInt32Le((cluster * 4).toInt(), value)
+
+        setEntry(0, 0xFFFF_FFF8L)
+        setEntry(1, 0xFFFF_FFFFL)
 
         val allocationBitmapClusters = allocationBitmapClusterCount(layout)
-        writeClusterChain(layout.allocationBitmapFirstCluster, allocationBitmapClusters, ::writeEntry)
+        writeClusterChain(layout.allocationBitmapFirstCluster, allocationBitmapClusters, ::setEntry)
 
         val upcaseClusters = upcaseTableClusterCount(layout)
-        writeClusterChain(layout.upcaseTableFirstCluster, upcaseClusters, ::writeEntry)
+        writeClusterChain(layout.upcaseTableFirstCluster, upcaseClusters, ::setEntry)
 
-        writeEntry(layout.rootDirectoryFirstCluster, 0xFFFF_FFFFL)
+        setEntry(layout.rootDirectoryFirstCluster, 0xFFFF_FFFFL)
+        return fat
     }
 
-    private fun writeAllocationBitmap(device: RawBlockDevice, partitionOffsetBytes: Long, layout: ExFatFormatInfo) {
-        val bitmapBytes = ceilDiv(layout.clusterCount, 8).toInt()
-        val bitmap = ByteArray(bitmapBytes)
+    private fun buildAllocationBitmap(layout: ExFatFormatInfo): ByteArray {
+        val clusterBytes = allocationBitmapClusterCount(layout) * layout.clusterSizeBytes
+        val bitmap = ByteArray(clusterBytes.toInt())
         val usedClusterLast = layout.rootDirectoryFirstCluster
         for (cluster in 2..usedClusterLast) {
             val bitIndex = (cluster - 2).toInt()
             bitmap[bitIndex / 8] = (bitmap[bitIndex / 8].toInt() or (1 shl (bitIndex % 8))).toByte()
         }
-
-        val clusterBytes = allocationBitmapClusterCount(layout) * layout.clusterSizeBytes
-        val padded = bitmap.copyOf(clusterBytes.toInt())
-        device.writeZeros(clusterOffset(partitionOffsetBytes, layout, layout.allocationBitmapFirstCluster), clusterBytes)
-        device.write(clusterOffset(partitionOffsetBytes, layout, layout.allocationBitmapFirstCluster), padded)
+        return bitmap
     }
 
     private fun writeUpcaseTable(device: RawBlockDevice, partitionOffsetBytes: Long, layout: ExFatFormatInfo) {
         val upcase = buildUpcaseTable()
         val clusterBytes = upcaseTableClusterCount(layout) * layout.clusterSizeBytes
         val padded = upcase.copyOf(clusterBytes.toInt())
-        device.writeZeros(clusterOffset(partitionOffsetBytes, layout, layout.upcaseTableFirstCluster), clusterBytes)
         device.write(clusterOffset(partitionOffsetBytes, layout, layout.upcaseTableFirstCluster), padded)
     }
 
@@ -228,9 +225,7 @@ class ExFatFormatter(
         writeAllocationBitmapEntry(root, 32, layout)
         writeUpcaseTableEntry(root, 64, layout)
 
-        val rootOffset = clusterOffset(partitionOffsetBytes, layout, layout.rootDirectoryFirstCluster)
-        device.writeZeros(rootOffset, layout.clusterSizeBytes.toLong())
-        device.write(rootOffset, root)
+        device.write(clusterOffset(partitionOffsetBytes, layout, layout.rootDirectoryFirstCluster), root)
     }
 
     private fun writeVolumeLabelEntry(root: ByteArray, offset: Int, label: String) {

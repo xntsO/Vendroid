@@ -145,3 +145,17 @@ fun RawBlockDevice.writeZeros(
         onProgress(length - remaining)
     }
 }
+
+fun RawBlockDevice.writeInChunks(
+    offset: Long,
+    bytes: ByteArray,
+    onProgress: (processedBytes: Long) -> Unit = {},
+) {
+    var written = 0
+    while (written < bytes.size) {
+        val chunk = minOf(bytes.size - written, 1024 * 1024)
+        write(offset + written, bytes, written, chunk)
+        written += chunk
+        onProgress(written.toLong())
+    }
+}
