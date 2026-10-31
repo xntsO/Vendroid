@@ -612,9 +612,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # The website links to this fixed name through releases/latest/download.
+          cp "distribution/vendroid-v${VENDROID_VERSION}.apk" distribution/vendroid.apk
           gh release create "$GITHUB_REF_NAME" \
             "distribution/vendroid-v${VENDROID_VERSION}.apk" \
             "distribution/vendroid-v${VENDROID_VERSION}.apk.sha256" \
+            distribution/vendroid.apk \
             --verify-tag \
             --draft \
             --title "Vendroid ${VENDROID_VERSION}" \
