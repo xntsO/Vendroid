@@ -1027,6 +1027,46 @@ class VentoyInstallerTest {
     }
 
     @Test
+    fun `install refuses an unusable payload before touching the drive`() {
+        for (files in unusablePayloads()) {
+            val writes = WriteTrackingDevice(memoryDevice(40L * 1024 * 1024))
+
+            assertThrows<Exception> {
+                VentoyInstaller(VentoyPayload.fromBytes("1.1.16", files))
+                    .install(writes, VentoyInstallOptions(forceInstall = true))
+            }
+
+            assertTrue(writes.writes.isEmpty())
+        }
+    }
+
+    @Test
+    fun `update refuses an unusable payload before touching the drive`() {
+        for (files in unusablePayloads()) {
+            val writes = WriteTrackingDevice(installedGptDevice())
+
+            assertThrows<Exception> {
+                VentoyInstaller(VentoyPayload.fromBytes("1.1.16", files)).upgrade(writes)
+            }
+
+            assertTrue(writes.writes.isEmpty())
+        }
+    }
+
+    private fun unusablePayloads(): List<Map<String, ByteArray>> {
+        val files = syntheticPayloadFiles()
+        val core = "boot/core.img.xz"
+        val disk = "ventoy/ventoy.disk.img.xz"
+        return listOf(
+            files + (core to xz(ByteArray(512))),
+            files + (disk to xz(ByteArray(31 * 1024 * 1024))),
+            files + (disk to xz(ByteArray(33 * 1024 * 1024))),
+            files + (disk to files.getValue(disk).copyOf(1024)),
+            files + ("boot/boot.img" to ByteArray(511)),
+        )
+    }
+
+    @Test
     fun `install syncs the drive after its last write and before verifying`() {
         for (style in VentoyPartitionStyle.entries) {
             assertSyncedBeforeVerifying(memoryDevice(40L * 1024 * 1024)) { device, onProgress ->
