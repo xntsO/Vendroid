@@ -56,7 +56,15 @@ class VentoyInstaller(
             partitionSectorCount = plan.partition1SectorCount,
             label = options.label,
             clusterSize = options.clusterSize,
-        )
+        ) { processedBytes, totalBytes ->
+            onProgress(
+                VentoyInstallProgress(
+                    VentoyInstallStage.FormattingExFat,
+                    processedBytes,
+                    totalBytes,
+                ),
+            )
+        }
         device.flush()
 
         onProgress(VentoyInstallProgress(VentoyInstallStage.Verifying))
