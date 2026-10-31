@@ -61,6 +61,7 @@ jobs:
         id: plan
         env:
           PLAY_PUBLISHING_ENABLED: ${{ vars.VENDROID_PLAY_PUBLISHING_ENABLED }}
+          PLAY_PRODUCTION_ENABLED: ${{ vars.VENDROID_PLAY_PRODUCTION_ENABLED }}
           INPUT_MODE: ${{ inputs.mode }}
           INPUT_TRACK: ${{ inputs.track }}
           GH_TOKEN: ${{ github.token }}
@@ -77,6 +78,7 @@ jobs:
             --event-name "$GITHUB_EVENT_NAME" --event-file "$GITHUB_EVENT_PATH" \
             --gradle-file app/build.gradle.kts --commit "$(git rev-parse HEAD)" \
             --expected-commit "$GITHUB_SHA" --publishing-enabled "$PLAY_PUBLISHING_ENABLED" \
+            --production-enabled "$PLAY_PRODUCTION_ENABLED" \
             --plan-output play-plan.json --github-output "$GITHUB_OUTPUT" "${extra[@]}"
       - name: Retain the release plan
         uses: actions/upload-artifact@v5
@@ -197,6 +199,32 @@ jobs:
       - name: Remove temporary signing material
         if: always()
         run: rm -f "$RUNNER_TEMP/vendroid-release.jks" "$RUNNER_TEMP/vendroid.apks" "$RUNNER_TEMP/vendroid-keystore.pass" "$RUNNER_TEMP/vendroid-key.pass"
+
+  attach-beta-apk:
+    name: Attach the beta APK to its GitHub prerelease
+    needs: [plan, bundle]
+    if: needs.plan.outputs.execute == 'true' && github.event_name == 'release' && github.event.release.prerelease
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+      DISTRIBUTION_VERSION: ${{ needs.plan.outputs.version_name }}
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: vendroid-play-${{ needs.plan.outputs.track }}-${{ needs.plan.outputs.version_code }}
+          path: play-artifacts
+      - name: Upload the APK and its checksum
+        working-directory: play-artifacts
+        run: |
+          apk="vendroid-v${DISTRIBUTION_VERSION}.apk"
+          cp vendroid.apk "$apk"
+          sha256sum "$apk" > "$apk.sha256"
+          gh release upload "$RELEASE_TAG" "$apk" "$apk.sha256" --clobber
 
   publish:
     name: Submit verified bundle to Google Play
