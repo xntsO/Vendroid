@@ -21,6 +21,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 import uuid
 import zlib
 
@@ -290,6 +291,19 @@ def _check_exfat(loop):
              f"fsck.exfat rejected the data partition:\n{result.stdout}{result.stderr}")
 
 
+def _wait_for_detach(loop, sys_block=Path("/sys/block"), timeout=15.0):
+    """Wait for the kernel to release a loop device.
+
+    losetup --detach only marks a busy device, and exfat-fuse can hold it for a moment
+    after umount returns. Boot validation rejects any image still backing a loop device.
+    """
+    backing = sys_block / Path(loop).name / "loop" / "backing_file"
+    deadline = time.monotonic() + timeout
+    while backing.exists():
+        _require(time.monotonic() < deadline, f"{loop} stayed attached after detach")
+        time.sleep(0.05)
+
+
 @contextmanager
 def mounted_data_partition(path, writable=False):
     """Yield a Path for partition 1, only after the caller detached QEMU.
@@ -318,6 +332,7 @@ def mounted_data_partition(path, writable=False):
             command += ["--", f"/proc/{os.getpid()}/fd/{disk.fileno()}"]
             loop = subprocess.run(command, check=True, capture_output=True, text=True).stdout.strip()
             _require(re.fullmatch(r"/dev/loop[0-9]+", loop) is not None, "Unexpected losetup device output")
+            cleanup.callback(_wait_for_detach, loop)
             cleanup.callback(subprocess.run, ["sudo", "-n", "losetup", "--detach", loop], check=True)
             _check_exfat(loop)
             options = "rw" if writable else "ro"
