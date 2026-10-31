@@ -2,12 +2,27 @@ package io.github.xntso.vendroid.utils
 
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.concurrent.atomic.AtomicInteger
 
 class HeartbeatTest {
+    @Test
+    fun `stall detector allows silent work up to its limit and resets on progress`() {
+        var now = 1_000L
+        val detector = ProgressStallDetector(limitMillis = 180_000) { now }
+
+        now += 179_999
+        assertFalse(detector.isStalled)
+        now += 1
+        assertTrue(detector.isStalled)
+
+        detector.recordProgress()
+        assertFalse(detector.isStalled)
+    }
+
     @Test
     fun `beats while blocking work runs and stops when it returns`() {
         val beats = AtomicInteger()

@@ -32,6 +32,7 @@ import io.github.xntso.vendroid.plugins.telemetry.Telemetry
 import io.github.xntso.vendroid.service.WorkerServiceFlowImpl.verifyImage
 import io.github.xntso.vendroid.service.WorkerServiceFlowImpl.writeImage
 import io.github.xntso.vendroid.ui.ProgressActivity
+import io.github.xntso.vendroid.utils.ProgressStallDetector
 import io.github.xntso.vendroid.utils.TimeoutExpiredException
 import io.github.xntso.vendroid.utils.broadcastReceiver
 import io.github.xntso.vendroid.utils.exception.InitException
@@ -83,6 +84,8 @@ private const val JOB_PROGRESS_CHANNEL = "io.github.xntso.vendroid.notifications
 
 private const val WAKELOCK_TIMEOUT = 10 * 60 * 1000L
 private const val VENTOY_HEARTBEAT_MILLIS = 3 * 1000L
+// Longer than a one minute cache flush or formatting a slow large drive, which report nothing.
+private const val VENTOY_STALL_LIMIT_MILLIS = 3 * 60 * 1000L
 private const val PROGRESS_UPDATE_INTERVAL = 1000L
 const val BUFFER_BLOCKS = 4096L
 const val QUEUE_SIZE = 2
@@ -101,8 +104,8 @@ class WorkerService : LifecycleService() {
     private var mWakelockAcquireTime = -1L
     private var mWakeLock: PowerManager.WakeLock? = null
     private var mVerificationCancelled = false
-    @Volatile
     private var mLastVentoyProgress: VentoyInstallProgress? = null
+    private val mVentoyStallDetector = ProgressStallDetector(VENTOY_STALL_LIMIT_MILLIS)
 
     private val mNotificationManager by lazy {
         getSystemService(NOTIFICATION_SERVICE) as NotificationManager
@@ -676,13 +679,21 @@ class WorkerService : LifecycleService() {
         mBytesSinceLastUpdate = 0.0
     }
 
+    @Synchronized
     private fun resendVentoyProgress() {
-        mLastVentoyProgress?.let(::sendVentoyProgressUpdate)
+        val progress = mLastVentoyProgress ?: return
+        // Going quiet lets the UI's progress timeout report a worker that stopped advancing.
+        if (!mVentoyStallDetector.isStalled) broadcastVentoyProgress(progress)
     }
 
     @Synchronized
     private fun sendVentoyProgressUpdate(progress: VentoyInstallProgress) {
         mLastVentoyProgress = progress
+        mVentoyStallDetector.recordProgress()
+        broadcastVentoyProgress(progress)
+    }
+
+    private fun broadcastVentoyProgress(progress: VentoyInstallProgress) {
         ensureWakelock()
         val range = when (progress.stage) {
             VentoyInstallStage.ValidatingPayload -> 0L..5L
