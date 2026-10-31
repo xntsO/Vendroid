@@ -54,6 +54,7 @@ import io.github.xntso.vendroid.utils.ktexts.threadIdCompat
 import io.github.xntso.vendroid.utils.ktexts.toHRSize
 import io.github.xntso.vendroid.utils.lateInit
 import io.github.xntso.vendroid.utils.timeoutWatchdog
+import io.github.xntso.vendroid.utils.withHeartbeat
 import io.github.xntso.vendroid.ventoy.BlockDeviceRawBlockDevice
 import io.github.xntso.vendroid.ventoy.VentoyInstallProgress
 import io.github.xntso.vendroid.ventoy.VentoyInstallStage
@@ -81,6 +82,7 @@ private const val JOB_RESULT_CHANNEL = "io.github.xntso.vendroid.notifications.J
 private const val JOB_PROGRESS_CHANNEL = "io.github.xntso.vendroid.notifications.JOB_PROGRESS"
 
 private const val WAKELOCK_TIMEOUT = 10 * 60 * 1000L
+private const val VENTOY_HEARTBEAT_MILLIS = 3 * 1000L
 private const val PROGRESS_UPDATE_INTERVAL = 1000L
 const val BUFFER_BLOCKS = 4096L
 const val QUEUE_SIZE = 2
@@ -99,6 +101,8 @@ class WorkerService : LifecycleService() {
     private var mWakelockAcquireTime = -1L
     private var mWakeLock: PowerManager.WakeLock? = null
     private var mVerificationCancelled = false
+    @Volatile
+    private var mLastVentoyProgress: VentoyInstallProgress? = null
 
     private val mNotificationManager by lazy {
         getSystemService(NOTIFICATION_SERVICE) as NotificationManager
@@ -459,17 +463,20 @@ class WorkerService : LifecycleService() {
                         VentoyPayloadCache(noBackupFilesDir).load(version)
                     } ?: VentoyPayload.fromAssets(assets)
                     val installer = VentoyInstaller(payload)
-                    if (mOperation == Intents.OPERATION_VENTOY_UPDATE) {
-                        installer.upgrade(
-                            device = rawBlockDevice,
-                            onProgress = ::sendVentoyProgressUpdate,
-                        )
-                    } else {
-                        installer.install(
-                            device = rawBlockDevice,
-                            options = mVentoyOptions.toInstallOptions(),
-                            onProgress = ::sendVentoyProgressUpdate,
-                        )
+                    // Payload checks and cache flushes can outlast the UI's progress timeout.
+                    withHeartbeat(VENTOY_HEARTBEAT_MILLIS, ::resendVentoyProgress) {
+                        if (mOperation == Intents.OPERATION_VENTOY_UPDATE) {
+                            installer.upgrade(
+                                device = rawBlockDevice,
+                                onProgress = ::sendVentoyProgressUpdate,
+                            )
+                        } else {
+                            installer.install(
+                                device = rawBlockDevice,
+                                options = mVentoyOptions.toInstallOptions(),
+                                onProgress = ::sendVentoyProgressUpdate,
+                            )
+                        }
                     }
 
                     getFinishedIntent(
@@ -665,7 +672,13 @@ class WorkerService : LifecycleService() {
         mBytesSinceLastUpdate = 0.0
     }
 
+    private fun resendVentoyProgress() {
+        mLastVentoyProgress?.let(::sendVentoyProgressUpdate)
+    }
+
+    @Synchronized
     private fun sendVentoyProgressUpdate(progress: VentoyInstallProgress) {
+        mLastVentoyProgress = progress
         ensureWakelock()
         val range = when (progress.stage) {
             VentoyInstallStage.ValidatingPayload -> 0L..5L
