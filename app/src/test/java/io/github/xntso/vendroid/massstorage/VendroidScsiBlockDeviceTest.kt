@@ -2,9 +2,12 @@ package io.github.xntso.vendroid.massstorage
 
 import android.hardware.usb.UsbEndpoint
 import android.hardware.usb.UsbInterface
+import me.jahnen.libaums.core.driver.scsi.commands.sense.IllegalCommand
 import me.jahnen.libaums.core.driver.scsi.commands.sense.MediumError
 import me.jahnen.libaums.core.driver.scsi.commands.sense.UnitAttention
 import me.jahnen.libaums.core.usb.UsbCommunication
+import me.jahnen.libaums.libusbcommunication.LibusbError
+import me.jahnen.libaums.libusbcommunication.LibusbException
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -367,18 +370,73 @@ class VendroidScsiBlockDeviceTest {
 
     @Test
     fun `a device without cache synchronization is not treated as a failed drive`() {
+        // Invalid operation code, then invalid field in the CDB.
+        for (asc in listOf<Byte>(0x20, 0x24)) {
+            val usb = FakeUsbCommunication(4095)
+            val device = initialized(usb)
+            usb.fault = Fault.COMMAND_FAILED
+            usb.faultOpcode = 0x35
+            usb.senseKey = 5
+            usb.senseAsc = asc
+            val commandsBeforeSync = usb.commands.size
+
+            device.synchronizeCache()
+
+            assertEquals(listOf(0x35, 0x03), usb.commands.drop(commandsBeforeSync).map { it.opcode })
+            assertEquals(0, usb.resetCount)
+        }
+    }
+
+    @Test
+    fun `other illegal requests during cache synchronization fail the operation`() {
         val usb = FakeUsbCommunication(4095)
         val device = initialized(usb)
         usb.fault = Fault.COMMAND_FAILED
         usb.faultOpcode = 0x35
         usb.senseKey = 5
-        usb.senseAsc = 0x20 // Invalid command operation code.
+        usb.senseAsc = 0x25 // Logical unit not supported.
+
+        assertThrows<IllegalCommand> { device.synchronizeCache() }
+    }
+
+    @Test
+    fun `a slow flush is awaited without resetting or replaying the command`() {
+        val usb = FakeUsbCommunication(4095)
+        val device = initialized(usb)
+        usb.statusTimeoutsRemaining = 11
         val commandsBeforeSync = usb.commands.size
 
         device.synchronizeCache()
 
-        assertEquals(listOf(0x35, 0x03), usb.commands.drop(commandsBeforeSync).map { it.opcode })
+        assertEquals(listOf(0x35), usb.commands.drop(commandsBeforeSync).map { it.opcode })
+        assertEquals(0, usb.statusTimeoutsRemaining)
         assertEquals(0, usb.resetCount)
+    }
+
+    @Test
+    fun `a flush that never finishes fails after a bounded wait without a reset`() {
+        val usb = FakeUsbCommunication(4095)
+        val device = initialized(usb)
+        usb.statusTimeoutsRemaining = Int.MAX_VALUE
+        val commandsBeforeSync = usb.commands.size
+
+        assertThrows<IOException> { device.synchronizeCache() }
+
+        assertEquals(listOf(0x35), usb.commands.drop(commandsBeforeSync).map { it.opcode })
+        assertEquals(Int.MAX_VALUE - 12, usb.statusTimeoutsRemaining)
+        assertEquals(0, usb.resetCount)
+    }
+
+    @Test
+    fun `ordinary commands keep resetting after a status timeout`() {
+        val usb = FakeUsbCommunication(4095)
+        val device = initialized(usb)
+        usb.statusTimeoutsRemaining = 1
+
+        device.read(17, ByteBuffer.allocate(512))
+
+        assertEquals(2, usb.ioCommands.size)
+        assertTrue(usb.resetCount > 0)
     }
 
     @Test
@@ -467,6 +525,7 @@ class VendroidScsiBlockDeviceTest {
         var senseAdditionalLength: Byte = 10
         var senseKey: Byte = 3
         var senseAsc: Byte = 0x11
+        var statusTimeoutsRemaining = 0
         var resetCount = 0
             private set
         private val storage = mutableMapOf<Long, ByteArray>()
@@ -510,6 +569,10 @@ class VendroidScsiBlockDeviceTest {
                 dest.put(response, transferred, length)
                 transferred += length
                 return length
+            }
+            if (statusTimeoutsRemaining > 0) {
+                statusTimeoutsRemaining--
+                throw LibusbException("status read", LibusbError.TIMEOUT)
             }
             val matchesFault = faultOpcode?.let { command.opcode == it } ?: command.isBlockIo
             val injected = if (matchesFault && faultsRemaining > 0) fault else null
