@@ -71,8 +71,17 @@ validation gates in [validation.md](validation.md) pass.
 The `Prepare or publish Google Play` workflow validates the selected commit, builds and
 checks the signed bundle, then uploads it through the Android Publisher API.
 Publishing a GitHub prerelease selects the Vendroid beta channel. It uploads to
-Play's closed `alpha` track by default. Publishing a stable GitHub release selects
-`production`. Draft releases and ordinary commits do not upload.
+Play's closed `alpha` track by default and attaches the signed beta APK and its
+checksum to the prerelease. Publishing a stable GitHub release selects `production`,
+but only when the repository variable `VENDROID_PLAY_PRODUCTION_ENABLED` is `true`.
+Leave it unset until Play grants production access. A stable GitHub release can then
+ship first, and a manual `publish` to `production` can follow it. Draft releases and
+ordinary commits do not upload.
+
+The tag workflow attaches the stable APK under its versioned name and as
+`vendroid.apk`. The website's direct download uses
+`https://github.com/xntsO/Vendroid/releases/latest/download/vendroid.apk`, which only
+resolves to stable releases, so keep that asset name.
 Google review, testing eligibility, and managed publishing can still delay availability.
 
 Before enabling uploads, create a dedicated service account with Android Publisher

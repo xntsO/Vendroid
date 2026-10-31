@@ -10,11 +10,11 @@ GRADLE = 'val defaultVersionCode = 31\nval stableGptEnabled = true\n        vers
 
 
 class ReleasePlanTest(unittest.TestCase):
-    def plan(self, event, event_name="release", *, enabled=True, source=GRADLE, commit=COMMIT,
-             published=None, published_commit=None):
+    def plan(self, event, event_name="release", *, enabled=True, production=True, source=GRADLE,
+             commit=COMMIT, published=None, published_commit=None):
         return resolve_plan(
             event_name, event, gradle_source=source, commit=commit,
-            expected_commit=COMMIT, publishing_enabled=enabled,
+            expected_commit=COMMIT, publishing_enabled=enabled, production_enabled=production,
             published_stable_release=published, published_stable_commit=published_commit,
         )
 
@@ -42,6 +42,22 @@ class ReleasePlanTest(unittest.TestCase):
         plan = self.plan(self.release(), enabled=False)
         self.assertFalse(plan.execute)
         self.assertFalse(plan.publish)
+
+    def test_stable_release_skips_play_until_production_is_enabled(self):
+        plan = self.plan(self.release(), production=False)
+        self.assertFalse(plan.execute)
+        self.assertFalse(plan.publish)
+
+    def test_prerelease_does_not_need_production_access(self):
+        plan = self.plan(self.release(prerelease=True, tag="v0.2.0-beta.2"), production=False)
+        self.assertTrue(plan.execute)
+        self.assertTrue(plan.publish)
+
+    def test_manual_production_publish_requires_production_access(self):
+        event = {"inputs": {"mode": "publish", "track": "production"}}
+        with self.assertRaisesRegex(ReleasePlanError, "PRODUCTION_ENABLED"):
+            self.plan(event, "workflow_dispatch", production=False,
+                      published=self.release()["release"], published_commit=COMMIT)
 
     def test_first_setup_prepare_works_without_play_publishing_enabled(self):
         for track in ("beta", "production"):

@@ -67,6 +67,7 @@ def resolve_plan(
     commit: str,
     expected_commit: str,
     publishing_enabled: bool,
+    production_enabled: bool = False,
     published_stable_release: dict | None = None,
     published_stable_commit: str | None = None,
 ) -> ReleasePlan:
@@ -90,8 +91,9 @@ def resolve_plan(
             raise ReleasePlanError("Release tag must match the checked-in versionName")
         if track == "production" and release_name != f"v{base_version}":
             raise ReleasePlanError("Stable releases require the exact stable version tag")
-        publish = publishing_enabled
-        execute = publishing_enabled
+        # A stable GitHub release must not depend on Play granting production access.
+        publish = publishing_enabled and (track != "production" or production_enabled)
+        execute = publish
     elif event_name == "workflow_dispatch":
         inputs = event.get("inputs", {})
         if not isinstance(inputs, dict):
@@ -111,6 +113,8 @@ def resolve_plan(
                 raise ReleasePlanError("version_code must be at least the checked-in code and at most 2100000000")
         if mode == "publish" and not publishing_enabled:
             raise ReleasePlanError("Set VENDROID_PLAY_PUBLISHING_ENABLED=true after completing Play setup")
+        if mode == "publish" and track == "production" and not production_enabled:
+            raise ReleasePlanError("Set VENDROID_PLAY_PRODUCTION_ENABLED=true after Play grants production access")
         publish = mode == "publish"
         execute = True
         release_name = base_version + ("-beta" if track == "beta" else "")
@@ -153,6 +157,7 @@ def main() -> int:
     parser.add_argument("--commit", required=True)
     parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--publishing-enabled", default="false")
+    parser.add_argument("--production-enabled", default="false")
     parser.add_argument("--plan-output", type=Path, required=True)
     parser.add_argument("--github-output", type=Path, required=True)
     parser.add_argument("--published-stable-release", type=Path)
@@ -166,6 +171,7 @@ def main() -> int:
             commit=args.commit,
             expected_commit=args.expected_commit,
             publishing_enabled=args.publishing_enabled == "true",
+            production_enabled=args.production_enabled == "true",
             published_stable_release=(json.loads(args.published_stable_release.read_text(encoding="utf-8"))
                                       if args.published_stable_release else None),
             published_stable_commit=args.published_stable_commit,
@@ -175,7 +181,7 @@ def main() -> int:
             for key, value in plan.outputs().items():
                 output.write(f"{key}={value}\n")
         if not plan.execute:
-            print("Play publishing is disabled. Complete Console setup and enable VENDROID_PLAY_PUBLISHING_ENABLED.")
+            print("Skipping Play: enable VENDROID_PLAY_PUBLISHING_ENABLED, and VENDROID_PLAY_PRODUCTION_ENABLED for production.")
         else:
             print(f"{'Publish' if plan.publish else 'Prepare'} {plan.track} version {plan.version_name} ({plan.version_code}) at {plan.commit}")
         return 0
