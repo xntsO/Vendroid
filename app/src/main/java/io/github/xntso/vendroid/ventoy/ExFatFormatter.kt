@@ -26,6 +26,7 @@ class ExFatFormatter(
         partitionSectorCount: Long,
         label: String = "Ventoy",
         clusterSize: VentoyClusterSize = VentoyClusterSize.Automatic,
+        onProgress: (processedBytes: Long, totalBytes: Long) -> Unit = { _, _ -> },
     ): ExFatFormatInfo {
         require(device.blockSize == VentoyDiskLayout.SECTOR_SIZE) {
             "exFAT formatter requires a 512-byte block device"
@@ -50,7 +51,11 @@ class ExFatFormatter(
         device.write(partitionOffsetBytes + BACKUP_BOOT_REGION_SECTOR * VentoyDiskLayout.SECTOR_SIZE, bootRegion)
 
         val fatBytes = layout.fatLengthSectors * VentoyDiskLayout.SECTOR_SIZE
-        device.writeZeros(partitionOffsetBytes + layout.fatOffsetSector * VentoyDiskLayout.SECTOR_SIZE, fatBytes)
+        // The FAT is the only large write here, and can take minutes on a big slow drive.
+        device.writeZeros(
+            partitionOffsetBytes + layout.fatOffsetSector * VentoyDiskLayout.SECTOR_SIZE,
+            fatBytes,
+        ) { processedBytes -> onProgress(processedBytes, fatBytes) }
         writeFat(device, partitionOffsetBytes, layout)
 
         writeAllocationBitmap(device, partitionOffsetBytes, layout)

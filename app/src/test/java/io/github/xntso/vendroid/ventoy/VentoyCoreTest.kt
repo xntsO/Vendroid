@@ -534,6 +534,27 @@ class ExFatFormatterTest {
     }
 
     @Test
+    fun `formatting reports each mebibyte of FAT zeroing`() {
+        val sectors = 2L * 1024 * 1024 * 1024 * 1024 / 512 - 2048
+        val device = DiscardingRawBlockDevice((2048 + sectors) * 512)
+        val updates = mutableListOf<Pair<Long, Long>>()
+
+        val info = ExFatFormatter().format(
+            device = device,
+            partitionStartSector = 2048,
+            partitionSectorCount = sectors,
+            clusterSize = VentoyClusterSize.KiB32,
+        ) { processed, total -> updates += processed to total }
+
+        val fatBytes = info.fatLengthSectors * 512
+        assertTrue(fatBytes > 256L * 1024 * 1024)
+        assertEquals(fatBytes, updates.last().first)
+        assertTrue(updates.all { (_, total) -> total == fatBytes })
+        val steps = updates.map { it.first }.zipWithNext { before, after -> after - before }
+        assertTrue(steps.all { it in 1..1024L * 1024 })
+    }
+
+    @Test
     fun `sizes that already converged keep their layout`() {
         val info = ExFatFormatter().calculateLayout(2048, 31_199_232L, 32 * 1024)
 
@@ -1067,6 +1088,20 @@ class VentoyInstallerTest {
             files + (disk to files.getValue(disk).copyOf(1024)),
             files + ("boot/boot.img" to ByteArray(511)),
         )
+    }
+
+    @Test
+    fun `install forwards formatting progress`() {
+        val stages = mutableListOf<VentoyInstallProgress>()
+
+        VentoyInstaller(syntheticPayload()).install(
+            memoryDevice(40L * 1024 * 1024),
+            VentoyInstallOptions(forceInstall = true),
+        ) { stages += it }
+
+        val formatting = stages.filter { it.stage == VentoyInstallStage.FormattingExFat }
+        assertTrue(formatting.last().totalBytes > 0)
+        assertEquals(formatting.last().totalBytes, formatting.last().processedBytes)
     }
 
     @Test

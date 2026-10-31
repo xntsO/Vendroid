@@ -126,7 +126,11 @@ class BlockDeviceRawBlockDevice(
 fun RawBlockDevice.readBytes(offset: Long, length: Int): ByteArray =
     ByteArray(length).also { read(offset, it) }
 
-fun RawBlockDevice.writeZeros(offset: Long, length: Long) {
+fun RawBlockDevice.writeZeros(
+    offset: Long,
+    length: Long,
+    onProgress: (processedBytes: Long) -> Unit = {},
+) {
     require(offset >= 0) { "Offset must be non-negative" }
     require(length >= 0) { "Length must be non-negative" }
 
@@ -138,5 +142,6 @@ fun RawBlockDevice.writeZeros(offset: Long, length: Long) {
         write(currentOffset, zeroBuffer, 0, chunk)
         currentOffset += chunk
         remaining -= chunk
+        onProgress(length - remaining)
     }
 }
