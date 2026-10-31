@@ -35,6 +35,10 @@ val vendroidVersionCode = providers.environmentVariable("VENDROID_VERSION_CODE")
         code
     }
 val stableGptEnabled = false
+// Distribution sets a numbered suffix from the release tag, such as -beta.2.
+val betaVersionSuffix = providers.environmentVariable("VENDROID_BETA_SUFFIX").orNull
+    ?.takeIf { it.isNotEmpty() }
+    ?: "-beta"
 
 plugins {
     alias(libs.plugins.android.application)
@@ -103,7 +107,7 @@ android {
             // The beta track updates the same Vendroid app and retains Preview capabilities.
             initWith(getByName("optimized"))
             matchingFallbacks += listOf("release")
-            versionNameSuffix = "-beta"
+            versionNameSuffix = betaVersionSuffix
             buildConfigField("boolean", "IS_PREVIEW", "true")
             buildConfigField("boolean", "GPT_ENABLED", "true")
             signingConfig = if (releaseSigningConfigured) {

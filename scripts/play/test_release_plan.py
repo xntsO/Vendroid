@@ -33,15 +33,26 @@ class ReleasePlanTest(unittest.TestCase):
 
     def test_prerelease_uses_beta_capabilities_and_same_version_code_sequence(self):
         plan = self.plan(self.release(prerelease=True, tag="v0.2.0-beta.1"))
-        self.assertEqual(("beta", "preview", 31, "0.2.0-beta"),
+        self.assertEqual(("beta", "preview", 31, "0.2.0-beta.1"),
                          (plan.track, plan.variant, plan.version_code, plan.version_name))
         self.assertEqual("bundleFossPreview", plan.bundle_task)
+        self.assertEqual("-beta.1", plan.outputs()["beta_suffix"])
         self.assertEqual("io.github.xntso.vendroid", plan.outputs()["package_name"])
 
     def test_unconfigured_automatic_release_does_not_build_or_publish(self):
         plan = self.plan(self.release(), enabled=False)
         self.assertFalse(plan.execute)
         self.assertFalse(plan.publish)
+
+    def test_prerelease_tag_must_be_numbered_for_the_checked_in_version(self):
+        for tag in ("v0.2.0-beta", "v0.2.0-beta.0", "v0.2.0-rc.1", "v0.2.0-beta.1.1", "v0.3.0-beta.1"):
+            with self.subTest(tag=tag), self.assertRaises(ReleasePlanError):
+                self.plan(self.release(prerelease=True, tag=tag))
+
+    def test_stable_and_manual_plans_have_no_numbered_suffix(self):
+        self.assertEqual("", self.plan(self.release()).outputs()["beta_suffix"])
+        manual = self.plan({"inputs": {"mode": "prepare", "track": "beta"}}, "workflow_dispatch")
+        self.assertEqual("-beta", manual.outputs()["beta_suffix"])
 
     def test_stable_release_skips_play_until_production_is_enabled(self):
         plan = self.plan(self.release(), production=False)
@@ -82,7 +93,7 @@ class ReleasePlanTest(unittest.TestCase):
             self.plan(self.release(), source=source)
         self.assertFalse(self.plan({"inputs": {"mode": "prepare", "track": "production"}},
                                   "workflow_dispatch", source=source).publish)
-        self.assertTrue(self.plan(self.release(prerelease=True), source=source).publish)
+        self.assertTrue(self.plan(self.release(prerelease=True, tag="v0.2.0-beta.1"), source=source).publish)
         event = {"inputs": {"mode": "publish", "track": "production"}}
         for published, sha in ((None, None), (self.release(draft=True)["release"], COMMIT),
                                (self.release(prerelease=True)["release"], COMMIT),
