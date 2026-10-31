@@ -32,7 +32,7 @@ Candidate distribution consumes its versionCode. The first 0.2.0 candidate used 
 - Stable MBR, Preview GPT, and GPT candidate with emulated UHCI and xHCI USB controllers. The candidate runs with the stable package and stable capacity gate.
 - Installation with an explicit assertion of the requested partition style, exFAT label, allocation size, and reserved space.
 - Primary and backup GPT CRCs, matching partition tables, disk identities, and partition boundaries.
-- `fsck.exfat` from exfatprogs accepting the data partition before every host mount, independent of Vendroid's formatter and the FUSE driver.
+- `fsck.exfat` from exfatprogs accepting the data partition before every host mount, independent of Vendroid's formatter and the FUSE driver. Volumes now use the recommended 5836-byte up-case table. Earlier Vendroid versions wrote a 128 KiB table, whose size overflows exfatprogs 1.2.2's checksum length and is falsely reported as corrupted.
 - Ordinary nested files, including binary and Unicode-name files, hashed from the mounted exFAT partition before and after maintenance.
 - USB detach and reattach, permission acquisition, and installed-version detection.
 - Healthy repair and separate primary/backup GPT-header damage and repair.

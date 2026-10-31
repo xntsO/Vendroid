@@ -292,17 +292,7 @@ class ExFatFormatter(
             return checksum
         }
 
-        fun buildUpcaseTable(): ByteArray {
-            val table = ByteArray(65536 * 2)
-            for (codePoint in 0..0xFFFF) {
-                val mapped = when (codePoint) {
-                    in 'a'.code..'z'.code -> codePoint - 32
-                    else -> codePoint
-                }
-                table.writeUInt16Le(codePoint * 2, mapped)
-            }
-            return table
-        }
+        fun buildUpcaseTable(): ByteArray = ExFatUpcaseTable.bytes.copyOf()
 
         fun upcaseChecksum(upcaseTable: ByteArray): UInt {
             var checksum = 0u
