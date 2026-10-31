@@ -139,6 +139,32 @@ Production retains the existing physical release gate. Validate the candidate,
 record the affected physical USB checks and the owner's promotion decision, then
 publish the GitHub release explicitly. CI success alone is not physical evidence.
 
+## Release process
+
+All work lands on `main`. There is no long-lived preview branch. Stable and beta are
+build variants of the same code, separated by `IS_PREVIEW` and `GPT_ENABLED`.
+
+- Beta stays ahead of stable. No stable release ships from code that did not pass
+  through beta. A feature moves to stable when its validation gate passes.
+- A beta is a published GitHub prerelease with a numbered tag, such as `v0.3.0-beta.1`,
+  matching the checked-in `versionName`. CI builds keep the plain `-beta` suffix, and
+  distribution takes the number from the tag.
+- Right after each stable release, raise `versionName` to the next version and publish
+  a beta with a higher code. Devices receive the highest eligible code, so a beta with
+  a lower code than stable would reach nobody.
+- Urgent stable fixes land on `main` first, then on a temporary `release/x.y` branch
+  cut from the stable tag. The fix takes a code above the current beta, so publish a
+  new beta straight after it.
+
+Play shows its join option on the app listing only for open testing, and only once
+the app has an active production version. After the first stable release, configure
+open testing in the Console and set `VENDROID_PLAY_BETA_TRACK=beta`. Joining replaces
+the installed app with the beta, because both use one package.
+
+The website's direct APK card stays inactive until the first stable GitHub release.
+At that point it needs one edit and one site deployment to link to
+`releases/latest/download/vendroid.apk`. It then follows every later stable release.
+
 ## Ventoy payload updates
 
 Ventoy payload checks are independent of Google Play app updates. The app reads
