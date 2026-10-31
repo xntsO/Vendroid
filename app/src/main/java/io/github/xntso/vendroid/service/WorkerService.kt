@@ -335,6 +335,10 @@ class WorkerService : LifecycleService() {
             mForceInstall = intent.getBooleanExtra(Intents.EXTRA_FORCE_INSTALL, false)
             mVentoyOptions = intent.safeParcelableExtra<VentoyJobOptions>(Intents.EXTRA_VENTOY_OPTIONS)
                 ?: VentoyJobOptions(forceInstall = mForceInstall)
+            // Raw image writing is retired, so a stale or default operation must not run it.
+            require(Intents.isVentoyOperation(mOperation)) {
+                "Unsupported operation: $mOperation"
+            }
 
             val fileName = mSourceUri.getFileName(this@WorkerService) ?: "Unknown file"
             Telemetry.configureScope {
