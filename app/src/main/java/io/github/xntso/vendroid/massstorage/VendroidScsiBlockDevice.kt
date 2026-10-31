@@ -24,6 +24,8 @@ import me.jahnen.libaums.core.driver.scsi.commands.CommandBlockWrapper.Direction
 import me.jahnen.libaums.core.driver.scsi.commands.sense.*
 import me.jahnen.libaums.core.usb.PipeException
 import me.jahnen.libaums.core.usb.UsbCommunication
+import me.jahnen.libaums.libusbcommunication.LibusbError
+import me.jahnen.libaums.libusbcommunication.LibusbException
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -126,7 +128,11 @@ internal class VendroidScsiBlockDevice(
     }
 
     @Throws(IOException::class)
-    private fun transferCommand(command: CommandBlockWrapper, inBuffer: ByteBuffer) {
+    private fun transferCommand(
+        command: CommandBlockWrapper,
+        inBuffer: ByteBuffer,
+        statusTimeouts: Int = 0,
+    ) {
         var lastException: Exception? = null
         val start = inBuffer.position()
         val limit = inBuffer.limit()
@@ -134,12 +140,15 @@ internal class VendroidScsiBlockDevice(
             inBuffer.limit(limit)
             inBuffer.position(start)
             try {
-                val result = transferOneCommand(command, inBuffer)
+                val result = transferOneCommand(command, inBuffer, statusTimeouts)
                 val senseWasNotIssued = handleCommandResult(result)
                 if (senseWasNotIssued) {
                     return
                 }
 
+            } catch (e: CommandStatusTimeout) {
+                // Resetting or replaying would disturb a command the drive may still be running.
+                throw e
             } catch (e: SenseException) {
                 Log.w(TAG, (e.message ?: "SenseException"))
                 when (e) {
@@ -173,9 +182,12 @@ internal class VendroidScsiBlockDevice(
     }
 
     @Throws(IOException::class)
-    private fun transferCommandWithoutDataPhase(command: CommandBlockWrapper) {
+    private fun transferCommandWithoutDataPhase(
+        command: CommandBlockWrapper,
+        statusTimeouts: Int = 0,
+    ) {
         require(command.direction == Direction.NONE) { "Command has a data phase" }
-        transferCommand(command, ByteBuffer.allocate(0))
+        transferCommand(command, ByteBuffer.allocate(0), statusTimeouts)
     }
 
     @Throws(IOException::class)
@@ -229,7 +241,11 @@ internal class VendroidScsiBlockDevice(
     }
 
     @Throws(IOException::class)
-    private fun transferOneCommand(command: CommandBlockWrapper, inBuffer: ByteBuffer): Int {
+    private fun transferOneCommand(
+        command: CommandBlockWrapper,
+        inBuffer: ByteBuffer,
+        statusTimeouts: Int = 0,
+    ): Int {
         val outArray = outBuffer.array()
         Arrays.fill(outArray, 0.toByte())
 
@@ -286,9 +302,7 @@ internal class VendroidScsiBlockDevice(
 
 
         // expecting csw now
-        cswBuffer.clear()
-
-        read = usbCommunication.bulkInTransfer(cswBuffer)
+        read = readCommandStatus(statusTimeouts)
         if (read != CommandStatusWrapper.SIZE) {
             throw IOException("Unexpected command size while expecting csw")
         }
@@ -311,6 +325,25 @@ internal class VendroidScsiBlockDevice(
         return csw.bCswStatus.toInt()
     }
 
+    /**
+     * USB transfers have a fixed timeout, and one that expires has taken no status bytes, so
+     * a slow command can be awaited by reading again rather than resetting the drive.
+     */
+    @Throws(IOException::class)
+    private fun readCommandStatus(statusTimeouts: Int): Int {
+        var timeoutsLeft = statusTimeouts
+        while (true) {
+            cswBuffer.clear()
+            try {
+                return usbCommunication.bulkInTransfer(cswBuffer)
+            } catch (e: LibusbException) {
+                if (e.libusbError != LibusbError.TIMEOUT || statusTimeouts == 0) throw e
+                if (timeoutsLeft == 0) throw CommandStatusTimeout(e)
+                timeoutsLeft--
+            }
+        }
+    }
+
     @Synchronized
     @Throws(IOException::class)
     override fun read(deviceOffset: Long, buffer: ByteBuffer) {
@@ -328,9 +361,15 @@ internal class VendroidScsiBlockDevice(
     override fun synchronizeCache() {
         check(blockSize > 0 && blocks > 0) { "SCSI device is not initialized" }
         try {
-            transferCommandWithoutDataPhase(ScsiSynchronizeCache(lun))
+            transferCommandWithoutDataPhase(
+                ScsiSynchronizeCache(lun),
+                statusTimeouts = SYNC_STATUS_TIMEOUTS,
+            )
         } catch (e: IllegalCommand) {
             // The command is optional. Bridges that reject it give us no way to wait for them.
+            val asc = e.additionalSenseCode.toInt()
+            val unsupported = asc == ASC_INVALID_OPCODE || asc == ASC_INVALID_CDB_FIELD
+            if (!unsupported || e.additionalSenseCodeQualifier.toInt() != 0) throw e
             Log.i(TAG, e.message ?: "Device does not support SYNCHRONIZE CACHE")
         }
     }
@@ -370,9 +409,16 @@ internal class VendroidScsiBlockDevice(
 
     companion object {
         private const val MAX_RECOVERY_ATTEMPTS = 5
+        // With the transport's 5 second timeout this allows a flush one minute to finish.
+        private const val SYNC_STATUS_TIMEOUTS = 11
+        private const val ASC_INVALID_OPCODE = 0x20
+        private const val ASC_INVALID_CDB_FIELD = 0x24
         private val TAG = VendroidScsiBlockDevice::class.java.simpleName
     }
 }
+
+private class CommandStatusTimeout(cause: IOException) :
+    IOException("USB drive did not finish its command in time", cause)
 
 internal interface CacheSynchronizingBlockDevice {
     /** Returns once the device reports that earlier writes reached stable storage. */
