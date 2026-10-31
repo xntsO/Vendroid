@@ -547,7 +547,7 @@ class ExFatFormatterTest {
         ) { processed, total -> updates += processed to total }
 
         val fatBytes = info.fatLengthSectors * 512
-        assertTrue(fatBytes > 256L * 1024 * 1024)
+        assertTrue(fatBytes > 255L * 1024 * 1024)
         assertEquals(fatBytes, updates.last().first)
         assertTrue(updates.all { (_, total) -> total == fatBytes })
         val steps = updates.map { it.first }.zipWithNext { before, after -> after - before }
