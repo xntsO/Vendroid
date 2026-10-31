@@ -22,7 +22,7 @@ To build a signed GPT candidate after automatic validation passes, use:
 
 This requires the existing release-signing secrets and uploads an APK with checksums, package metadata, signer details, and the tested commit. It does not publish a release. The candidate uses the stable package `io.github.xntso.vendroid`, enables GPT, and keeps `IS_PREVIEW=false`, so it exercises the future stable path. Its name is `0.2.0-gpt-candidate`. CI uses debug signing for its Android lifecycle tests; the separately signed candidate is the APK for the physical check and upgrade check.
 
-Candidate distribution consumes its versionCode. The first 0.2.0 candidate used code 30, following 0.1.2 code 29, and the first `0.2.0-beta` used code 31. A later distributed APK, including the final stable release, must use a greater code, and signed builds fail at or below `VENDROID_HIGHEST_DISTRIBUTED_CODE`. Record every candidate's actual metadata in the [Release 2 evidence record](release-evidence/0.2.0.md).
+Candidate distribution consumes its versionCode. The first 0.2.0 candidate used code 30, following 0.1.2 code 29, the first `0.2.0-beta` used code 31, and `0.2.0-beta.2` used code 32. A later distributed APK, including the final stable release, must use a greater code, and signed builds fail at or below `VENDROID_HIGHEST_DISTRIBUTED_CODE`. Record every candidate's actual metadata in the [Release 2 evidence record](release-evidence/0.2.0.md).
 
 ## Automated evidence
 
