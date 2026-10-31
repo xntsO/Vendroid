@@ -1,5 +1,6 @@
 package io.github.xntso.vendroid.ventoy
 
+import io.github.xntso.vendroid.massstorage.CacheSynchronizingBlockDevice
 import io.github.xntso.vendroid.utils.exception.UsbCommunicationException
 import me.jahnen.libaums.core.driver.BlockDeviceDriver
 import java.io.EOFException
@@ -85,6 +86,15 @@ class BlockDeviceRawBlockDevice(
             currentOffset += copyLength
             inputOffset += copyLength
             remaining -= copyLength
+        }
+    }
+
+    override fun flush() {
+        val cachingDriver = driver as? CacheSynchronizingBlockDevice ?: return
+        try {
+            cachingDriver.synchronizeCache()
+        } catch (exception: IOException) {
+            throw UsbCommunicationException(exception)
         }
     }
 

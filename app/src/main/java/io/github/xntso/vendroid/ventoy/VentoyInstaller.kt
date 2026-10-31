@@ -56,6 +56,7 @@ class VentoyInstaller(
             label = options.label,
             clusterSize = options.clusterSize,
         )
+        device.flush()
 
         onProgress(VentoyInstallProgress(VentoyInstallStage.Verifying))
         verifyPartitionLayout(device, plan)
@@ -118,6 +119,7 @@ class VentoyInstaller(
                 preservedVentoyUuid = preservedUuid,
                 preservedDiskSignature = preservedDiskSignature,
             )
+            device.flush()
             onProgress(VentoyInstallProgress(VentoyInstallStage.Verifying))
             verifyGpt(device, plan)
             onProgress(VentoyInstallProgress(VentoyInstallStage.Complete))
@@ -150,6 +152,7 @@ class VentoyInstaller(
 
         onProgress(VentoyInstallProgress(VentoyInstallStage.WritingVentoyPayload))
         writeVentoyDiskImage(device, plan, onProgress)
+        device.flush()
 
         onProgress(VentoyInstallProgress(VentoyInstallStage.Verifying))
         verifyPartitionLayout(device, plan)

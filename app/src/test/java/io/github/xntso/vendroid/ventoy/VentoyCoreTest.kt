@@ -3,6 +3,7 @@ package io.github.xntso.vendroid.ventoy
 import android.net.Uri
 import io.github.xntso.vendroid.MemoryBufferBlockDeviceDriver
 import io.github.xntso.vendroid.VendroidApplication
+import io.github.xntso.vendroid.massstorage.CacheSynchronizingBlockDevice
 import io.github.xntso.vendroid.utils.exception.UsbCommunicationException
 import me.jahnen.libaums.core.driver.BlockDeviceDriver
 import org.junit.jupiter.api.Assertions.assertArrayEquals
@@ -1026,6 +1027,75 @@ class VentoyInstallerTest {
     }
 
     @Test
+    fun `install syncs the drive after its last write and before verifying`() {
+        for (style in VentoyPartitionStyle.entries) {
+            assertSyncedBeforeVerifying(memoryDevice(40L * 1024 * 1024)) { device, onProgress ->
+                VentoyInstaller(syntheticPayload()).install(
+                    device,
+                    VentoyInstallOptions(forceInstall = true, partitionStyle = style),
+                    onProgress,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `update syncs the drive after its last write and before verifying`() {
+        assertSyncedBeforeVerifying(installedGptDevice()) { device, onProgress ->
+            VentoyInstaller(syntheticPayload()).upgrade(device, onProgress)
+        }
+    }
+
+    @Test
+    fun `metadata repair syncs the drive after its last write and before verifying`() {
+        val device = memoryDevice(40L * 1024 * 1024)
+        VentoyInstaller(syntheticPayload("1.1.17")).install(
+            device,
+            VentoyInstallOptions(forceInstall = true, partitionStyle = VentoyPartitionStyle.Gpt),
+        )
+        device.write(512 + 24, byteArrayOf(0x7F))
+
+        assertSyncedBeforeVerifying(device) { ordered, onProgress ->
+            VentoyInstaller(syntheticPayload("1.1.16")).upgrade(ordered, onProgress)
+        }
+    }
+
+    @Test
+    fun `a failed sync never reports a completed operation`() {
+        val device = OperationOrderDevice(
+            memoryDevice(40L * 1024 * 1024),
+            flushFailure = IOException("Disconnected during sync"),
+        )
+        val stages = mutableListOf<VentoyInstallStage>()
+
+        assertThrows<IOException> {
+            VentoyInstaller(syntheticPayload()).install(
+                device,
+                VentoyInstallOptions(forceInstall = true),
+            ) { stages += it.stage }
+        }
+
+        assertFalse(VentoyInstallStage.Verifying in stages)
+        assertFalse(VentoyInstallStage.Complete in stages)
+    }
+
+    private fun assertSyncedBeforeVerifying(
+        device: RawBlockDevice,
+        operation: (RawBlockDevice, (VentoyInstallProgress) -> Unit) -> Unit,
+    ) {
+        val ordered = OperationOrderDevice(device)
+
+        operation(ordered) { progress ->
+            if (progress.stage == VentoyInstallStage.Verifying) ordered.operations += "verify"
+        }
+
+        val lastWrite = ordered.operations.lastIndexOf("write")
+        val firstVerify = ordered.operations.indexOf("verify")
+        assertTrue(lastWrite in 0 until firstVerify)
+        assertTrue("flush" in ordered.operations.subList(lastWrite, firstVerify))
+    }
+
+    @Test
     fun `post-write verification rejects a corrupted VTOYEFI payload`() {
         val backing = memoryDevice(40L * 1024 * 1024)
         val plan = VentoyDiskLayout.plan(backing.sizeBytes, backing.blockSize, "1.1.16")
@@ -1056,6 +1126,30 @@ class BlockDeviceRawBlockDeviceTest {
         assertArrayEquals(bytes, readBack)
         assertEquals(1, driver.writeCalls)
         assertEquals(1, driver.readCalls)
+    }
+
+    @Test
+    fun `flush waits for a caching driver and classifies its failures`() {
+        val driver = SynchronizingBlockDeviceDriver()
+        val device = BlockDeviceRawBlockDevice(driver)
+
+        device.flush()
+        assertEquals(1, driver.synchronizeCalls)
+
+        val failure = IOException("Disconnected during sync")
+        driver.failure = failure
+        val exception = assertThrows<UsbCommunicationException> { device.flush() }
+        assertEquals(failure, exception.cause)
+    }
+
+    @Test
+    fun `flush is a no-op for a driver without a cache to synchronize`() {
+        val driver = CountingBlockDeviceDriver(blocks = 16, blockSize = 512)
+
+        BlockDeviceRawBlockDevice(driver).flush()
+
+        assertEquals(0, driver.readCalls)
+        assertEquals(0, driver.writeCalls)
     }
 
     @Test
@@ -1096,6 +1190,22 @@ class BlockDeviceRawBlockDeviceTest {
     private fun transferFailure() = IOException(
         "MAX_RECOVERY_ATTEMPTS Exceeded while trying to transfer command to device"
     )
+}
+
+private class SynchronizingBlockDeviceDriver : BlockDeviceDriver, CacheSynchronizingBlockDevice {
+    override val blockSize = 512
+    override val blocks = 16L
+    var failure: IOException? = null
+    var synchronizeCalls = 0
+
+    override fun init() = Unit
+    override fun read(deviceOffset: Long, buffer: ByteBuffer) = Unit
+    override fun write(deviceOffset: Long, buffer: ByteBuffer) = Unit
+
+    override fun synchronizeCache() {
+        failure?.let { throw it }
+        synchronizeCalls++
+    }
 }
 
 private class CountingBlockDeviceDriver(
@@ -1311,6 +1421,24 @@ private class ReadFailureDevice(
     override fun read(offset: Long, destination: ByteArray, destinationOffset: Int, length: Int) {
         if (offset <= unreadable.last && offset + length > unreadable.first) throw failure
         delegate.read(offset, destination, destinationOffset, length)
+    }
+}
+
+private class OperationOrderDevice(
+    private val delegate: RawBlockDevice,
+    private val flushFailure: IOException? = null,
+) : RawBlockDevice by delegate {
+    val operations = mutableListOf<String>()
+
+    override fun write(offset: Long, source: ByteArray, sourceOffset: Int, length: Int) {
+        operations += "write"
+        delegate.write(offset, source, sourceOffset, length)
+    }
+
+    override fun flush() {
+        operations += "flush"
+        flushFailure?.let { throw it }
+        delegate.flush()
     }
 }
 

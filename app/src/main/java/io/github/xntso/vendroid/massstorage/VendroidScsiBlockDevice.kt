@@ -37,7 +37,10 @@ import java.util.Arrays
  * @author mjahnen, Derpalus
  * @see com.github.mjdev.libaums.driver.scsi.commands
  */
-internal class VendroidScsiBlockDevice(private val usbCommunication: UsbCommunication, private val lun: Byte) : BlockDeviceDriver {
+internal class VendroidScsiBlockDevice(
+    private val usbCommunication: UsbCommunication,
+    private val lun: Byte,
+) : BlockDeviceDriver, CacheSynchronizingBlockDevice {
     private val outBuffer: ByteBuffer = ByteBuffer.allocate(31)
     private val cswBuffer: ByteBuffer = ByteBuffer.allocate(CommandStatusWrapper.SIZE)
 
@@ -320,6 +323,18 @@ internal class VendroidScsiBlockDevice(private val usbCommunication: UsbCommunic
         transferBlocks(deviceOffset, buffer, Direction.OUT)
     }
 
+    @Synchronized
+    @Throws(IOException::class)
+    override fun synchronizeCache() {
+        check(blockSize > 0 && blocks > 0) { "SCSI device is not initialized" }
+        try {
+            transferCommandWithoutDataPhase(ScsiSynchronizeCache(lun))
+        } catch (e: IllegalCommand) {
+            // The command is optional. Bridges that reject it give us no way to wait for them.
+            Log.i(TAG, e.message ?: "Device does not support SYNCHRONIZE CACHE")
+        }
+    }
+
     private fun transferBlocks(deviceOffset: Long, buffer: ByteBuffer, direction: Direction) {
         check(blockSize > 0 && blocks > 0) { "SCSI device is not initialized" }
         require(buffer.remaining() % blockSize == 0) { "Buffer must contain whole logical blocks" }
@@ -356,6 +371,21 @@ internal class VendroidScsiBlockDevice(private val usbCommunication: UsbCommunic
     companion object {
         private const val MAX_RECOVERY_ATTEMPTS = 5
         private val TAG = VendroidScsiBlockDevice::class.java.simpleName
+    }
+}
+
+internal interface CacheSynchronizingBlockDevice {
+    /** Returns once the device reports that earlier writes reached stable storage. */
+    @Throws(IOException::class)
+    fun synchronizeCache()
+}
+
+private class ScsiSynchronizeCache(lun: Byte) : CommandBlockWrapper(0, Direction.NONE, lun, 10) {
+    override fun serialize(buffer: ByteBuffer) {
+        super.serialize(buffer)
+        buffer.order(ByteOrder.BIG_ENDIAN)
+        // A zero LBA and block count cover the whole medium, including above 2 TiB.
+        buffer.put(0x35).put(0).putInt(0).put(0).putShort(0).put(0)
     }
 }
 

@@ -354,6 +354,63 @@ class VendroidScsiBlockDeviceTest {
     }
 
     @Test
+    fun `cache synchronization covers the whole medium with a ten byte command`() {
+        val usb = FakeUsbCommunication(THREE_TIB_BLOCKS - 1)
+        val device = initialized(usb)
+
+        device.synchronizeCache()
+
+        assertEquals(0x35, usb.commands.last().opcode)
+        assertEquals(TEST_LUN.toInt(), usb.commands.last().lun)
+        assertEquals(0, usb.resetCount)
+    }
+
+    @Test
+    fun `a device without cache synchronization is not treated as a failed drive`() {
+        val usb = FakeUsbCommunication(4095)
+        val device = initialized(usb)
+        usb.fault = Fault.COMMAND_FAILED
+        usb.faultOpcode = 0x35
+        usb.senseKey = 5
+        usb.senseAsc = 0x20 // Invalid command operation code.
+        val commandsBeforeSync = usb.commands.size
+
+        device.synchronizeCache()
+
+        assertEquals(listOf(0x35, 0x03), usb.commands.drop(commandsBeforeSync).map { it.opcode })
+        assertEquals(0, usb.resetCount)
+    }
+
+    @Test
+    fun `cache synchronization failures reach the caller`() {
+        val usb = FakeUsbCommunication(4095)
+        val device = initialized(usb)
+        usb.fault = Fault.COMMAND_FAILED
+        usb.faultOpcode = 0x35
+        usb.senseAsc = 0x0c // Write error.
+        usb.faultsRemaining = 1 // A replay would succeed, so assert that the failure escapes.
+
+        val error = assertThrows<MediumError> { device.synchronizeCache() }
+
+        assertEquals(3, error.senseKey.toInt())
+    }
+
+    @Test
+    fun `retry after a bad CSW resets and replays cache synchronization`() {
+        val usb = FakeUsbCommunication(4095)
+        val device = initialized(usb)
+        usb.fault = Fault.BAD_TAG
+        usb.faultOpcode = 0x35
+        usb.faultsRemaining = 1
+        val commandsBeforeSync = usb.commands.size
+
+        device.synchronizeCache()
+
+        assertEquals(listOf(0x35, 0x35), usb.commands.drop(commandsBeforeSync).map { it.opcode })
+        assertTrue(usb.resetCount > 0)
+    }
+
+    @Test
     fun `retry after a bad CSW resets the transaction and replays into the original buffer range`() {
         val usb = FakeUsbCommunication(4095)
         val device = initialized(usb)
@@ -519,7 +576,7 @@ class VendroidScsiBlockDeviceTest {
             val opcode = cdb.get(0).toInt() and 0xff
             val expectedLength = when (opcode) {
                 0x00, 0x03, 0x12 -> 6
-                0x25, 0x28, 0x2a -> 10
+                0x25, 0x28, 0x2a, 0x35 -> 10
                 0x88, 0x8a, 0x9e -> 16
                 else -> throw AssertionError("Unexpected SCSI opcode $opcode")
             }
@@ -543,7 +600,7 @@ class VendroidScsiBlockDeviceTest {
                     lba = 0
                     count = 0
                     val expectedBytes = when (opcode) {
-                        0x00 -> 0
+                        0x00, 0x35 -> 0
                         0x03 -> 18
                         0x12 -> 36
                         0x25 -> 8
@@ -551,6 +608,11 @@ class VendroidScsiBlockDeviceTest {
                         else -> throw AssertionError("Unexpected opcode $opcode")
                     }
                     assertEquals(expectedBytes, transferBytes)
+                    if (opcode == 0x35) {
+                        assertEquals(0, cdb.get(1).toInt(), "SYNCHRONIZE CACHE must not return early")
+                        assertEquals(0, cdb.getInt(2), "SYNCHRONIZE CACHE start LBA")
+                        assertEquals(0, cdb.getShort(7).toInt(), "SYNCHRONIZE CACHE block count")
+                    }
                     if (opcode == 0x03) {
                         assertEquals(18, cdb.get(4).toInt() and 0xff, "REQUEST SENSE allocation length")
                     }
