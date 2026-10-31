@@ -534,7 +534,7 @@ class ExFatFormatterTest {
     }
 
     @Test
-    fun `formatting reports each mebibyte of FAT zeroing`() {
+    fun `formatting reports each mebibyte of the FAT and allocation bitmap`() {
         val sectors = 2L * 1024 * 1024 * 1024 * 1024 / 512 - 2048
         val device = DiscardingRawBlockDevice((2048 + sectors) * 512)
         val updates = mutableListOf<Pair<Long, Long>>()
@@ -547,11 +547,53 @@ class ExFatFormatterTest {
         ) { processed, total -> updates += processed to total }
 
         val fatBytes = info.fatLengthSectors * 512
+        val bitmapClusters = info.upcaseTableFirstCluster - info.allocationBitmapFirstCluster
+        val totalBytes = fatBytes + bitmapClusters * info.clusterSizeBytes
         assertTrue(fatBytes > 255L * 1024 * 1024)
-        assertEquals(fatBytes, updates.last().first)
-        assertTrue(updates.all { (_, total) -> total == fatBytes })
+        assertEquals(totalBytes, updates.last().first)
+        assertTrue(updates.all { (_, total) -> total == totalBytes })
         val steps = updates.map { it.first }.zipWithNext { before, after -> after - before }
         assertTrue(steps.all { it in 1..1024L * 1024 })
+    }
+
+    @Test
+    fun `metadata clusters are chained in the FAT and marked in the bitmap`() {
+        val device = memoryDevice(64L * 1024 * 1024)
+        val plan = VentoyDiskLayout.plan(device.sizeBytes, device.blockSize, "1.1.16")
+
+        val info = ExFatFormatter().format(
+            device = device,
+            partitionStartSector = plan.partition1StartSector,
+            partitionSectorCount = plan.partition1SectorCount,
+        )
+
+        val start = plan.partition1StartSector * 512
+        val fat = device.readBytes(start + info.fatOffsetSector * 512, info.fatLengthSectors.toInt() * 512)
+        val endOfChain = 0xFFFF_FFFFL
+        val expected = buildMap {
+            put(0L, 0xFFFF_FFF8L)
+            put(1L, endOfChain)
+            for ((first, next) in listOf(
+                info.allocationBitmapFirstCluster to info.upcaseTableFirstCluster,
+                info.upcaseTableFirstCluster to info.rootDirectoryFirstCluster,
+            )) {
+                for (cluster in first until next - 1) put(cluster, cluster + 1)
+                put(next - 1, endOfChain)
+            }
+            put(info.rootDirectoryFirstCluster, endOfChain)
+            put(info.rootDirectoryFirstCluster + 1, 0L)
+        }
+        for ((cluster, value) in expected) {
+            assertEquals(value, fat.readUInt32Le(cluster.toInt() * 4), "FAT entry $cluster")
+        }
+
+        val heap = start + info.clusterHeapOffsetSector * 512
+        val bitmap = device.readBytes(heap, info.clusterSizeBytes)
+        val usedClusters = (info.rootDirectoryFirstCluster - 1).toInt()
+        for (index in 0..usedClusters) {
+            val used = bitmap[index / 8].toInt() and (1 shl (index % 8)) != 0
+            assertEquals(index < usedClusters, used, "Bitmap bit $index")
+        }
     }
 
     @Test
