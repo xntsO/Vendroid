@@ -22,7 +22,7 @@ To build a signed GPT candidate after automatic validation passes, use:
 
 This requires the existing release-signing secrets and uploads an APK with checksums, package metadata, signer details, and the tested commit. It does not publish a release. The candidate uses the stable package `io.github.xntso.vendroid`, enables GPT, and keeps `IS_PREVIEW=false`, so it exercises the future stable path. Its name is `0.2.0-gpt-candidate`. CI uses debug signing for its Android lifecycle tests; the separately signed candidate is the APK for the physical check and upgrade check.
 
-Candidate distribution consumes its versionCode. The first 0.2.0 candidate uses code 30, following 0.1.2 code 29. A later distributed APK, including the final stable release, must use a greater code. Record every candidate's actual metadata in the [Release 2 evidence record](release-evidence/0.2.0.md).
+Candidate distribution consumes its versionCode. The first 0.2.0 candidate used code 30, following 0.1.2 code 29, and the first `0.2.0-beta` used code 31. A later distributed APK, including the final stable release, must use a greater code, and signed builds fail at or below `VENDROID_HIGHEST_DISTRIBUTED_CODE`. Record every candidate's actual metadata in the [Release 2 evidence record](release-evidence/0.2.0.md).
 
 ## Automated evidence
 
@@ -32,6 +32,7 @@ Candidate distribution consumes its versionCode. The first 0.2.0 candidate uses 
 - Stable MBR, Preview GPT, and GPT candidate with emulated UHCI and xHCI USB controllers. The candidate runs with the stable package and stable capacity gate.
 - Installation with an explicit assertion of the requested partition style, exFAT label, allocation size, and reserved space.
 - Primary and backup GPT CRCs, matching partition tables, disk identities, and partition boundaries.
+- `fsck.exfat` from exfatprogs accepting the data partition before every host mount, independent of Vendroid's formatter and the FUSE driver.
 - Ordinary nested files, including binary and Unicode-name files, hashed from the mounted exFAT partition before and after maintenance.
 - USB detach and reattach, permission acquisition, and installed-version detection.
 - Healthy repair and separate primary/backup GPT-header damage and repair.
@@ -102,6 +103,8 @@ Release 3 retains the agreed check on two different real UEFI firmware implement
 The initial 3 TiB checks reproduced a zero-capacity error in libaums 0.10.0. Vendroid now uses an adapted SCSI driver with unsigned READ CAPACITY(10), READ CAPACITY(16), true block counts, and READ(16)/WRITE(16) for high or boundary-crossing addresses. Transfers use bounded zero-offset buffers because libusbcommunication 0.3.0 ignores sliced buffer array offsets. Driver tests exercise serialized USB commands, capacity boundaries, high-address preservation, and transfer buffers. The full 3 TiB Appium cases remain required; use the current revision's CI result as evidence, not this implementation description. Sources: [upstream driver](https://github.com/magnusja/libaums/blob/af89120aa434ccd97b985a6d66420c1b7e30a1ad/libaums/src/main/java/me/jahnen/libaums/core/driver/scsi/ScsiBlockDevice.kt), [pinned USB transport source](https://repo.maven.apache.org/maven2/me/jahnen/libaums/libusbcommunication/0.3.0/libusbcommunication-0.3.0-sources.jar).
 
 Focused regression tests also cover primary-header read failure with a valid GPT backup, editable GPT names, refusal to replace an unknown-version payload, metadata-only repair for unknown/newer GPT versions, and preserving sectors 2040 through 2047 by excluding them from update writes. Interrupted updates can still damage other boot or payload regions; these tests do not establish general power-loss recovery.
+
+Further regression tests cover exFAT sizes whose cluster count would otherwise oscillate forever, a SCSI SYNCHRONIZE CACHE after the last write and before verification on install, update, and metadata repair, tolerance of devices that reject that optional command, and refusal of an unusable payload before any write. These tests exercise the serialized commands and their order. Emulated USB has no real volatile cache, so they do not prove that a physical drive's data survives unplugging. Record that gap with the hardware evidence.
 
 Stable GPT and large-capacity permissions are separate. Stable GPT remains disabled, and stable and the GPT candidate refuse drives above 2 TiB. Installation exposes the partition-style selector before Advanced options, with MBR Recommended as the default. The candidate allows ordinary GPT validation while retaining the stable capacity gate. When stable GPT is enabled, validate GPT in the optimized stable package and record the final physical promotion checks. No stable promotion or release publication is implied by a passing validation run.
 
