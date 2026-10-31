@@ -480,26 +480,29 @@ class ExFatFormatterTest {
     }
 
     @Test
-    fun `each format writes a distinct volume serial to both boot regions`() {
-        val serials = List(2) {
-            val device = memoryDevice(64L * 1024 * 1024)
-            val plan = VentoyDiskLayout.plan(device.sizeBytes, device.blockSize, "1.1.16")
-            val info = ExFatFormatter().format(
-                device = device,
-                partitionStartSector = plan.partition1StartSector,
-                partitionSectorCount = plan.partition1SectorCount,
-                label = "Ventoy",
-            )
-            val offset = plan.partition1StartSector * 512
-            val main = device.readBytes(offset, 12 * 512)
-            val backup = device.readBytes(offset + 12 * 512, 12 * 512)
-            assertEquals(info.volumeSerial, main.readUInt32Le(100))
-            assertArrayEquals(main, backup)
-            assertEquals(ExFatFormatter.bootChecksum(main).toLong(), main.readUInt32Le(11 * 512))
-            info.volumeSerial
+    fun `one random volume serial reaches both boot regions and their checksum`() {
+        val device = memoryDevice(64L * 1024 * 1024)
+        val plan = VentoyDiskLayout.plan(device.sizeBytes, device.blockSize, "1.1.16")
+        val random = object : SecureRandom() {
+            override fun nextInt() = -2
         }
 
-        assertTrue(serials[0] != serials[1])
+        val info = ExFatFormatter(random).format(
+            device = device,
+            partitionStartSector = plan.partition1StartSector,
+            partitionSectorCount = plan.partition1SectorCount,
+        )
+
+        val offset = plan.partition1StartSector * 512
+        val main = device.readBytes(offset, 12 * 512)
+        val backup = device.readBytes(offset + 12 * 512, 12 * 512)
+        assertEquals(0xFFFF_FFFEL, info.volumeSerial)
+        assertEquals(info.volumeSerial, main.readUInt32Le(100))
+        assertArrayEquals(main, backup)
+        assertEquals(
+            ExFatFormatter.bootChecksum(main).toLong() and 0xFFFF_FFFFL,
+            main.readUInt32Le(11 * 512),
+        )
     }
 
     @Test
