@@ -105,11 +105,10 @@ country/region entries selected and `contact@fhas.sa` as the feedback contact.
 Only group owners can view members and their email addresses or post to the group.
 No testers were invited or added manually. Joining the group grants eligibility;
 testers must then opt in on Google Play using the same Google account.
-The Console shows `https://play.google.com/apps/testing/io.github.xntso.vendroid`
-as the future opt-in URL, but it remains inactive until the first beta is published.
-The website's [beta section](https://vendroid.fhas.sa/#beta) links to the group and
-keeps the second step disabled until publication. Enable that button only after
-checking the live Play opt-in page. Group membership alone does not count toward
+The opt-in URL is `https://play.google.com/apps/testing/io.github.xntso.vendroid`.
+The first `0.2.0-beta` is published on the closed track, and the website's
+[beta section](https://vendroid.fhas.sa/#beta) links to both the group and this page.
+Group membership alone does not count toward
 the 12-testers-for-14-days requirement.
 
 The workflow's manual `prepare` mode needs only the existing four release-signing
