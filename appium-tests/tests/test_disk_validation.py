@@ -17,6 +17,7 @@ import struct
 import subprocess
 import tarfile
 import tempfile
+import threading
 import unittest
 from unittest import mock
 import uuid
@@ -444,10 +445,35 @@ class PreservationTests(unittest.TestCase):
             dv.verify_preservation_files(self.root, {"vendroid-preservation/file": "0" * 64})
 
 
+class LoopDetachWaitTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.sys_block = Path(self.temp.name)
+        self.backing = self.sys_block / "loop7" / "loop" / "backing_file"
+        self.backing.parent.mkdir(parents=True)
+        self.backing.write_text("/disk.img\n")
+
+    def test_returns_once_the_kernel_releases_the_device(self):
+        timer = threading.Timer(0.1, self.backing.unlink)
+        timer.start()
+        self.addCleanup(timer.join)
+
+        dv._wait_for_detach("/dev/loop7", self.sys_block, timeout=5)
+
+        self.assertFalse(self.backing.exists())
+
+    def test_device_that_stays_attached_fails_after_the_timeout(self):
+        with self.assertRaisesRegex(ValueError, "/dev/loop7 stayed attached"):
+            dv._wait_for_detach("/dev/loop7", self.sys_block, timeout=0)
+
+
 class MountTests(unittest.TestCase):
     def setUp(self):
         self.enterContext(mock.patch.object(dv.os, "getuid", return_value=1001, create=True))
         self.enterContext(mock.patch.object(dv.os, "getgid", return_value=1002, create=True))
+        # Runners have their own loop devices, so the fake one must not reach real sysfs.
+        self.wait_for_detach = self.enterContext(mock.patch.object(dv, "_wait_for_detach"))
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.image = make_image(Path(self.temp.name) / "disk.img")
@@ -518,6 +544,17 @@ class MountTests(unittest.TestCase):
                     self.fail("must not enter body")
         self.assertIn("--detach", self.calls[-1])
         self.assertFalse(any("umount" in command for command in self.calls))
+
+    def test_cleanup_waits_for_the_kernel_after_requesting_detach(self):
+        detached = []
+        self.wait_for_detach.side_effect = lambda loop: detached.append(
+            any("--detach" in command for command in self.calls))
+        with mock.patch.object(dv.sys, "platform", "linux"), \
+                mock.patch.object(dv.subprocess, "run", side_effect=self.run_command):
+            with self.context():
+                pass
+        self.wait_for_detach.assert_called_once_with("/dev/loop7")
+        self.assertEqual([True], detached)
 
     def test_unmount_failure_still_attempts_detach(self):
         self.failed_command = "umount"
