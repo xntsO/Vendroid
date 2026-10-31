@@ -50,6 +50,7 @@ jobs:
       release_name: ${{ steps.plan.outputs.release_name }}
       bundle_task: ${{ steps.plan.outputs.bundle_task }}
       apk_task: ${{ steps.plan.outputs.apk_task }}
+      beta_suffix: ${{ steps.plan.outputs.beta_suffix }}
       commit: ${{ steps.plan.outputs.commit }}
     steps:
       - uses: actions/checkout@v5
@@ -111,6 +112,7 @@ jobs:
       VENDROID_VERSION_CODE: ${{ needs.plan.outputs.version_code }}
       BUNDLE_TASK: ${{ needs.plan.outputs.bundle_task }}
       APK_TASK: ${{ needs.plan.outputs.apk_task }}
+      VENDROID_BETA_SUFFIX: ${{ needs.plan.outputs.beta_suffix }}
       VENDROID_KEYSTORE_BASE64: ${{ secrets.VENDROID_KEYSTORE_BASE64 }}
       VENDROID_KEYSTORE_PASSWORD: ${{ secrets.VENDROID_KEYSTORE_PASSWORD }}
       VENDROID_KEY_ALIAS: ${{ secrets.VENDROID_KEY_ALIAS }}

@@ -31,6 +31,10 @@ class ReleasePlan:
     execute: bool
 
     @property
+    def beta_suffix(self) -> str:
+        return self.version_name[self.version_name.index("-"):] if self.track == "beta" else ""
+
+    @property
     def bundle_task(self) -> str:
         return "bundleFossPreview" if self.track == "beta" else "bundleFossRelease"
 
@@ -44,6 +48,7 @@ class ReleasePlan:
                for key, value in asdict(self).items()},
             "bundle_task": self.bundle_task,
             "apk_task": self.apk_task,
+            "beta_suffix": self.beta_suffix,
             "package_name": PACKAGE_NAME,
         }
 
@@ -77,6 +82,7 @@ def resolve_plan(
         raise ReleasePlanError("Checkout must match the exact GitHub event commit")
     default_code, base_version = checked_in_version(gradle_source)
     code = default_code
+    version_name = base_version
     if event_name == "release":
         release = event.get("release")
         if not isinstance(release, dict) or event.get("action") != "published":
@@ -91,6 +97,10 @@ def resolve_plan(
             raise ReleasePlanError("Release tag must match the checked-in versionName")
         if track == "production" and release_name != f"v{base_version}":
             raise ReleasePlanError("Stable releases require the exact stable version tag")
+        if track == "beta":
+            if not re.fullmatch(rf"v{re.escape(base_version)}-beta.[1-9][0-9]*", release_name):
+                raise ReleasePlanError("Beta prereleases require a numbered tag such as v0.2.0-beta.2")
+            version_name = release_name[1:]
         # A stable GitHub release must not depend on Play granting production access.
         publish = publishing_enabled and (track != "production" or production_enabled)
         execute = publish
@@ -117,7 +127,8 @@ def resolve_plan(
             raise ReleasePlanError("Set VENDROID_PLAY_PRODUCTION_ENABLED=true after Play grants production access")
         publish = mode == "publish"
         execute = True
-        release_name = base_version + ("-beta" if track == "beta" else "")
+        version_name = base_version + ("-beta" if track == "beta" else "")
+        release_name = version_name
     else:
         raise ReleasePlanError("Only published releases and manual dispatch can distribute bundles")
 
@@ -142,7 +153,7 @@ def resolve_plan(
         track=track,
         variant="preview" if track == "beta" else "release",
         version_code=code,
-        version_name=base_version + ("-beta" if track == "beta" else ""),
+        version_name=version_name,
         release_name=release_name,
         publish=publish,
         execute=execute,
