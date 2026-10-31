@@ -479,10 +479,33 @@ class ExFatFormatterTest {
     }
 
     @Test
+    fun `each format writes a distinct volume serial to both boot regions`() {
+        val serials = List(2) {
+            val device = memoryDevice(64L * 1024 * 1024)
+            val plan = VentoyDiskLayout.plan(device.sizeBytes, device.blockSize, "1.1.16")
+            val info = ExFatFormatter().format(
+                device = device,
+                partitionStartSector = plan.partition1StartSector,
+                partitionSectorCount = plan.partition1SectorCount,
+                label = "Ventoy",
+            )
+            val offset = plan.partition1StartSector * 512
+            val main = device.readBytes(offset, 12 * 512)
+            val backup = device.readBytes(offset + 12 * 512, 12 * 512)
+            assertEquals(info.volumeSerial, main.readUInt32Le(100))
+            assertArrayEquals(main, backup)
+            assertEquals(ExFatFormatter.bootChecksum(main).toLong(), main.readUInt32Le(11 * 512))
+            info.volumeSerial
+        }
+
+        assertTrue(serials[0] != serials[1])
+    }
+
+    @Test
     fun `sizes where FAT growth oscillates the cluster count finish with a valid layout`() {
         for (sample in OSCILLATING_LAYOUTS) {
             val info = assertTimeoutPreemptively(Duration.ofSeconds(30)) {
-                ExFatFormatter().calculateLayout(2048, sample.sectors, sample.clusterBytes, "Ventoy")
+                ExFatFormatter().calculateLayout(2048, sample.sectors, sample.clusterBytes)
             }
 
             assertEquals(sample.clusters, info.clusterCount)
@@ -499,7 +522,7 @@ class ExFatFormatterTest {
             for (step in -2L..2L) {
                 val sectors = sample.sectors + step * sectorsPerCluster
                 val info = assertTimeoutPreemptively(Duration.ofSeconds(30)) {
-                    ExFatFormatter().calculateLayout(2048, sectors, sample.clusterBytes, "Ventoy")
+                    ExFatFormatter().calculateLayout(2048, sectors, sample.clusterBytes)
                 }
                 assertValidExFatGeometry(info, sectors)
             }
@@ -508,7 +531,7 @@ class ExFatFormatterTest {
 
     @Test
     fun `sizes that already converged keep their layout`() {
-        val info = ExFatFormatter().calculateLayout(2048, 31_199_232L, 32 * 1024, "Ventoy")
+        val info = ExFatFormatter().calculateLayout(2048, 31_199_232L, 32 * 1024)
 
         assertEquals(487_428L, info.clusterCount)
         assertEquals(3809L, info.fatLengthSectors)

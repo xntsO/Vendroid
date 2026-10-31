@@ -1,6 +1,7 @@
 package io.github.xntso.vendroid.ventoy
 
-import java.util.Locale
+import java.security.SecureRandom
+
 data class ExFatFormatInfo(
     val partitionOffsetSector: Long,
     val volumeLengthSectors: Long,
@@ -12,10 +13,13 @@ data class ExFatFormatInfo(
     val allocationBitmapFirstCluster: Long,
     val upcaseTableFirstCluster: Long,
     val rootDirectoryFirstCluster: Long,
+    val volumeSerial: Long,
     val bootChecksum: UInt,
 )
 
-class ExFatFormatter {
+class ExFatFormatter(
+    private val random: SecureRandom = SecureRandom(),
+) {
     fun format(
         device: RawBlockDevice,
         partitionStartSector: Long,
@@ -38,11 +42,10 @@ class ExFatFormatter {
             partitionStartSector,
             partitionSectorCount,
             clusterSizeBytes,
-            label,
         )
         val partitionOffsetBytes = partitionStartSector * VentoyDiskLayout.SECTOR_SIZE
 
-        val bootRegion = buildBootRegion(layout, label)
+        val bootRegion = buildBootRegion(layout)
         device.write(partitionOffsetBytes, bootRegion)
         device.write(partitionOffsetBytes + BACKUP_BOOT_REGION_SECTOR * VentoyDiskLayout.SECTOR_SIZE, bootRegion)
 
@@ -62,7 +65,6 @@ class ExFatFormatter {
         partitionOffsetSector: Long,
         partitionSectorCount: Long,
         clusterSizeBytes: Int,
-        label: String,
     ): ExFatFormatInfo {
         val sectorsPerCluster = clusterSizeBytes / VentoyDiskLayout.SECTOR_SIZE
         var clusterCount = 0L
@@ -112,15 +114,15 @@ class ExFatFormatter {
             allocationBitmapFirstCluster = allocationBitmapFirstCluster,
             upcaseTableFirstCluster = upcaseTableFirstCluster,
             rootDirectoryFirstCluster = rootDirectoryFirstCluster,
+            volumeSerial = random.nextInt().toLong() and 0xFFFF_FFFFL,
             bootChecksum = 0u,
         )
-        val checksum = bootChecksum(buildBootRegion(layoutWithoutChecksum, label, includeChecksum = false))
+        val checksum = bootChecksum(buildBootRegion(layoutWithoutChecksum, includeChecksum = false))
         return layoutWithoutChecksum.copy(bootChecksum = checksum)
     }
 
     private fun buildBootRegion(
         layout: ExFatFormatInfo,
-        label: String,
         includeChecksum: Boolean = true,
     ): ByteArray {
         val bootRegion = ByteArray(BOOT_REGION_SECTORS * VentoyDiskLayout.SECTOR_SIZE)
@@ -137,7 +139,7 @@ class ExFatFormatter {
         bootSector.writeUInt32Le(88, layout.clusterHeapOffsetSector)
         bootSector.writeUInt32Le(92, layout.clusterCount)
         bootSector.writeUInt32Le(96, layout.rootDirectoryFirstCluster)
-        bootSector.writeUInt32Le(100, volumeSerial(label))
+        bootSector.writeUInt32Le(100, layout.volumeSerial)
         bootSector.writeUInt16Le(104, 0x0100)
         bootSector.writeUInt16Le(106, 0)
         bootSector[108] = 9
@@ -308,14 +310,6 @@ class ExFatFormatter {
                 checksum = ((checksum and 1u) shl 31) + (checksum shr 1) + (byte.toUInt() and 0xffu)
             }
             return checksum
-        }
-
-        private fun volumeSerial(label: String): Long {
-            var hash = 0x56454E54L
-            label.uppercase(Locale.US).forEach { char ->
-                hash = ((hash shl 5) - hash + char.code) and 0xFFFF_FFFFL
-            }
-            return hash
         }
 
         private fun log2(value: Int): Int {
