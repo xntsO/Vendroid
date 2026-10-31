@@ -2,8 +2,12 @@ package io.github.xntso.vendroid.ventoy
 
 /**
  * The compressed up-case table recommended by the exFAT specification: 5836 bytes with
- * checksum 0xE619D30D. Bytes from exfatprogs mkfs/upcase.c, GPL-2.0-or-later. Other formatters
- * write the same table, so readers and checkers already handle it.
+ * checksum 0xE619D30D. Other formatters write the same table, so readers and checkers already
+ * handle it.
+ *
+ * Bytes from exfatprogs 1.2.2 mkfs/upcase.c:
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ * Copyright (C) 2019 Namjae Jeon <linkinjeon@kernel.org>
  */
 internal object ExFatUpcaseTable {
     val bytes: ByteArray by lazy {
