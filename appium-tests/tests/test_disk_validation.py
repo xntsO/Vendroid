@@ -453,11 +453,14 @@ class MountTests(unittest.TestCase):
         self.image = make_image(Path(self.temp.name) / "disk.img")
         self.calls = []
         self.failed_command = None
+        self.fsck_status = 0
 
     def run_command(self, command, **kwargs):
         self.calls.append(command)
         if self.failed_command and self.failed_command in command:
             raise subprocess.CalledProcessError(1, command)
+        if "fsck.exfat" in command:
+            return subprocess.CompletedProcess(command, self.fsck_status, stdout="check output\n", stderr="")
         return subprocess.CompletedProcess(command, 0, stdout="/dev/loop7\n")
 
     def context(self, writable=False):
@@ -469,7 +472,8 @@ class MountTests(unittest.TestCase):
             with self.context() as root:
                 self.assertIsInstance(root, Path)
                 self.assertTrue(root.is_dir())
-        setup, mount, unmount, detach = self.calls
+        setup, check, mount, unmount, detach = self.calls
+        self.assertEqual(check, ["sudo", "-n", "fsck.exfat", "-n", "/dev/loop7"])
         self.assertEqual(setup[:5], ["sudo", "-n", "losetup", "--find", "--show"])
         self.assertEqual(setup[setup.index("--offset") + 1], str(DATA_START * SECTOR))
         self.assertEqual(setup[setup.index("--sizelimit") + 1], str(DATA_LENGTH * SECTOR))
@@ -491,8 +495,18 @@ class MountTests(unittest.TestCase):
                 with self.context(writable=True):
                     raise RuntimeError("body failed")
         self.assertNotIn("--read-only", self.calls[0])
-        self.assertIn("rw,uid=1001,gid=1002,umask=077,allow_other,default_permissions", self.calls[1])
+        self.assertIn("rw,uid=1001,gid=1002,umask=077,allow_other,default_permissions", self.calls[2])
         self.assertEqual(self.calls[-2][2], "umount")
+        self.assertIn("--detach", self.calls[-1])
+
+    def test_filesystem_check_failure_blocks_mount_and_detaches_loop(self):
+        self.fsck_status = 4
+        with mock.patch.object(dv.sys, "platform", "linux"), \
+                mock.patch.object(dv.subprocess, "run", side_effect=self.run_command):
+            with self.assertRaisesRegex(ValueError, "check output"):
+                with self.context():
+                    self.fail("must not enter body")
+        self.assertFalse(any("mount.exfat-fuse" in command for command in self.calls))
         self.assertIn("--detach", self.calls[-1])
 
     def test_mount_failure_still_detaches_loop(self):
