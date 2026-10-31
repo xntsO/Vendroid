@@ -1,6 +1,6 @@
 Install and manage Ventoy on external USB drives from Android, without root.
 
-Vendroid prepares a USB drive so you can keep multiple boot images on it and choose an image when booting a compatible computer. Use Android's file picker to manage supported boot image files.
+Vendroid prepares a USB drive so you can keep multiple boot images on it and choose an image when booting a compatible computer. Copy images to the drive from a computer or a file manager that can open it.
 
 Features
 • Install Ventoy with an exFAT data partition.
