@@ -41,7 +41,7 @@ env:
   # Public certificate from the signed 0.1.2 APK; see docs/validation.md.
   VENDROID_SIGNER_SHA256: b388ad9d2290967480630cbd4a48f4f8c6784305c05da3541ad780821d9fbeb1
   # Raise when a build leaves CI; see the version code section of docs/google-play.md.
-  VENDROID_HIGHEST_DISTRIBUTED_CODE: '31'
+  VENDROID_HIGHEST_DISTRIBUTED_CODE: '32'
   VM_DIR: /appium-vm
 
 jobs:
