@@ -166,15 +166,18 @@ server-log deletion mechanism or 90-day deletion guarantee.
 ## Version codes and upgrades
 
 All tracks and signed GitHub distributions share one increasing version-code
-sequence. Code 30 was consumed by the first GPT candidate; this preparation starts
-at 31. Increment `defaultVersionCode` before distributing the next distinct version. CI reads
+sequence. Code 30 was consumed by the first GPT candidate and code 31 by the first
+`0.2.0-beta`, built from `6b1cbcb9`, whose tree matches `5ac9b9e` on `main`.
+Increment `defaultVersionCode` before distributing the next distinct version. CI reads
 the code and version name directly from Gradle source. An explicit `VENDROID_VERSION_CODE`
 override must be at least the checked-in default and at most 2100000000.
 
 Do not reuse one code for different beta and production binaries. The publisher
 checks existing bundles, APKs, and tracks before upload and rejects a code that is
-not greater than the highest one returned by Play. Keep a record of distributed
-codes, including artifacts used for physical checks. A failed or repeated upload
+not greater than the highest one returned by Play. Signed artifacts that do not reach
+Play are checked against `VENDROID_HIGHEST_DISTRIBUTED_CODE` in
+`.github/workflows/build-test-debug.yml`. Raise that value whenever a build is
+distributed, including artifacts used for physical checks. A failed or repeated upload
 does not justify overwriting a previously distributed version.
 
 Beta users receive the highest eligible version code. After leaving beta, an
