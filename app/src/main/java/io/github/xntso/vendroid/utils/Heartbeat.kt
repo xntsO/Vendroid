@@ -1,5 +1,6 @@
 package io.github.xntso.vendroid.utils
 
+import android.os.SystemClock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
@@ -10,7 +11,7 @@ import kotlinx.coroutines.launch
 /** Tells a heartbeat when real progress stopped, so it cannot hide a hung worker forever. */
 class ProgressStallDetector(
     private val limitMillis: Long,
-    private val clock: () -> Long = System::currentTimeMillis,
+    private val clock: () -> Long = SystemClock::elapsedRealtime,
 ) {
     private var lastProgressMillis = clock()
 
