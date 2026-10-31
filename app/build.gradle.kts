@@ -24,7 +24,7 @@ val releaseSigningConfigured = listOf(
     releaseKeyAlias,
     releaseKeyPassword,
 ).all { !it.isNullOrBlank() }
-val defaultVersionCode = 31
+val defaultVersionCode = 32
 val vendroidVersionCode = providers.environmentVariable("VENDROID_VERSION_CODE")
     .orElse(defaultVersionCode.toString())
     .map { value ->
@@ -132,6 +132,10 @@ android {
             isDefault = true
             dimension = "store"
         }
+    }
+    dependenciesInfo {
+        // F-Droid and IzzyOnDroid reject this Google-encrypted APK signing block.
+        includeInApk = false
     }
     packaging {
         resources {

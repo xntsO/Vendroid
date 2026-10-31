@@ -40,6 +40,8 @@ env:
   VENTOY_VERSION: '1.1.16'
   # Public certificate from the signed 0.1.2 APK; see docs/validation.md.
   VENDROID_SIGNER_SHA256: b388ad9d2290967480630cbd4a48f4f8c6784305c05da3541ad780821d9fbeb1
+  # Raise when a build leaves CI; see the version code section of docs/google-play.md.
+  VENDROID_HIGHEST_DISTRIBUTED_CODE: '31'
   VM_DIR: /appium-vm
 
 jobs:
@@ -494,7 +496,10 @@ jobs:
 
       - name: Check release readiness
         run: |
-          test "$VENDROID_VERSION_CODE" -gt 29
+          test "$VENDROID_VERSION_CODE" -gt "$VENDROID_HIGHEST_DISTRIBUTED_CODE" || {
+            echo "versionCode $VENDROID_VERSION_CODE was already distributed; increment defaultVersionCode"
+            exit 1
+          }
           if [ "$IS_PLAY_BUNDLE" = true ]; then
             test "$IS_SIGNED_CANDIDATE" != true || { echo 'Choose one signed artifact type per version code'; exit 1; }
             echo "DISTRIBUTION_VERSION=${VENDROID_VERSION}-beta" >> "$GITHUB_ENV"
@@ -504,7 +509,6 @@ jobs:
             echo "DISTRIBUTION_VARIANT=gptCandidate" >> "$GITHUB_ENV"
           else
             test "$GITHUB_REF_NAME" = "v${VENDROID_VERSION}"
-            test "$VENDROID_VERSION_CODE" -gt 30
             grep -q '^val stableGptEnabled = true$' app/build.gradle.kts
             echo "DISTRIBUTION_VERSION=${VENDROID_VERSION}" >> "$GITHUB_ENV"
             echo "DISTRIBUTION_VARIANT=release" >> "$GITHUB_ENV"
