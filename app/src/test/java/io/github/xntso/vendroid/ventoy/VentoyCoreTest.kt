@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.api.assertTimeoutPreemptively
 import org.junit.jupiter.api.extension.ExtendWith
 import org.robolectric.annotation.Config
 import tech.apter.junit.jupiter.robolectric.RobolectricExtension
@@ -25,6 +26,7 @@ import java.io.IOException
 import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.security.SecureRandom
+import java.time.Duration
 import java.util.zip.CRC32
 
 class VentoyLayoutTest {
@@ -474,6 +476,82 @@ class ExFatFormatterTest {
         val bootSector = device.readBytes(plan.partition1StartSector * 512, 512)
         assertEquals(64 * 1024, info.clusterSizeBytes)
         assertEquals(7, bootSector[109].toInt())
+    }
+
+    @Test
+    fun `sizes where FAT growth oscillates the cluster count finish with a valid layout`() {
+        for (sample in OSCILLATING_LAYOUTS) {
+            val info = assertTimeoutPreemptively(Duration.ofSeconds(30)) {
+                ExFatFormatter().calculateLayout(2048, sample.sectors, sample.clusterBytes, "Ventoy")
+            }
+
+            assertEquals(sample.clusters, info.clusterCount)
+            assertEquals(sample.fatSectors, info.fatLengthSectors)
+            assertEquals(sample.heapSector, info.clusterHeapOffsetSector)
+            assertValidExFatGeometry(info, sample.sectors)
+        }
+    }
+
+    @Test
+    fun `sizes around each oscillation keep a valid layout`() {
+        for (sample in OSCILLATING_LAYOUTS) {
+            val sectorsPerCluster = sample.clusterBytes / 512L
+            for (step in -2L..2L) {
+                val sectors = sample.sectors + step * sectorsPerCluster
+                val info = assertTimeoutPreemptively(Duration.ofSeconds(30)) {
+                    ExFatFormatter().calculateLayout(2048, sectors, sample.clusterBytes, "Ventoy")
+                }
+                assertValidExFatGeometry(info, sectors)
+            }
+        }
+    }
+
+    @Test
+    fun `sizes that already converged keep their layout`() {
+        val info = ExFatFormatter().calculateLayout(2048, 31_199_232L, 32 * 1024, "Ventoy")
+
+        assertEquals(487_428L, info.clusterCount)
+        assertEquals(3809L, info.fatLengthSectors)
+        assertEquals(3840L, info.clusterHeapOffsetSector)
+    }
+
+    @Test
+    fun `automatic format completes on a partition that used to hang`() {
+        val sectors = 31_264_448L
+        val device = DiscardingRawBlockDevice((2048 + sectors) * 512)
+
+        val info = assertTimeoutPreemptively(Duration.ofSeconds(30)) {
+            ExFatFormatter().format(device, 2048, sectors)
+        }
+
+        assertEquals(32 * 1024, info.clusterSizeBytes)
+        assertEquals(488_446L, info.clusterCount)
+    }
+
+    private fun assertValidExFatGeometry(info: ExFatFormatInfo, sectors: Long) {
+        val sectorsPerCluster = info.clusterSizeBytes / 512L
+        assertEquals((sectors - info.clusterHeapOffsetSector) / sectorsPerCluster, info.clusterCount)
+        assertEquals(0L, info.clusterHeapOffsetSector % sectorsPerCluster)
+        assertTrue(info.fatLengthSectors * 512 >= (info.clusterCount + 2) * 4)
+        assertTrue(info.fatOffsetSector + info.fatLengthSectors <= info.clusterHeapOffsetSector)
+    }
+
+    private data class OscillatingLayout(
+        val sectors: Long,
+        val clusterBytes: Int,
+        val clusters: Long,
+        val fatSectors: Long,
+        val heapSector: Long,
+    )
+
+    private companion object {
+        private val OSCILLATING_LAYOUTS = listOf(
+            OscillatingLayout(31_264_448L, 32 * 1024, 488_446L, 3817L, 3904L),
+            OscillatingLayout(31_788_800L, 32 * 1024, 496_638L, 3881L, 3968L),
+            OscillatingLayout(62_525_056L, 64 * 1024, 488_446L, 3817L, 3968L),
+            OscillatingLayout(91_490_816L, 128 * 1024, 357_374L, 2793L, 3072L),
+            OscillatingLayout(1_978_168_320L, 256 * 1024, 3_863_550L, 30_185L, 30_720L),
+        )
     }
 }
 
@@ -1105,6 +1183,18 @@ private fun rewriteGptPartitionType(
     }
     header.writeUInt32Le(16, headerCrc)
     device.write(headerSector * 512, header)
+}
+
+/** Accepts a full-size format without allocating the drive it describes. */
+private class DiscardingRawBlockDevice(
+    override val sizeBytes: Long,
+) : RawBlockDevice {
+    override val blockSize: Int = 512
+
+    override fun read(offset: Long, destination: ByteArray, destinationOffset: Int, length: Int) =
+        destination.fill(0, destinationOffset, destinationOffset + length)
+
+    override fun write(offset: Long, source: ByteArray, sourceOffset: Int, length: Int) = Unit
 }
 
 private class CorruptingRawBlockDevice(

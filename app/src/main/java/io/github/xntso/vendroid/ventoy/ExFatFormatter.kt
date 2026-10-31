@@ -58,7 +58,7 @@ class ExFatFormatter {
         return layout
     }
 
-    private fun calculateLayout(
+    internal fun calculateLayout(
         partitionOffsetSector: Long,
         partitionSectorCount: Long,
         clusterSizeBytes: Int,
@@ -66,6 +66,7 @@ class ExFatFormatter {
     ): ExFatFormatInfo {
         val sectorsPerCluster = clusterSizeBytes / VentoyDiskLayout.SECTOR_SIZE
         var clusterCount = 0L
+        var previousClusterCount = -1L
         var fatLengthSectors: Long
         var clusterHeapOffsetSectors: Long
 
@@ -76,6 +77,13 @@ class ExFatFormatter {
             val nextClusterCount = (partitionSectorCount - clusterHeapOffsetSectors) / sectorsPerCluster
             require(nextClusterCount > 0) { "Partition is too small for exFAT" }
             if (nextClusterCount == clusterCount) break
+            // A FAT for N + 1 clusters can move the heap so only N fit, while a FAT for N
+            // leaves room for N + 1. Keep the larger FAT, whose heap holds exactly N clusters.
+            if (nextClusterCount == previousClusterCount && nextClusterCount < clusterCount) {
+                clusterCount = nextClusterCount
+                break
+            }
+            previousClusterCount = clusterCount
             clusterCount = nextClusterCount
         }
 
