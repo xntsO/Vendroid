@@ -557,6 +557,33 @@ class ExFatFormatterTest {
     }
 
     @Test
+    fun `writes the recommended compressed upcase table`() {
+        val table = ExFatFormatter.buildUpcaseTable()
+        assertEquals(5836, table.size)
+        assertEquals(0xE619_D30DL, ExFatFormatter.upcaseChecksum(table).toLong())
+
+        val device = memoryDevice(64L * 1024 * 1024)
+        val plan = VentoyDiskLayout.plan(device.sizeBytes, device.blockSize, "1.1.16")
+        val info = ExFatFormatter().format(
+            device = device,
+            partitionStartSector = plan.partition1StartSector,
+            partitionSectorCount = plan.partition1SectorCount,
+        )
+
+        val heap = plan.partition1StartSector * 512 + info.clusterHeapOffsetSector * 512
+        fun clusterOffset(cluster: Long) = heap + (cluster - 2) * info.clusterSizeBytes
+        val root = device.readBytes(clusterOffset(info.rootDirectoryFirstCluster), 96)
+        assertEquals(0x82, root[64].toInt() and 0xff)
+        assertEquals(0xE619_D30DL, root.readUInt32Le(68))
+        assertEquals(info.upcaseTableFirstCluster, root.readUInt32Le(84))
+        assertEquals(5836L, root.readUInt64Le(88))
+        assertArrayEquals(
+            table,
+            device.readBytes(clusterOffset(info.upcaseTableFirstCluster), table.size),
+        )
+    }
+
+    @Test
     fun `metadata clusters are chained in the FAT and marked in the bitmap`() {
         val device = memoryDevice(64L * 1024 * 1024)
         val plan = VentoyDiskLayout.plan(device.sizeBytes, device.blockSize, "1.1.16")
