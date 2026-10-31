@@ -1,5 +1,6 @@
 package io.github.xntso.vendroid
 
+import android.content.Intent
 import android.net.Uri
 import io.github.xntso.vendroid.massstorage.PreviewUsbDevice
 import io.github.xntso.vendroid.massstorage.UsbMassStorageDeviceDescriptor
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.Test
 import io.github.xntso.vendroid.ventoy.VentoyClusterSize
 import io.github.xntso.vendroid.ventoy.VentoyPartitionStyle
 import org.junit.jupiter.api.extension.ExtendWith
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import tech.apter.junit.jupiter.robolectric.RobolectricExtension
 
@@ -20,6 +22,29 @@ class VentoyIntentTest {
     private val device = UsbMassStorageDeviceDescriptor(
         previewUsbDevice = PreviewUsbDevice("Test USB", "1234:5678"),
     )
+
+    @Test
+    fun `the launcher stays reachable while no activity opens image files`() {
+        val context = RuntimeEnvironment.getApplication()
+        val packageManager = context.packageManager
+        val launcher = Intent(Intent.ACTION_MAIN)
+            .addCategory(Intent.CATEGORY_LAUNCHER)
+            .setPackage(context.packageName)
+        assertEquals(1, packageManager.queryIntentActivities(launcher, 0).size)
+
+        val images = listOf(
+            Intent(Intent.ACTION_VIEW).setDataAndType(
+                Uri.parse("content://vendroid/boot.iso"),
+                "application/x-iso9660-image",
+            ),
+            Intent(Intent.ACTION_VIEW, Uri.parse("file:///storage/emulated/0/boot.iso")),
+            Intent(Intent.ACTION_VIEW, Uri.parse("content://vendroid/boot.img")),
+        )
+        for (image in images) {
+            image.setPackage(context.packageName)
+            assertTrue(packageManager.queryIntentActivities(image, 0).isEmpty())
+        }
+    }
 
     @Test
     fun `progress status preserves Ventoy force install state`() {
