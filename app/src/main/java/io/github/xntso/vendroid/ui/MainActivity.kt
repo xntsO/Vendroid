@@ -241,10 +241,6 @@ class MainActivity : ActivityBase() {
             mViewModel.refreshSettings(this)
         }
 
-        if (intent.action == Intent.ACTION_VIEW) {
-            intent.data?.let { openUri(it) }
-        }
-
         setContent {
             val snackbarHostState = remember { SnackbarHostState() }
             var forceInstallRequested by rememberSaveable { mutableStateOf(false) }
