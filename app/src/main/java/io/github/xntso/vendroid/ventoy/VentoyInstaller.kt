@@ -37,6 +37,7 @@ class VentoyInstaller(
         if (!options.forceInstall && scanner.hasAnyPartition(device)) {
             throw IllegalStateException("The USB drive already has a partition table. Use force install to overwrite it.")
         }
+        requireWritableImages(plan)
 
         onProgress(VentoyInstallProgress(VentoyInstallStage.Partitioning))
         zeroInstallAreas(device)
@@ -125,6 +126,7 @@ class VentoyInstaller(
             onProgress(VentoyInstallProgress(VentoyInstallStage.Complete))
             return scanner.scan(device) ?: diskInfo.copy(needsRepair = false)
         }
+        requireWritableImages(plan)
         val preservedCoreTail = device.readBytes(
             CORE_TAIL_START_SECTOR * VentoyDiskLayout.SECTOR_SIZE,
             CORE_TAIL_SECTOR_COUNT * VentoyDiskLayout.SECTOR_SIZE,
@@ -160,6 +162,38 @@ class VentoyInstaller(
         onProgress(VentoyInstallProgress(VentoyInstallStage.Complete))
         return scanner.scan(device) ?: diskInfo.copy(installedVersion = payload.version)
     }
+
+    /** Fails on an unusable payload while the drive is still untouched. */
+    private fun requireWritableImages(plan: VentoyInstallPlan) {
+        require(payload.bootImage().size >= VentoyDiskLayout.SECTOR_SIZE) {
+            "boot.img must contain at least one 512-byte sector"
+        }
+        val coreBytes = payload.openCoreImage().use(::decompressedSize)
+        when (plan.partitionStyle) {
+            VentoyPartitionStyle.Mbr -> require(
+                coreBytes == MBR_CORE_SECTOR_COUNT * VentoyDiskLayout.SECTOR_SIZE,
+            ) { "Ventoy core image decompressed to $coreBytes bytes." }
+            VentoyPartitionStyle.Gpt -> require(
+                coreBytes >= GPT_CORE_SECTOR_COUNT * VentoyDiskLayout.SECTOR_SIZE,
+            ) { "Ventoy core image decompressed to $coreBytes bytes." }
+        }
+        val ventoyBytes = payload.openVentoyDiskImage().use(::decompressedSize)
+        require(ventoyBytes == plan.partition2SectorCount * VentoyDiskLayout.SECTOR_SIZE) {
+            "Ventoy disk image decompressed to $ventoyBytes bytes."
+        }
+    }
+
+    private fun decompressedSize(compressed: java.io.InputStream): Long =
+        XZInputStream(compressed).use { input ->
+            val buffer = ByteArray(1024 * 1024)
+            var size = 0L
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                size += read
+            }
+            size
+        }
 
     private fun zeroInstallAreas(device: RawBlockDevice) {
         val zeroLength = minOf(2L * 1024L * 1024L, device.sizeBytes)
@@ -235,12 +269,12 @@ class VentoyInstaller(
         when (plan.partitionStyle) {
             VentoyPartitionStyle.Mbr -> {
                 startSector = 1
-                sectorCount = 2047
+                sectorCount = MBR_CORE_SECTOR_COUNT
                 requireEndOfStream = true
             }
             VentoyPartitionStyle.Gpt -> {
                 startSector = VentoyDiskLayout.GPT_FIRST_USABLE_SECTOR
-                sectorCount = 2014
+                sectorCount = GPT_CORE_SECTOR_COUNT
                 requireEndOfStream = false
             }
         }
@@ -359,8 +393,8 @@ class VentoyInstaller(
             VentoyPartitionStyle.Gpt -> VentoyDiskLayout.GPT_FIRST_USABLE_SECTOR
         }
         val coreSectorCount = when (plan.partitionStyle) {
-            VentoyPartitionStyle.Mbr -> 2047L
-            VentoyPartitionStyle.Gpt -> 2014L
+            VentoyPartitionStyle.Mbr -> MBR_CORE_SECTOR_COUNT
+            VentoyPartitionStyle.Gpt -> GPT_CORE_SECTOR_COUNT
         }
         val coreBytes = coreSectorCount * VentoyDiskLayout.SECTOR_SIZE
         val ventoyBytes = plan.partition2SectorCount * VentoyDiskLayout.SECTOR_SIZE
@@ -510,6 +544,8 @@ class VentoyInstaller(
         const val GPT_CORE_PATCH_OFFSET = 17908L
         const val CORE_TAIL_START_SECTOR = 2040L
         const val CORE_TAIL_SECTOR_COUNT = 8
+        const val MBR_CORE_SECTOR_COUNT = 2047L
+        const val GPT_CORE_SECTOR_COUNT = 2014L
     }
 
     private data class PayloadReplacement(
