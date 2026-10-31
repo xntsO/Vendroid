@@ -1,6 +1,6 @@
 # Vendroid privacy policy
 
-Effective date: 13 October 2026
+Effective date: 31 October 2026
 
 Vendroid is an open-source Android app maintained by Xnts0. This policy applies to
 the Vendroid FOSS app, including its Google Play beta and production releases.
@@ -8,11 +8,11 @@ Privacy questions can be sent to contact@fhas.sa.
 
 ## Files and USB drives
 
-Vendroid accesses the USB drive you grant permission to and files or folders you
-select through Android's file picker. It uses this access to install, inspect,
-update, or repair Ventoy and manage boot image files. These operations run on your
-device. Vendroid does not upload USB contents, selected files, or their names to
-the developer. Installing Ventoy erases the selected USB drive after confirmation.
+Vendroid accesses the USB drive you grant permission to. It uses this access to
+install, inspect, update, or repair Ventoy. These operations run on your device.
+Vendroid does not upload USB contents or file names to the developer. Installing
+Ventoy erases the selected USB drive after confirmation. Earlier beta versions could
+also open a boot image you chose through Android. That file stayed on your device.
 
 ## Optional update downloads
 
@@ -54,7 +54,7 @@ retain interface preferences according to your device settings and backup
 provider's policies. Downloaded Ventoy payloads are excluded from Android backup.
 Uninstalling Vendroid does not remove connection records retained by a hosting
 provider. Files on external USB drives remain until you delete or overwrite them.
-Revoking file-picker or USB permission stops the corresponding access.
+Revoking USB permission stops that access.
 
 Vendroid does not sell personal data. Its update mirror stores public release
 files and metadata, not your app files or USB contents. Hosting providers may keep
