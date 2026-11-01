@@ -24,7 +24,7 @@ val releaseSigningConfigured = listOf(
     releaseKeyAlias,
     releaseKeyPassword,
 ).all { !it.isNullOrBlank() }
-val defaultVersionCode = 33
+val defaultVersionCode = 34
 val vendroidVersionCode = providers.environmentVariable("VENDROID_VERSION_CODE")
     .orElse(defaultVersionCode.toString())
     .map { value ->

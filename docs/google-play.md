@@ -202,7 +202,8 @@ server-log deletion mechanism or 90-day deletion guarantee.
 All tracks and signed GitHub distributions share one increasing version-code
 sequence. Code 30 was consumed by the first GPT candidate and code 31 by the first
 `0.2.0-beta`, built from `6b1cbcb9`, whose tree matches `5ac9b9e` on `main`. Code 32 went
-to `0.2.0-beta.2`, built from `5f42150`.
+to `0.2.0-beta.2`, built from `5f42150`, and code 33 to `0.2.0-beta.3`, built from
+`cbdf54b`.
 Increment `defaultVersionCode` before distributing the next distinct version. CI reads
 the code and version name directly from Gradle source. An explicit `VENDROID_VERSION_CODE`
 override must be at least the checked-in default and at most 2100000000.
