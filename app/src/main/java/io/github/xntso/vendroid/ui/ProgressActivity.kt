@@ -178,11 +178,9 @@ class ProgressActivity : ActivityBase() {
                 addAction(Intents.ERROR)
                 addAction(Intents.FINISHED)
             })
-        // The job can end before this screen resumes, when no broadcast can reach it.
-        val state = mViewModel.state.value
-        if (state.jobState == JobState.IN_PROGRESS) {
-            RetainedJobResult.forJob(state.jobId)?.let(mViewModel::updateFromIntent)
-        }
+        // The job can end before this screen resumes, when no broadcast can reach it. Its result
+        // outranks the current state, which may be a timeout raised while the screen was away.
+        RetainedJobResult.take(mViewModel.state.value.jobId)?.let(mViewModel::updateFromIntent)
         refreshNotificationsPermission()
     }
 
@@ -1149,6 +1147,7 @@ fun FatalErrorView(
                         WorkerService::class.java
                     )
                     Log.d(TAG, "Starting service with intent: $serviceIntent")
+                    RetainedJobResult.clear()
                     activity.startForegroundServiceCompat(serviceIntent)
                 }) {
                     Text(stringResource(R.string.try_again))
@@ -1252,6 +1251,7 @@ fun AutoJobRestarter(
                             ventoyOptions = ventoyOptions,
                         )
                         Log.d(TAG, "Starting service with intent: $serviceIntent")
+                        RetainedJobResult.clear()
                         activity.startForegroundServiceCompat(serviceIntent)
                     }
                 }

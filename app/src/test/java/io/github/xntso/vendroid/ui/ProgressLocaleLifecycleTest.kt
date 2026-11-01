@@ -12,11 +12,13 @@ import io.github.xntso.vendroid.Intents
 import io.github.xntso.vendroid.VENTOY_INSTALL_URI
 import io.github.xntso.vendroid.VendroidApplication
 import io.github.xntso.vendroid.R
+import io.github.xntso.vendroid.getErrorIntent
 import io.github.xntso.vendroid.getFinishedIntent
 import io.github.xntso.vendroid.getProgressUpdateIntent
 import io.github.xntso.vendroid.massstorage.PreviewUsbDevice
 import io.github.xntso.vendroid.massstorage.UsbMassStorageDeviceDescriptor
 import io.github.xntso.vendroid.service.RetainedJobResult
+import io.github.xntso.vendroid.utils.exception.InitException
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
@@ -104,6 +106,60 @@ abstract class ProgressLocaleLifecycleTestSuite {
     }
 
     @Test
+    fun `a retained result replaces a timeout raised while the screen was away`() {
+        val controller = Robolectric.buildActivity(ProgressActivity::class.java, progress(0)).setup()
+        try {
+            val viewModel = ViewModelProvider(controller.get())[ProgressActivityViewModel::class.java]
+            controller.pause()
+            viewModel.setTimeoutError()
+            RetainedJobResult.retain(42, finished())
+
+            controller.resume()
+
+            assertEquals(JobState.SUCCESS, viewModel.state.value.jobState)
+        } finally {
+            controller.pause().stop().destroy()
+        }
+    }
+
+    @Test
+    fun `a retry result replaces the recovery screen of the earlier attempt`() {
+        val controller = Robolectric.buildActivity(ProgressActivity::class.java, progress(0)).setup()
+        try {
+            val viewModel = ViewModelProvider(controller.get())[ProgressActivityViewModel::class.java]
+            viewModel.updateFromIntent(recoverableError())
+            assertEquals(JobState.RECOVERABLE_ERROR, viewModel.state.value.jobState)
+            controller.pause()
+            RetainedJobResult.retain(42, finished())
+
+            controller.resume()
+
+            assertEquals(JobState.SUCCESS, viewModel.state.value.jobState)
+        } finally {
+            controller.pause().stop().destroy()
+        }
+    }
+
+    @Test
+    fun `a retained result is only shown once`() {
+        val controller = Robolectric.buildActivity(ProgressActivity::class.java, progress(0)).setup()
+        try {
+            val viewModel = ViewModelProvider(controller.get())[ProgressActivityViewModel::class.java]
+            controller.pause()
+            RetainedJobResult.retain(42, recoverableError())
+            controller.resume()
+            assertEquals(JobState.RECOVERABLE_ERROR, viewModel.state.value.jobState)
+            viewModel.updateFromIntent(progress(1))
+
+            controller.pause().resume()
+
+            assertEquals(JobState.IN_PROGRESS, viewModel.state.value.jobState)
+        } finally {
+            controller.pause().stop().destroy()
+        }
+    }
+
+    @Test
     fun `a result from another job is ignored when the screen resumes`() {
         val controller = Robolectric.buildActivity(ProgressActivity::class.java, progress(0)).setup()
         try {
@@ -118,6 +174,11 @@ abstract class ProgressLocaleLifecycleTestSuite {
             controller.pause().stop().destroy()
         }
     }
+
+    private fun recoverableError() = getErrorIntent(
+        VENTOY_INSTALL_URI, device, 42, 1, 1024, InitException("Fixture failure"),
+        operation = Intents.OPERATION_VENTOY_INSTALL,
+    )
 
     private fun finished() =
         getFinishedIntent(VENTOY_INSTALL_URI, device, 1024, operation = Intents.OPERATION_VENTOY_INSTALL)

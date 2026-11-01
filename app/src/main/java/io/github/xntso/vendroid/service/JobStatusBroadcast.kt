@@ -24,8 +24,12 @@ internal object RetainedJobResult {
         this.result = result
     }
 
+    /** Hands the result to one reader, so a later resume cannot replay it over a retry. */
     @Synchronized
-    fun forJob(jobId: Int): Intent? = result.takeIf { this.jobId == jobId }
+    fun take(jobId: Int): Intent? {
+        if (this.jobId != jobId) return null
+        return result.also { clear() }
+    }
 
     @Synchronized
     fun clear() {
