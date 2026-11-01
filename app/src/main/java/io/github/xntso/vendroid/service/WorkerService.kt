@@ -332,6 +332,7 @@ class WorkerService : LifecycleService() {
             mDestDevice = intent.safeParcelableExtra<UsbMassStorageDeviceDescriptor>("destDevice")
                 ?: throw MissingDeviceException()
             mJobId = intent.getIntExtra("jobId", -1)
+            RetainedJobResult.clear()
             offset = intent.getLongExtra("offset", 0L)
             verifyOnly = intent.getBooleanExtra("verifyOnly", false)
             mOperation = intent.getStringExtra(Intents.EXTRA_OPERATION) ?: Intents.OPERATION_WRITE_IMAGE
@@ -394,7 +395,7 @@ class WorkerService : LifecycleService() {
                     operation = mOperation,
                     forceInstall = mForceInstall,
                     ventoyOptions = mVentoyOptions,
-                ).enqueueJobStatus(this@WorkerService)
+                ).publishJobResult()
             }
             stopSelf()
             return START_NOT_STICKY
@@ -494,9 +495,7 @@ class WorkerService : LifecycleService() {
                         operation = mOperation,
                         forceInstall = mForceInstall,
                         ventoyOptions = mVentoyOptions,
-                    ).enqueueJobStatus(
-                        this@WorkerService
-                    )
+                    ).publishJobResult()
                     return@launch
                 }
 
@@ -585,9 +584,7 @@ class WorkerService : LifecycleService() {
                     operation = mOperation,
                     forceInstall = mForceInstall,
                     ventoyOptions = mVentoyOptions,
-                ).enqueueJobStatus(
-                    this@WorkerService
-                )
+                ).publishJobResult()
 
             } catch (exception: Exception) {
                 val downstreamException = when (exception) {
@@ -606,7 +603,7 @@ class WorkerService : LifecycleService() {
                     operation = mOperation,
                     forceInstall = mForceInstall,
                     ventoyOptions = mVentoyOptions,
-                ).enqueueJobStatus(this@WorkerService)
+                ).publishJobResult()
             } finally {
                 finish()
                 releaseWakelock()
@@ -678,6 +675,11 @@ class WorkerService : LifecycleService() {
 
         mLastProgressUpdate = newTime
         mBytesSinceLastUpdate = 0.0
+    }
+
+    private fun Intent.publishJobResult() {
+        RetainedJobResult.retain(mJobId, this)
+        enqueueJobStatus(this@WorkerService)
     }
 
     @Synchronized
