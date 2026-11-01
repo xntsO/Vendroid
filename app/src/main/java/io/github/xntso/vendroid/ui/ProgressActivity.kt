@@ -135,6 +135,7 @@ import io.github.xntso.vendroid.utils.ktexts.activity
 import io.github.xntso.vendroid.utils.ktexts.broadcastLocally
 import io.github.xntso.vendroid.utils.ktexts.getDisplayName
 import io.github.xntso.vendroid.utils.ktexts.registerExportedReceiver
+import io.github.xntso.vendroid.service.RetainedJobResult
 import io.github.xntso.vendroid.utils.ktexts.startForegroundServiceCompat
 import io.github.xntso.vendroid.utils.ktexts.toHRSize
 import io.github.xntso.vendroid.utils.ktexts.toast
@@ -177,6 +178,11 @@ class ProgressActivity : ActivityBase() {
                 addAction(Intents.ERROR)
                 addAction(Intents.FINISHED)
             })
+        // The job can end before this screen resumes, when no broadcast can reach it.
+        val state = mViewModel.state.value
+        if (state.jobState == JobState.IN_PROGRESS) {
+            RetainedJobResult.forJob(state.jobId)?.let(mViewModel::updateFromIntent)
+        }
         refreshNotificationsPermission()
     }
 

@@ -9,3 +9,27 @@ internal fun Intent.enqueueJobStatus(context: Context) {
     // can overtake queued progress and let it overwrite a finished/error state.
     LocalBroadcastManager.getInstance(context).sendBroadcast(this)
 }
+
+/**
+ * The result of the current job. Status broadcasts reach only a resumed screen, so a job ending
+ * while the screen is paused or still opening would otherwise look stuck once it resumes.
+ */
+internal object RetainedJobResult {
+    private var jobId: Int? = null
+    private var result: Intent? = null
+
+    @Synchronized
+    fun retain(jobId: Int, result: Intent) {
+        this.jobId = jobId
+        this.result = result
+    }
+
+    @Synchronized
+    fun forJob(jobId: Int): Intent? = result.takeIf { this.jobId == jobId }
+
+    @Synchronized
+    fun clear() {
+        jobId = null
+        result = null
+    }
+}

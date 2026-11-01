@@ -16,6 +16,8 @@ import io.github.xntso.vendroid.getFinishedIntent
 import io.github.xntso.vendroid.getProgressUpdateIntent
 import io.github.xntso.vendroid.massstorage.PreviewUsbDevice
 import io.github.xntso.vendroid.massstorage.UsbMassStorageDeviceDescriptor
+import io.github.xntso.vendroid.service.RetainedJobResult
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -29,6 +31,9 @@ import java.util.Locale
 
 abstract class ProgressLocaleLifecycleTestSuite {
     private val device = UsbMassStorageDeviceDescriptor(previewUsbDevice = PreviewUsbDevice("Test USB", "1234:5678"))
+
+    @AfterEach
+    fun clearRetainedResult() = RetainedJobResult.clear()
 
     @BeforeEach
     fun assertConfiguredApi() {
@@ -79,6 +84,43 @@ abstract class ProgressLocaleLifecycleTestSuite {
             controller.pause().stop().destroy()
         }
     }
+
+    @Test
+    fun `a result sent while the screen was paused appears when it resumes`() {
+        val controller = Robolectric.buildActivity(ProgressActivity::class.java, progress(0)).setup()
+        try {
+            val viewModel = ViewModelProvider(controller.get())[ProgressActivityViewModel::class.java]
+            controller.pause()
+            RetainedJobResult.retain(42, finished())
+            LocalBroadcastManager.getInstance(controller.get()).sendBroadcastSync(finished())
+            assertEquals(JobState.IN_PROGRESS, viewModel.state.value.jobState)
+
+            controller.resume()
+
+            assertEquals(JobState.SUCCESS, viewModel.state.value.jobState)
+        } finally {
+            controller.pause().stop().destroy()
+        }
+    }
+
+    @Test
+    fun `a result from another job is ignored when the screen resumes`() {
+        val controller = Robolectric.buildActivity(ProgressActivity::class.java, progress(0)).setup()
+        try {
+            val viewModel = ViewModelProvider(controller.get())[ProgressActivityViewModel::class.java]
+            controller.pause()
+            RetainedJobResult.retain(7, finished())
+
+            controller.resume()
+
+            assertEquals(JobState.IN_PROGRESS, viewModel.state.value.jobState)
+        } finally {
+            controller.pause().stop().destroy()
+        }
+    }
+
+    private fun finished() =
+        getFinishedIntent(VENTOY_INSTALL_URI, device, 1024, operation = Intents.OPERATION_VENTOY_INSTALL)
 
     private fun progress(processed: Long) = getProgressUpdateIntent(
         VENTOY_INSTALL_URI, device, 42, 1f, processed, 1024,
