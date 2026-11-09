@@ -12,7 +12,7 @@ import pytest
 
 from vendroid import actions, package_name
 from vendroid.fixtures import appium_service, driver
-from vendroid.utils import run_adb_command, used, wait_for_element
+from vendroid.utils import get_wait, run_adb_command, used, wait_for_element
 from vendroid.validation_profiles import configured_profile
 
 used(appium_service)
@@ -87,18 +87,26 @@ def test_capture_real_store_screenshots(driver):
         actions.select_first_usb_device_if_multiple(driver)
         report["capture_stage"] = "grant-usb-permission"
         actions.grant_usb_permission(driver)
+        # The options link appears only once the drive scan offers a fresh install.
+        report["capture_stage"] = "wait-for-install-confirmation"
+        wait_for_element(driver, '//*[@resource-id="ventoyAdvancedOptionsButton"]', timeout=30)
+        get_wait(driver, 30).until(lambda current: current.find_element(
+            "xpath", '//*[@resource-id="writeImageButton"]',
+        ).get_attribute("enabled") == "true")
+        # Both screens are only inspected. No install, update, or repair is started.
+        report["capture_stage"] = "capture-install-confirmation"
+        report["screenshots"].append(capture(driver, directory, "install-confirmation"))
         report["capture_stage"] = "open-install-options"
         actions.open_ventoy_advanced_options(driver)
         wait_for_element(driver, '//*[@resource-id="ventoyVolumeLabelField"]', timeout=30)
-        # The options sheet is only inspected. No install, update, or repair is started.
         report["capture_stage"] = "capture-install-options"
         report["screenshots"].append(capture(driver, directory, "install-options"))
-        report["store_ready"] = len(report["screenshots"]) == 2 and all(
+        report["store_ready"] = len(report["screenshots"]) == 3 and all(
             item["store_geometry"] and item["store_format"] for item in report["screenshots"]
         )
         report["capture_stage"] = "complete"
         if not report["store_ready"]:
-            report["capture_error"] = "Two RGB PNG captures with Google Play's required dimensions were not obtained"
+            report["capture_error"] = "Three RGB PNG captures with Google Play's required dimensions were not obtained"
     except Exception as error:
         report["failure_stage"] = report["capture_stage"]
         report["capture_error"] = f"{type(error).__name__}: {error}"
