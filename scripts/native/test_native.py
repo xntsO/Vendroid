@@ -35,10 +35,13 @@ def bundle_config(alignment=2):
     return bytes((18, len(optimizations))) + optimizations
 
 
-def artifact(path, *, bad_abi=None, zip_alignment=True, duplicate=False, missing=None, legacy_32bit=False):
+def artifact(path, *, bad_abi=None, zip_alignment=True, duplicate=False, missing=None, legacy_32bit=False,
+             extra=()):
     with zipfile.ZipFile(path, "w") as archive:
         if path.suffix == ".aab":
             archive.writestr("BundleConfig.pb", bundle_config())
+        for name in extra:
+            archive.writestr(name, b"fixture")
         for abi, (bits, _) in ABI_MACHINES.items():
             for library in sorted(USB_LIBRARIES):
                 if missing == (abi, library):
@@ -137,6 +140,30 @@ class ArtifactFixtures(unittest.TestCase):
             artifact(path, duplicate=True)
             with self.assertRaisesRegex(VerificationError, "duplicate"):
                 inspect_artifact(path)
+
+    def test_desktop_binaries_from_a_test_only_dependency_are_rejected(self):
+        cases = (("jna.apk", "com/sun/jna/win32-x86-64/jnidispatch.dll"),
+                 ("jna-archive.apk", "com/sun/jna/aix-ppc64/libjnidispatch.a"),
+                 ("jna-template.apk", "com/sun/jna/platform/win32/COM/tlb/imp/TlbEnum.template"),
+                 ("agent.apk", "win32-x86-64/attach_hotspot_windows.dll"),
+                 ("macos.apk", "native/libfixture.JNILIB"),
+                 ("bundle.aab", "base/root/com/sun/jna/darwin-aarch64/libjnidispatch.jnilib"))
+        with tempfile.TemporaryDirectory() as directory:
+            for filename, entry in cases:
+                path = Path(directory) / filename
+                artifact(path, extra=(entry,))
+                with self.subTest(entry=entry), self.assertRaisesRegex(VerificationError, "desktop binaries"):
+                    inspect_artifact(path)
+
+    def test_bundled_assets_are_not_mistaken_for_desktop_binaries(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for filename, entry in (("assets.apk", "assets/native-source/tools/helper.exe"),
+                                    ("assets.aab", "base/assets/ventoy_payload/tool.dll"),
+                                    ("resources.apk", "okhttp3/internal/publicsuffix/publicsuffixes.gz")):
+                path = Path(directory) / filename
+                artifact(path, extra=(entry,))
+                with self.subTest(entry=entry):
+                    self.assertEqual(inspect_artifact(path)["foreign_binaries"], [])
 
     def test_bundle_4kb_or_truncated_config_is_rejected(self):
         for data in (bundle_config(1), bundle_config()[:-1], b"\x12\x80", b"\x00"):

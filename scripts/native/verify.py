@@ -14,6 +14,8 @@ PAGE_SIZE = 16_384
 ABI_MACHINES = {"arm64-v8a": (64, 183), "armeabi-v7a": (32, 40), "x86": (32, 3), "x86_64": (64, 62)}
 USB_LIBRARIES = {"liberrno-lib.so", "libusb-lib.so", "liblibusb.so", "liblibusbcom.so"}
 MAX_LIBRARY_BYTES = 64 * 1024 * 1024
+# JNA's desktop JNI payloads and other Windows or macOS binaries. Android loads none of them.
+FOREIGN_BINARY = re.compile(r"(?:^|/)com/sun/jna/|\.(?:dll|jnilib|dylib|exe)$", re.IGNORECASE)
 
 
 class VerificationError(ValueError):
@@ -134,6 +136,12 @@ def zip_data_offset(archive, info):
     return info.header_offset + 30 + name_bytes + extra_bytes
 
 
+def foreign_binaries(names, kind):
+    """List desktop binaries packaged as code or Java resources; bundled assets are not inspected."""
+    assets = re.compile(r"assets/" if kind == "apk" else r"[^/]+/assets/")
+    return sorted(name for name in names if not assets.match(name) and FOREIGN_BINARY.search(name))
+
+
 def inspect_artifact(path):
     path = Path(path)
     kind = path.suffix.lower().lstrip(".")
@@ -146,6 +154,11 @@ def inspect_artifact(path):
         names = archive.namelist()
         if len(names) != len(set(names)):
             raise VerificationError("Artifact contains duplicate ZIP entry names")
+        foreign = foreign_binaries(names, kind)
+        if foreign:
+            raise VerificationError(
+                f"Artifact packages {len(foreign)} desktop binaries, such as {foreign[0]}; "
+                "keep test-only dependencies out of the runtime classpath")
         alignment = None
         if kind == "aab":
             config = archive.getinfo("BundleConfig.pb")
@@ -183,7 +196,8 @@ def inspect_artifact(path):
             if missing:
                 raise VerificationError(f"Missing rebuilt USB libraries for {abi}: {', '.join(sorted(missing))}")
     return {"schema": 1, "artifact_type": kind, "sha256": sha256_file(path),
-            "native_16kb_passed": True, "bundle_page_alignment": alignment, "libraries": libraries}
+            "native_16kb_passed": True, "foreign_binaries": [],
+            "bundle_page_alignment": alignment, "libraries": libraries}
 
 
 def main():
