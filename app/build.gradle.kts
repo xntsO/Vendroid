@@ -197,7 +197,8 @@ dependencies {
     implementation(libs.constraintlayout.compose)
     implementation(libs.core.ktx)
     implementation(libs.documentfile)
-    implementation(libs.kotlinx.coroutines.debug)
+    // Pins the coroutines runtime that the test-only debug artifact used to bring in.
+    implementation(libs.kotlinx.coroutines.core)
     implementation(libs.libaums.core)
     implementation(libs.libaums.libusbcommunication)
     implementation(libs.lifecycle.runtime.ktx)
@@ -221,6 +222,8 @@ dependencies {
     androidTestImplementation(platform(libs.compose.bom))
 
     testImplementation(libs.junit.jupiter)
+    // DebugProbes bundles desktop JNA binaries, so it must stay out of the APK.
+    testImplementation(libs.kotlinx.coroutines.debug)
     testImplementation(libs.mockito.core)
     testImplementation(libs.robolectric)
     testImplementation(libs.test.core)
