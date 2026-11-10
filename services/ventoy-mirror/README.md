@@ -41,7 +41,12 @@ Public GET and HEAD paths:
   `Cache-Control: no-store`. Before the first successful seed it returns 404.
 - `/v1/assets/{sha256}/ventoy-{version}-linux.tar.gz` serves the original archive
   as an R2 stream, with exact `Content-Length`, ETag, and a one-year immutable
-  cache lifetime. Unknown or unverified objects return 404.
+  cache lifetime. Unknown or unverified objects return 404. The same path serves
+  `ventoy-{version}-source.tar.gz` and `busybox-{release}.tar.bz2` source archives.
+  Other names return 404.
+- `/v1/ventoy/source/{version}.json` returns the source list of one mirrored
+  release with `Cache-Control: no-store`: its tag, commit, and archives. It
+  returns 404 for a version without a published list.
 
 Authenticated PUT paths:
 
@@ -52,9 +57,15 @@ Authenticated PUT paths:
 - `/v1/admin/ventoy/latest.json` accepts at most 4096 bytes of JSON. It requires a
   matching verified archive, rejects downgrades and altered metadata for an
   already published version, and returns the accepted manifest. `Content-Length`
-  is optional for this small JSON request.
+  is optional for this small JSON request. It returns 409 until the source list
+  of that version exists, so a release is never advertised without its source.
+- `/v1/admin/ventoy/source/{version}.json` accepts at most 8192 bytes of JSON. The
+  Ventoy source archive comes first, followed by up to 15 BusyBox archives, and
+  every one must be a verified object. A stored list cannot be replaced.
 
-Assets use `If-None-Match: *` to prevent replacement. Latest-manifest writes use
+Assets and source lists use `If-None-Match: *` to prevent replacement. There is
+no delete route, so the payload and source of older versions stay available.
+Latest-manifest writes use
 the previous R2 ETag, or `If-None-Match: *` for the initial manifest, so concurrent
 publications cannot overwrite each other silently. A rejected size mismatch is
 never eligible for public reads or publication, including while its uploader is
@@ -91,6 +102,8 @@ Before enabling the scheduled sync and releasing the Android mirror client:
 
 1. Require the current revision's Python sync and Node handler fixtures to pass
    in Actions, including the interleaved upload/publication regression.
+   Deploy this handler before the sync that publishes source runs. The older
+   handler rejects source uploads, so that sync fails and changes nothing.
 2. Confirm the deployed `app/lib/mirror.mjs` matches this canonical handler and
    that the public custom domain, R2 binding, and private token mapping work.
 3. Exercise real R2 upload rejection for wrong hashes and sizes, denied anonymous
