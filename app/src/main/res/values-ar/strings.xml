@@ -99,6 +99,7 @@
     <string name="developer_credit">طوّره %1$s.</string>
     <string name="project_source">الشيفرة المصدرية للمشروع: %1$s.</string>
     <string name="upstream_projects">يستخدم %1$s ويستند إلى %2$s.</string>
+    <string name="ventoy_source_notice">نسخة Ventoy %1$s المضمَّنة برنامج حر بموجب رخصة GNU GPLv3. شيفرتها المصدرية: %2$s.</string>
     <string name="gpl_license_notice">مرخّص بموجب رخصة GNU GPLv3.</string>
     <string name="project_website">موقع المشروع</string>
     <string name="menu">القائمة</string>

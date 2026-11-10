@@ -1,4 +1,6 @@
+import json
 import os
+from pathlib import Path
 
 import appium.webdriver
 
@@ -31,6 +33,12 @@ def test_home_identity_and_privacy_policy_action(driver: appium.webdriver.Remote
     wait_for_element(
         driver, '//*[@text="Close"]/ancestor-or-self::*[@clickable="true"][1]', timeout=15,
     ).click()
+
+    # The bundled Ventoy is GPL software: About names its version and exact source commit.
+    lock = json.loads((Path(__file__).resolve().parents[2] / "third_party/ventoy/source-lock.json").read_text())
+    credits = wait_for_element(driver, '//*[@resource-id="aboutCredits"]', timeout=15).get_attribute("text")
+    assert f"Ventoy {lock['version']}" in credits
+    assert f"github.com/ventoy/Ventoy@{lock['commit'][:12]}" in credits
 
     website = wait_for_element(driver, '//*[@resource-id="projectWebsiteButton"]', timeout=15)
     assert website.get_attribute("enabled") == "true"
