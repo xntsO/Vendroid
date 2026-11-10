@@ -7,6 +7,16 @@ first-party mirror. It verifies the public byte stream before publishing the
 stripped latest manifest, then reads that manifest back. The app retains its own
 size, checksum, payload compatibility, extraction, and cache checks.
 
+Before a release is advertised, the sync publishes its source. It asks GitHub for
+the commit of the release tag, downloads the generated source archive for that
+tag, and requires the commit recorded inside the archive to be the same one. It
+also requires the BusyBox binaries in that tree to be the ones identified in
+[`third_party/ventoy/source-lock.json`](../../third_party/ventoy/source-lock.json),
+then mirrors the pinned BusyBox source archives with them. The source list of each
+version stays available after newer releases replace the latest manifest. A tree
+with a changed or new BusyBox binary stops the sync, and the mirror keeps
+advertising the previous release until the lock is updated.
+
 The update service serves persisted R2 objects. Public requests never contact
 GitHub, and the sync does not accept visitor headers or arbitrary upstream URLs.
 GitHub's authentication token is sent only to its fixed metadata API. The mirror's
@@ -52,6 +62,11 @@ Public endpoints accept GET and HEAD with no redirects:
   cached manifest. An empty mirror returns HTTP 404; storage failures return 503.
 - `/v1/assets/{sha256}/ventoy-{version}-linux.tar.gz` streams the original archive.
   The download URL is exactly the HTTPS origin above plus that immutable path.
+- `/v1/ventoy/source/{version}.json` returns exactly `schemaVersion`, `version`,
+  `tag`, `commit`, and `archives` for one mirrored release. The first archive is
+  `ventoy-{version}-source.tar.gz`. The others are `busybox-{release}.tar.bz2`.
+  Each archive has `assetName`, `sizeBytes`, `sha256`, and a `downloadUrl` under
+  `/v1/assets/`. A version without a published source list returns HTTP 404.
 
 Authenticated endpoints accept PUT with `Authorization: Bearer <private-token>`
 and no redirects:
@@ -63,7 +78,11 @@ and no redirects:
   HTTP 200 or 201, after confirming its verified object exists with the exact size
   and digest. It rejects downgrades and changes to a published version's metadata.
   Its parser limits the body to 4096 bytes; `Content-Length` is optional here,
-  although the sync sends it.
+  although the sync sends it. It also requires the source list of that version.
+- `/v1/admin/ventoy/source/{version}.json` accepts and returns a source list after
+  confirming every listed archive exists with its exact size and digest. A list is
+  written once. The same list can be sent again, and a different one is refused.
+  Its parser limits the body to 8192 bytes.
 
 The server verifies uploads with R2's SHA-256 `put` option, uses conditional
 writes for immutable objects, and publishes a manifest only after that verified
@@ -78,8 +97,11 @@ accurate privacy disclosure; this design is not a worldwide compliance finding.
 Archives remain bounded by the Android client's 256 MiB limit. A hosting plan's
 inbound upload cap can be lower; an oversized upload must fail without publishing
 the manifest. Larger future archives need a separately verified multipart path.
-The complete upstream archive remains unchanged, including its licensing files;
-retain the version's upstream source attribution and corresponding-source access.
+The complete upstream archive remains unchanged. It contains no license texts, so
+the source list above is how the mirror gives access to the corresponding source.
+The Ventoy source archive is about 81 MB, close to Cloudflare's 100 MB upload cap
+on Free and Pro plans. See [licensing](../../docs/licensing.md) for what the
+published source does and does not cover.
 
 See [service deployment](../../services/ventoy-mirror/README.md) for the canonical
 handler, Sites adapter, storage binding, secret mapping, and pending hosted checks.
@@ -93,7 +115,10 @@ python3 -m unittest discover -s scripts/mirror -p 'test_*.py' -v
 Fixtures cover published checksums, conflicting metadata, duplicate JSON fields,
 size limits, corrupt and truncated byte streams, redirect allowlists, credential
 isolation, acknowledgement failures, readback ordering, monotonic manifests,
-temporary-file cleanup, and redacted error handling. Run these in Actions;
+temporary-file cleanup, and redacted error handling. Source fixtures cover the tag
+commit check, changed and unidentified BusyBox binaries, wrong BusyBox bytes, reuse
+of stored archives, the source-before-release order, and missing or resized
+listed archives. Run these in Actions;
 workstation app builds and tests remain prohibited by project instructions.
 
 Sources: [GitHub release assets](https://docs.github.com/en/rest/releases/assets),
