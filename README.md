@@ -251,6 +251,13 @@ their own licenses.
 
 - [Ventoy](https://github.com/ventoy/Ventoy) is the bootloader Vendroid installs. Vendroid
   ships its official release files and is not affiliated with the Ventoy project.
+  Ventoy is GPLv3 software and contains other free software such as GRUB 2 and BusyBox.
+  The bundled Ventoy 1.1.16 is built from tag
+  [`v1.1.16`](https://github.com/ventoy/Ventoy/tree/v1.1.16), commit
+  [`2f66a309e4a3f0e08953aabfb0f1cf7e12b39f5d`](https://github.com/ventoy/Ventoy/commit/2f66a309e4a3f0e08953aabfb0f1cf7e12b39f5d).
+  Its license texts are in [`third_party/ventoy/License`](third_party/ventoy/License) and in
+  the app. Every [Vendroid release](https://github.com/xntsO/Vendroid/releases) carries a
+  copy of that source and of the BusyBox source. [Licensing](docs/licensing.md) has the details.
 - [EtchDroid](https://github.com/EtchDroid/EtchDroid) is the app Vendroid is based on.
   Vendroid started from its code.
 - [libaums](https://github.com/magnusja/libaums) provides USB mass-storage access, together
