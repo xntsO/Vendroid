@@ -48,6 +48,19 @@ plugins {
     alias(libs.plugins.robolectric.junit5)
 }
 
+// The vendored License folder and source lock describe exactly one Ventoy release.
+val ventoyVendorDirectory = rootProject.layout.projectDirectory.dir("third_party/ventoy")
+val ventoySourceLock = ventoyVendorDirectory.file("source-lock.json").asFile.readText()
+fun ventoyLockValue(name: String): String =
+    Regex("^  \"$name\": \"([^\"]+)\",?$", RegexOption.MULTILINE).find(ventoySourceLock)?.groupValues?.get(1)
+        ?: error("third_party/ventoy/source-lock.json has no top-level $name")
+val ventoySourceCommit = ventoyLockValue("commit")
+check(ventoyLockValue("version") == pinnedVentoyVersion) {
+    "third_party/ventoy holds the licenses and source lock of Ventoy ${ventoyLockValue("version")}, " +
+        "but the bundled payload is $pinnedVentoyVersion. Update both together."
+}
+val generatedVentoyLicenseAssets = layout.buildDirectory.dir("generated/ventoyLicenses/assets")
+
 android {
     val sdkMin = 23
     val sdkTarget = 36
@@ -63,6 +76,8 @@ android {
         versionName = "0.2.0"
         buildConfigField("boolean", "IS_PREVIEW", "false")
         buildConfigField("boolean", "GPT_ENABLED", stableGptEnabled.toString())
+        buildConfigField("String", "VENTOY_VERSION", "\"$pinnedVentoyVersion\"")
+        buildConfigField("String", "VENTOY_SOURCE_COMMIT", "\"$ventoySourceCommit\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -164,6 +179,7 @@ android {
     sourceSets {
         getByName("main") {
             assets.srcDir(generatedVentoyPayloadAssets.get().asFile)
+            assets.srcDir(generatedVentoyLicenseAssets.get().asFile)
             assets.srcDir(generatedPrivacyAssets.get().asFile)
         }
     }
@@ -303,6 +319,13 @@ val preparePrivacyPolicy = tasks.register<Copy>("preparePrivacyPolicy") {
     into(generatedPrivacyAssets)
 }
 
+val prepareVentoyLicenses = tasks.register<Sync>("prepareVentoyLicenses") {
+    group = "vendroid"
+    description = "Packages the vendored Ventoy License folder, notice, and source lock as app assets."
+    from(ventoyVendorDirectory)
+    into(generatedVentoyLicenseAssets.map { it.dir("ventoy_licenses") })
+}
+
 tasks.named("preBuild") {
-    dependsOn(prepareVentoyPayload, preparePrivacyPolicy)
+    dependsOn(prepareVentoyPayload, preparePrivacyPolicy, prepareVentoyLicenses)
 }

@@ -217,6 +217,12 @@ fun AboutView() {
             val developerLine = stringResource(R.string.developer_credit, developerName)
             val sourceLine = stringResource(R.string.project_source, github)
             val upstreamLine = stringResource(R.string.upstream_projects, ventoy, etchDroid)
+            val ventoySource = "github.com/ventoy/Ventoy@${BuildConfig.VENTOY_SOURCE_COMMIT.take(12)}"
+            val ventoySourceLine = stringResource(
+                R.string.ventoy_source_notice,
+                BuildConfig.VENTOY_VERSION,
+                ventoySource,
+            )
             val linkStyle = SpanStyle(
                 color = MaterialTheme.colorScheme.primary,
                 textDecoration = TextDecoration.Underline,
@@ -245,13 +251,21 @@ fun AboutView() {
                     )
                 }
                 append("\n")
+                appendLinkedText(
+                    ventoySourceLine,
+                    ventoySource,
+                    ProjectLinks.ventoySource(BuildConfig.VENTOY_SOURCE_COMMIT),
+                    linkStyle,
+                )
+                append("\n")
                 append(stringResource(R.string.gpl_license_notice))
 
             }
 
             Text(
                 modifier = Modifier
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .appiumTag("aboutCredits"),
                 text = annotatedText,
                 style = MaterialTheme.typography.bodyLarge.copy(
                     color = MaterialTheme.colorScheme.onBackground,

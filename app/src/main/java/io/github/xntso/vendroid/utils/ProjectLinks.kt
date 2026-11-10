@@ -8,6 +8,9 @@ object ProjectLinks {
     const val WEBSITE = "https://vendroid.fhas.sa"
     const val HELP = "$WEBSITE/#faq"
 
+    /** The Ventoy source tree that the bundled payload was built from. */
+    fun ventoySource(commit: String) = "https://github.com/ventoy/Ventoy/tree/$commit"
+
     fun open(context: Context, url: String = WEBSITE) {
         context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
     }
