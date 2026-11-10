@@ -11,7 +11,7 @@ documentfile = "1.1.0"
 espresso-core = "3.7.0"
 junit = "6.1.0"
 kotlin = "2.4.0"
-kotlinx-coroutines-debug = "1.11.0"
+kotlinx-coroutines = "1.11.0"
 libaums = "0.10.0"
 libaums-libusbcommunication = "0.3.0"
 lifecycle = "2.10.0"
@@ -52,7 +52,8 @@ core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx
 documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso-core" }
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit" }
-kotlinx-coroutines-debug = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-debug", version.ref = "kotlinx-coroutines-debug" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-debug = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-debug", version.ref = "kotlinx-coroutines" }
 # TODO: switch back to non-JitPack version once new release is out
 libaums-core = { group = "me.jahnen.libaums", name = "core", version.ref = "libaums" }
 libaums-libusbcommunication = { group = "me.jahnen.libaums", name = "libusbcommunication", version.ref = "libaums-libusbcommunication" }
