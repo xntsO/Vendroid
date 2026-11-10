@@ -170,6 +170,10 @@ jobs:
             --ks-pass="file:$RUNNER_TEMP/vendroid-keystore.pass" --key-pass="file:$RUNNER_TEMP/vendroid-key.pass"
           unzip -p "$RUNNER_TEMP/vendroid.apks" universal.apk > play-artifacts/vendroid-generated.apk
           python3 scripts/native/verify.py play-artifacts/vendroid-generated.apk --output play-artifacts/generated-apk-native-16kb.json
+          for artifact in vendroid.aab vendroid.apk vendroid-generated.apk; do
+            python3 scripts/licenses/verify_apk.py "play-artifacts/$artifact" \
+              --output "play-artifacts/${artifact%.*}-${artifact##*.}-ventoy-licenses.json"
+          done
       - name: Verify package, version, and signing continuity
         run: |
           python3 scripts/play/verify_bundle.py --bundle play-artifacts/vendroid.aab \
@@ -220,13 +224,19 @@ jobs:
         with:
           name: vendroid-play-${{ needs.plan.outputs.track }}-${{ needs.plan.outputs.version_code }}
           path: play-artifacts
-      - name: Upload the APK and its checksum
+      # The reusable validation run verified these files for the same commit.
+      - uses: actions/download-artifact@v5
+        with:
+          name: vendroid-third-party-source
+          path: third-party-source
+      - name: Upload the APK, its checksum, and the third-party source
         working-directory: play-artifacts
         run: |
           apk="vendroid-v${DISTRIBUTION_VERSION}.apk"
           cp vendroid.apk "$apk"
           sha256sum "$apk" > "$apk.sha256"
-          gh release upload "$RELEASE_TAG" "$apk" "$apk.sha256" --clobber
+          (cd ../third-party-source && sha256sum --check --strict third-party-sources.sha256)
+          gh release upload "$RELEASE_TAG" "$apk" "$apk.sha256" ../third-party-source/* --clobber
 
   publish:
     name: Submit verified bundle to Google Play
