@@ -1,0 +1,2 @@
+# Vendored upstream license texts must stay byte-identical to their recorded hashes.
+third_party/ventoy/** -text

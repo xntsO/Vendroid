@@ -1,0 +1,222 @@
+{
+  "schema": 1,
+  "version": "1.1.16",
+  "tag": "v1.1.16",
+  "commit": "2f66a309e4a3f0e08953aabfb0f1cf7e12b39f5d",
+  "source_archive": {
+    "name": "ventoy-1.1.16-source.tar.gz",
+    "url": "https://github.com/ventoy/Ventoy/archive/refs/tags/v1.1.16.tar.gz",
+    "size": 81278633,
+    "sha256": "6f82ce5c9c2a8d51cb6fc65714c4e8c9c271826fae7246a7b0cbf783d92c383a"
+  },
+  "license_files": {
+    "BSD-2-Clause-Patent.txt": "933548fda5cb67f388953375b71973290c66b38c68a743cce0100404caf22559",
+    "BSD.txt": "8b7bc50ec3ecee27224e17d4d316a939fa2ddda9c88e0ddc2f059ce432edbfb9",
+    "gpl-2.0.txt": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643",
+    "gpl-3.0.txt": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    "lgpl-3.0.txt": "f831e7eed577481687a9bc0b48024e5e40b6f655fcde073ede964b50be5d55d9",
+    "license-7z.txt": "bb47ad4bd521d8953edc22a69e363962edcbad46b3a2be1f0229ffb95a03c93c",
+    "license-AdminLTE.txt": "b29ed55f1484fa7353423d69234b1494f8c5357109dea64654d632346a046a2d",
+    "license-bootstrap.txt": "3fd5f2c24a94875e5c660944f41ba39fcac5971007e0c320874dc9b582f81d49",
+    "license-busybox.txt": "5199e2124234cce647e0f0b34f3d4efca086b84a7b424de5ff413ea938d2448d",
+    "license-device-mapper.txt": "032894ca8ed61a55a526733631520c75a40afeee2c3135cc3cac506cf6faf253",
+    "license-edk2.txt": "d91f7b3ca13dfdfebf15d442d285659981f3739f8e588b2f18e976cb1421db6c",
+    "license-efifs.txt": "a17e5b053649db360065ff318416280eb5385b575edf8af2b70df765b7886ea5",
+    "license-exfat.txt": "447df89dac11507f8fbf9524d0031c0d51fc9a82c2c63f50449637d93fab59e7",
+    "license-fat-filelib.txt": "d8cba6df59eaae53dbf7e0765c2aada7358cdb75bd72137685faae9df0f6b079",
+    "license-fatfs.txt": "b9a85e367ad1ae4551e6c54b2ace98a6162f40c32c24f62f82ad57dad902d9e1",
+    "license-grub2.txt": "587a7afce3763221096880e6c375b5fedcfdaf038b23ac6ce80d80a63fbe3ce9",
+    "license-imdisk.txt": "8837ee297782f9aa62980d2fee220d85fc65508ae19749a7ef80f1cb4b8a9a81",
+    "license-ipxe.txt": "f1154ea820d590bc647af7733ceb2a3daf2e5a221493e22f6f7e4f262f42e7f1",
+    "license-jquery.txt": "f2bfc7234a35ebe6477ebe5f47ef8242ac7d41957e1837fa803d17f9d68be824",
+    "license-libfuse.txt": "4dd1989346e356eb058314d2189e338bcf1477e520135edb9c5937e513982a39",
+    "license-libhttp.txt": "6d456e73f5ebeb678e09f2dab233a4ef59ea73af7d55c77fb27aee1487407ac4",
+    "license-liblzma.txt": "f1ff5699bc97e270bbceb06de599ac7fd5ec1ff36604419f1217ba158c3dd57c",
+    "license-logo.txt": "bbc0f51bb4cb571c19f56d89e56410fc7e066b2e1e70132bdc9472d2121f7963",
+    "license-lunzip.txt": "74c0e506f6110c2db009833b457b6557e1917a6394497c7a14279624abcd5b43",
+    "license-lz4.txt": "b69d7f45ca05547fe04c71d989c90c4844e2242707fe2078a8cacfabbc5b26a7",
+    "license-lzo.txt": "c0677fab90ad578c9aeed0055fc4c0c17b2bccca36d92628b71101332b806f87",
+    "license-mini_gzip.txt": "187e3c4b376ee84d4767cf5a8c2758df04ccb35eef13ec80efc074b2ffb5d5f2",
+    "license-PorteusKiosk.txt": "28725139792189d778d2a00b5921b9c74eef03d0516fd423ae71533791864bad",
+    "license-rufus.txt": "16af1a58cc32de8513e4f502ca6be4b29207926d029f4252bdbe5c74320f3943",
+    "license-smallz4.txt": "b0235f82ea7bc7e5883de5a707fd440769e9ff15980754188e8e4637c20ad354",
+    "license-squashfs-tools.txt": "5f9f5ec16540c5f854ada6c9e26c30fad706a605a4ec2de0c932db38e882616b",
+    "license-tinycore.txt": "5066b0753ce2b0cd0950473906f47747258a4d87e4de839e3fff9c05c23bb79d",
+    "license-vblade.txt": "a00546204f98390f2e212480ece3bb1b3dbf9dceb1c4f138fd58e92769b581a5",
+    "license-ventoy.txt": "82fccb3ff90dc30e23bb6d9c19b0754e393ffcb3716763b7cd90cec2be8625d8",
+    "license-wimboot.txt": "2c8f199213159d4f6f5591b6852fcbda3e5a43a2db2a33e4b5f9804d99e5b1c2",
+    "license-xzembedded.txt": "203691ac9ad121a639b6d554131175434fa85b00407d1e37c774d8b7c8178bdd",
+    "license-zlib.txt": "ef6fd530acfa2e5c8372da734ea88c0f27f8bfcd30e81220d4a13894abb870ce",
+    "license-zstd.txt": "a87036babb0220fd4dcd8f1fb86b79a9cc560e3d2f205a89862727840f0e9608",
+    "MIT.txt": "8da4fa22143e60c8a4f784d485b591bf3bc2ed6c0d8765d207c980a7438bdf58",
+    "ubdl.txt": "5be9d2f0268908f2eeb87578d9b730caf6f7b36bdc7a520b1a176f9ac0bf1db8"
+  },
+  "busybox": {
+    "sources": {
+      "1.27.1": {
+        "name": "busybox-1.27.1.tar.bz2",
+        "url": "https://busybox.net/downloads/busybox-1.27.1.tar.bz2",
+        "size": 2216948,
+        "sha256": "c890ac53fb218eb4c6ad9ed3207a896783b142e6d306f292b8d9bec82af5f936"
+      },
+      "1.28.1": {
+        "name": "busybox-1.28.1.tar.bz2",
+        "url": "https://busybox.net/downloads/busybox-1.28.1.tar.bz2",
+        "size": 2260551,
+        "sha256": "98fe1d3c311156c597cd5cfa7673bb377dc552b6fa20b5d3834579da3b13652e"
+      },
+      "1.30.0": {
+        "name": "busybox-1.30.0.tar.bz2",
+        "url": "https://busybox.net/downloads/busybox-1.30.0.tar.bz2",
+        "size": 7586319,
+        "sha256": "9553da068c0a30b1b8b72479908c1ba58672e2be7b535363a88de5e0f7bc04ce"
+      },
+      "1.31.0": {
+        "name": "busybox-1.31.0.tar.bz2",
+        "url": "https://busybox.net/downloads/busybox-1.31.0.tar.bz2",
+        "size": 2427873,
+        "sha256": "0e4925392fd9f3743cc517e031b68b012b24a63b0cf6c1ff03cce7bb3846cc99"
+      },
+      "1.32.0": {
+        "name": "busybox-1.32.0.tar.bz2",
+        "url": "https://busybox.net/downloads/busybox-1.32.0.tar.bz2",
+        "size": 2439463,
+        "sha256": "c35d87f1d04b2b153d33c275c2632e40d388a88f19a9e71727e0bbbff51fe689"
+      }
+    },
+    "binaries": {
+      "IMG/cpio_arm64/ventoy/busybox/a64": {
+        "sha256": "d5b93c5a833a6955c503ac5fa6364120d89f6486161967b7ffde353898d97172",
+        "version": "1.32.0",
+        "evidence": "ventoy-build-notes"
+      },
+      "IMG/cpio_arm64/ventoy/busybox/busyboxaa64.xz": {
+        "sha256": "5d46d676d8d7e5adef9867bcb1151e0b98ead71d422519b0a284c59ccc5d91c8",
+        "version": "1.32.0",
+        "evidence": "version-string"
+      },
+      "IMG/cpio_mips64/ventoy/busybox/busyboxm64e.xz": {
+        "sha256": "4bbfe6a05c9871eb31376208a0e910edcb5783cc414111c50c4e0b71863e77e3",
+        "version": "1.32.0",
+        "evidence": "version-string"
+      },
+      "IMG/cpio_mips64/ventoy/busybox/m64": {
+        "sha256": "1f4cc2b5495e3bec91433eb6478f725046624b1bc22777ad66fb78bd7b9a952f",
+        "version": "1.32.0",
+        "evidence": "version-string"
+      },
+      "IMG/cpio_x86/ventoy/busybox/64h": {
+        "sha256": "306abe0a74bc2ae110334e29151ef306de4e71d5f8ab3ec5321c02d9bb3363ed",
+        "version": "1.32.0",
+        "evidence": "ventoy-build-notes"
+      },
+      "IMG/cpio_x86/ventoy/busybox/ash": {
+        "sha256": "44a6274bca580c2758ffc173fc76d18bb855b1fe8dcf70efd9ee75cbd57dee97",
+        "version": "1.27.1",
+        "evidence": "ventoy-binary-list"
+      },
+      "IMG/cpio_x86/ventoy/busybox/busybox32.xz": {
+        "sha256": "2c02bac3f8ef38555795c7ee3707941a4debc0fbb9afe61efa5f7ef12b35e30b",
+        "version": "1.28.1",
+        "evidence": "version-string"
+      },
+      "IMG/cpio_x86/ventoy/busybox/busybox64.xz": {
+        "sha256": "a84b775ec853dc6cf59eaaaa1b6cb8a6af4a431c9ba715e203e6c2d983791fce",
+        "version": "1.31.0",
+        "evidence": "version-string"
+      },
+      "IMG/cpio_x86/ventoy/busybox/xzcat32_musl.xz": {
+        "sha256": "616b9279c740f1995bfe36d6fc20501fddff1b95cbaf35ae275228cb6ebbdc2d",
+        "version": "1.32.0",
+        "evidence": "ventoy-build-notes"
+      },
+      "IMG/cpio_x86/ventoy/busybox/xzcat64_musl.xz": {
+        "sha256": "37f924ada65fa2c5fd7094c46cb75eeb224dd2afada3a43cc340ef4cf53de2a6",
+        "version": "1.32.0",
+        "evidence": "ventoy-build-notes"
+      },
+      "IMG/cpio_x86/ventoy/tool/ar": {
+        "sha256": "f29b7d81a983c0c85d22496f4a833c18f2528a1b666eb7d47c93084c1ed66ae0",
+        "version": "1.30.0",
+        "evidence": "ventoy-binary-list"
+      },
+      "IMG/cpio_x86/ventoy/tool/inotifyd": {
+        "sha256": "3532162a8695e91a1ed9ddea28b2cb22259a90e93d5d9c4a517b6c36842c686f",
+        "version": "1.30.0",
+        "evidence": "ventoy-binary-list"
+      },
+      "INSTALL/tool/aarch64/ash": {
+        "sha256": "d5b93c5a833a6955c503ac5fa6364120d89f6486161967b7ffde353898d97172",
+        "version": "1.32.0",
+        "evidence": "ventoy-build-notes"
+      },
+      "INSTALL/tool/aarch64/hexdump": {
+        "sha256": "12c1e804e5512fd057510af3d47de40daad808b7861c8c3c1e8db12d6958a1c8",
+        "version": "1.32.0",
+        "evidence": "ventoy-build-notes"
+      },
+      "INSTALL/tool/aarch64/xzcat": {
+        "sha256": "cffb7424b781cc7313a60f7d0f556adb758f2b96730f778e9bf559706b243ed0",
+        "version": "1.32.0",
+        "evidence": "ventoy-build-notes"
+      },
+      "INSTALL/tool/i386/ash": {
+        "sha256": "2943f02f85fee0c9551aec47110a558a73f919c032b3c51e56d6f197b5ec4d7b",
+        "version": "1.31.0",
+        "evidence": "ventoy-binary-list"
+      },
+      "INSTALL/tool/i386/hexdump": {
+        "sha256": "cde08b6a2cf5ad914f05203e18e3f7c2ed6060a63604e3d75536f19b55e8e0af",
+        "version": "1.30.0",
+        "evidence": "ventoy-binary-list"
+      },
+      "INSTALL/tool/i386/xzcat": {
+        "sha256": "7399db642c2beaf52a16ab5264ffc55cfd1ff5699a524f63e5d48edf84e20f44",
+        "version": "1.30.0",
+        "evidence": "ventoy-binary-list"
+      },
+      "INSTALL/tool/mips64el/ash": {
+        "sha256": "1f4cc2b5495e3bec91433eb6478f725046624b1bc22777ad66fb78bd7b9a952f",
+        "version": "1.32.0",
+        "evidence": "version-string"
+      },
+      "INSTALL/tool/mips64el/hexdump": {
+        "sha256": "1414504e76c26de57e534b3247ca5b722d1feeecf640a64af1f7a25ebbff8f69",
+        "version": "1.32.0",
+        "evidence": "version-string"
+      },
+      "INSTALL/tool/mips64el/xzcat": {
+        "sha256": "8f29d48d3392ced33168df3be226f7cac7b3c1d73d54d96d49ccc051ebca762a",
+        "version": "1.32.0",
+        "evidence": "version-string"
+      },
+      "INSTALL/tool/x86_64/ash": {
+        "sha256": "306abe0a74bc2ae110334e29151ef306de4e71d5f8ab3ec5321c02d9bb3363ed",
+        "version": "1.32.0",
+        "evidence": "ventoy-build-notes"
+      },
+      "INSTALL/tool/x86_64/hexdump": {
+        "sha256": "21b7f47b094a83f4a154a6231bd8ed31cb185d3bc963ffb76f8d9d10f5e0779a",
+        "version": "1.32.0",
+        "evidence": "ventoy-build-notes"
+      },
+      "INSTALL/tool/x86_64/xzcat": {
+        "sha256": "5c97f67f729efbb99984f6bb0f38bb25616dc155e3eb08df2a09deeb64ac8f30",
+        "version": "1.32.0",
+        "evidence": "ventoy-build-notes"
+      }
+    },
+    "other_tools": [
+      "IMG/cpio_arm64/ventoy/busybox/vtchmodaa64",
+      "IMG/cpio_arm64/ventoy/busybox/xzminidecaa64",
+      "IMG/cpio_mips64/ventoy/busybox/vtchmodm64e",
+      "IMG/cpio_mips64/ventoy/busybox/xzminidecm64e",
+      "IMG/cpio_x86/ventoy/busybox/vtchmod32",
+      "IMG/cpio_x86/ventoy/busybox/vtchmod64",
+      "IMG/cpio_x86/ventoy/busybox/vtchmod64_musl",
+      "IMG/cpio_x86/ventoy/busybox/xzminidec32",
+      "IMG/cpio_x86/ventoy/busybox/xzminidec64",
+      "IMG/cpio_x86/ventoy/busybox/xzminidec64_musl"
+    ]
+  }
+}
