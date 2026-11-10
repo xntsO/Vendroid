@@ -143,12 +143,7 @@ android {
     }
     packaging {
         resources {
-            excludes += "META-INF/AL2.0"
-            excludes += "META-INF/LGPL2.1"
-            excludes += "META-INF/licenses/ASM"
             excludes += "META-INF/libaums_release.kotlin_module"
-            excludes += "win32-x86/attach_hotspot_windows.dll"
-            excludes += "win32-x86-64/attach_hotspot_windows.dll"
         }
     }
     compileOptions {
