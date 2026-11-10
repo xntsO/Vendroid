@@ -1,0 +1,75 @@
+Ventoy 1.1.16 in Vendroid
+=========================
+
+Vendroid writes boot files from the official Ventoy 1.1.16 Linux release to
+your USB drive: boot/boot.img, boot/core.img.xz and ventoy/ventoy.disk.img.xz.
+Vendroid does not modify them. Vendroid is not affiliated with the Ventoy
+project.
+
+Release: https://github.com/ventoy/Ventoy/releases/tag/v1.1.16
+
+
+Licenses
+--------
+
+Ventoy is free software under the GNU General Public License, version 3 or
+later. Its boot files also contain other free software, including GRUB 2,
+iPXE, wimboot, memdisk, BusyBox, EDK II, efifs, shim and MokManager, and
+ImDisk.
+
+The License folder beside this notice is an unmodified copy of the License
+folder in the Ventoy source tree at the commit below. It holds the license
+texts and the terms Ventoy states for each component. Start with
+license-ventoy.txt, gpl-3.0.txt and gpl-2.0.txt.
+
+These programs come with NO WARRANTY, to the extent permitted by law. See
+sections 15 and 16 of gpl-3.0.txt.
+
+
+Corresponding source
+--------------------
+
+The complete source of Ventoy 1.1.16 is this tag and commit of the Ventoy
+repository:
+
+  Tag:     https://github.com/ventoy/Ventoy/tree/v1.1.16
+  Commit:  https://github.com/ventoy/Ventoy/commit/2f66a309e4a3f0e08953aabfb0f1cf7e12b39f5d
+  Archive: https://github.com/ventoy/Ventoy/archive/refs/tags/v1.1.16.tar.gz
+
+Every Vendroid release on GitHub also carries a copy of that archive as
+ventoy-1.1.16-source.tar.gz, with this License folder and a checksum list:
+
+  https://github.com/xntsO/Vendroid/releases
+
+
+BusyBox
+-------
+
+Ventoy's boot files contain BusyBox programs. BusyBox is under the GNU
+General Public License, version 2 (gpl-2.0.txt). Ventoy uses BusyBox
+unmodified and keeps only its binaries and build settings in the repository
+above, so the BusyBox source is separate. The binaries come from these
+upstream versions:
+
+  https://busybox.net/downloads/busybox-1.27.1.tar.bz2
+  https://busybox.net/downloads/busybox-1.28.1.tar.bz2
+  https://busybox.net/downloads/busybox-1.30.0.tar.bz2
+  https://busybox.net/downloads/busybox-1.31.0.tar.bz2
+  https://busybox.net/downloads/busybox-1.32.0.tar.bz2
+
+Every Vendroid release on GitHub carries a copy of these five archives too.
+
+
+Versions downloaded in the app
+------------------------------
+
+The optional online update downloads a newer official Ventoy release through
+Vendroid's mirror. The source of a downloaded version is the tag with the
+same number in the Ventoy repository, for example
+https://github.com/ventoy/Ventoy/tree/v1.1.18 for Ventoy 1.1.18. The mirror
+lists its own copy of that source at:
+
+  https://updates.vendroid.fhas.sa/v1/ventoy/source/<version>.json
+
+
+Questions about these notices or a source request: contact@fhas.sa
