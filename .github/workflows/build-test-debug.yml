@@ -119,6 +119,8 @@ jobs:
         run: |
           python3 -m unittest discover -s scripts/mirror -p 'test_*.py' -v
           node --test services/ventoy-mirror/*.test.mjs
+      - name: Test license assets and third-party source checks
+        run: python3 -m unittest discover -s scripts/licenses -p 'test_*.py' -v
       - uses: astral-sh/setup-uv@v5
       - name: Install boot probe tools
         run: |
@@ -140,6 +142,24 @@ jobs:
           path: vm-outputs/boot-probe.iso
           retention-days: 30
           if-no-files-found: error
+
+  third-party-source:
+    name: Verify third-party source for releases
+    if: ${{ !inputs.export_play_signing_key }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download and verify the pinned Ventoy and BusyBox source
+        run: python3 scripts/licenses/prepare_sources.py --output third-party-source
+      - name: Retain the files that accompany a release
+        uses: actions/upload-artifact@v5
+        with:
+          name: vendroid-third-party-source
+          path: third-party-source/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: ${{ startsWith(github.ref, 'refs/tags/') && 30 || 5 }}
 
   verify:
     name: Build, unit tests, and lint
@@ -210,6 +230,13 @@ jobs:
           for variant in debug optimized preview gptCandidate; do
             python3 scripts/native/verify.py "app/build/outputs/apk/foss/$variant/app-foss-$variant.apk" \
               --output "app/build/reports/native/$variant.json"
+          done
+
+      - name: Verify packaged Ventoy licenses
+        run: |
+          for variant in debug optimized preview gptCandidate; do
+            python3 scripts/licenses/verify_apk.py "app/build/outputs/apk/foss/$variant/app-foss-$variant.apk" \
+              --output "app/build/reports/licenses/$variant.json"
           done
 
       - name: Upload stable APK for end-to-end tests
@@ -431,7 +458,7 @@ jobs:
   validation-summary:
     name: Validate collected evidence
     if: ${{ always() && !inputs.export_play_signing_key }}
-    needs: [verify, validation-tools, qemu-tests]
+    needs: [verify, validation-tools, third-party-source, qemu-tests]
     runs-on: ubuntu-24.04
     env:
       VENDROID_VERSION: ${{ needs.verify.outputs.version }}
@@ -448,7 +475,10 @@ jobs:
           BUILD_RESULT: ${{ needs.verify.result }}
           TEST_RESULT: ${{ needs.qemu-tests.result }}
           TOOLS_RESULT: ${{ needs.validation-tools.result }}
-        run: test "$BUILD_RESULT" = success && test "$TEST_RESULT" = success && test "$TOOLS_RESULT" = success
+          SOURCE_RESULT: ${{ needs.third-party-source.result }}
+        run: |
+          test "$BUILD_RESULT" = success && test "$TEST_RESULT" = success && test "$TOOLS_RESULT" = success
+          test "$SOURCE_RESULT" = success
 
   signed-apk:
     name: Signed Vendroid APK
@@ -547,6 +577,7 @@ jobs:
           mkdir -p distribution
           cp .vendroid-cache/native-16kb/provenance.json distribution/native-provenance.json
           python3 scripts/native/verify.py "$apk" --output distribution/native-libraries.json
+          python3 scripts/licenses/verify_apk.py "$apk" --output distribution/ventoy-licenses.json
           output="distribution/vendroid-v${DISTRIBUTION_VERSION}.apk"
           checksum="${output}.sha256"
           aapt="$ANDROID_HOME/build-tools/36.0.0/aapt"
@@ -572,6 +603,7 @@ jobs:
           bundle="distribution/vendroid-v${DISTRIBUTION_VERSION}.aab"
           cp app/build/outputs/bundle/fossPreview/app-foss-preview.aab "$bundle"
           python3 scripts/native/verify.py "$bundle" --output distribution/aab-native-libraries.json
+          python3 scripts/licenses/verify_apk.py "$bundle" --output distribution/aab-ventoy-licenses.json
           python3 scripts/play/verify_bundle.py \
             --bundle "$bundle" --bundletool "$RUNNER_TEMP/bundletool.jar" \
             --native-report distribution/aab-native-libraries.json \
@@ -607,17 +639,27 @@ jobs:
         if: always()
         run: rm -f "$RUNNER_TEMP/vendroid-release.jks" "$RUNNER_TEMP/vendroid-keystore.pass" "$RUNNER_TEMP/vendroid-key.pass" "$RUNNER_TEMP/vendroid.apks"
 
+      - name: Download verified third-party source
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        uses: actions/download-artifact@v5
+        with:
+          name: vendroid-third-party-source
+          path: third-party-source
+
       - name: Create draft GitHub release for final physical check
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # The Ventoy and BusyBox source travels with every binary release.
+          (cd third-party-source && sha256sum --check --strict third-party-sources.sha256)
           # The website links to this fixed name through releases/latest/download.
           cp "distribution/vendroid-v${VENDROID_VERSION}.apk" distribution/vendroid.apk
           gh release create "$GITHUB_REF_NAME" \
             "distribution/vendroid-v${VENDROID_VERSION}.apk" \
             "distribution/vendroid-v${VENDROID_VERSION}.apk.sha256" \
             distribution/vendroid.apk \
+            third-party-source/* \
             --verify-tag \
             --draft \
             --title "Vendroid ${VENDROID_VERSION}" \
