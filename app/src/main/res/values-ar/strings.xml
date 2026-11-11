@@ -98,9 +98,9 @@
     <string name="about_project_summary">فيندرويد تطبيق أندرويد مفتوح المصدر لتثبيت Ventoy على وحدات تخزين USB وإدارة ملفات الإقلاع.</string>
     <string name="developer_credit">طوّره %1$s.</string>
     <string name="project_source">الشيفرة المصدرية للمشروع: %1$s.</string>
-    <string name="upstream_projects">يستخدم %1$s ويستند إلى %2$s.</string>
+    <string name="etchdroid_attribution">Vendroid نسخة معدَّلة من %1$s، © Davide Depau والمساهمون، مستخدمة بموجب رخصة GNU GPLv3. بدأ التعديل في 4 يوليو 2026، وحقوق التعديلات © 2026 %2$s.</string>
     <string name="ventoy_source_notice">نسخة Ventoy %1$s المضمَّنة برنامج حر بموجب رخصة GNU GPLv3. شيفرتها المصدرية: %2$s.</string>
-    <string name="gpl_license_notice">مرخّص بموجب رخصة GNU GPLv3.</string>
+    <string name="gpl_license_notice">Vendroid برنامج حر بموجب رخصة GNU GPLv3. يأتي بلا أي ضمان، ويمكنك إعادة توزيعه بموجب هذه الرخصة.</string>
     <string name="project_website">موقع المشروع</string>
     <string name="menu">القائمة</string>
     <string name="language">اللغة</string>

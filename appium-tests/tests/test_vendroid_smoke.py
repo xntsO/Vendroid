@@ -39,6 +39,10 @@ def test_home_identity_and_privacy_policy_action(driver: appium.webdriver.Remote
     credits = wait_for_element(driver, '//*[@resource-id="aboutCredits"]', timeout=15).get_attribute("text")
     assert f"Ventoy {lock['version']}" in credits
     assert f"github.com/ventoy/Ventoy@{lock['commit'][:12]}" in credits
+    # Vendroid is a modified EtchDroid: About credits its author and states the GPL warranty terms.
+    assert "modified version of EtchDroid" in credits
+    assert "Davide Depau" in credits
+    assert "no warranty" in credits
 
     website = wait_for_element(driver, '//*[@resource-id="projectWebsiteButton"]', timeout=15)
     assert website.get_attribute("enabled") == "true"

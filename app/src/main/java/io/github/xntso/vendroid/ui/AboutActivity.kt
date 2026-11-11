@@ -212,11 +212,10 @@ fun AboutView() {
         contributorsInfo = {
             val developerName = stringResource(R.string.developer_name)
             val github = "GitHub"
-            val ventoy = "Ventoy"
             val etchDroid = "EtchDroid"
             val developerLine = stringResource(R.string.developer_credit, developerName)
             val sourceLine = stringResource(R.string.project_source, github)
-            val upstreamLine = stringResource(R.string.upstream_projects, ventoy, etchDroid)
+            val etchDroidLine = stringResource(R.string.etchdroid_attribution, etchDroid, developerName)
             val ventoySource = "github.com/ventoy/Ventoy@${BuildConfig.VENTOY_SOURCE_COMMIT.take(12)}"
             val ventoySourceLine = stringResource(
                 R.string.ventoy_source_notice,
@@ -239,17 +238,7 @@ fun AboutView() {
                     linkStyle,
                 )
                 append("\n")
-                appendLinkedText(upstreamLine, ventoy, "https://www.ventoy.net", linkStyle)
-                val etchDroidStart = upstreamLine.indexOf(etchDroid)
-                if (etchDroidStart >= 0) {
-                    val absoluteStart = length - upstreamLine.length + etchDroidStart
-                    addStyle(linkStyle, absoluteStart, absoluteStart + etchDroid.length)
-                    addLink(
-                        LinkAnnotation.Url("https://github.com/EtchDroid/EtchDroid"),
-                        absoluteStart,
-                        absoluteStart + etchDroid.length,
-                    )
-                }
+                appendLinkedText(etchDroidLine, etchDroid, ProjectLinks.ETCHDROID_SOURCE, linkStyle)
                 append("\n")
                 appendLinkedText(
                     ventoySourceLine,
