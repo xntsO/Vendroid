@@ -20,6 +20,7 @@ Google Play uses the FOSS flavor and one Vendroid package for beta and productio
 - Separate cleanup from functional changes.
 - Preserve unrelated working-tree changes.
 - Keep Ventoy version changes synchronized between the Gradle payload configuration, GitHub Actions, and `third_party/ventoy/` (License folder, notice, and source lock). Follow [docs/licensing.md](docs/licensing.md).
+- Record every new runtime dependency group in `third_party/licenses/dependency-groups.txt` and its notice in `NOTICE`.
 - Increment `versionCode` for every distributed APK. `versionName` is the user-visible release version.
 
 ## Verification
