@@ -15,7 +15,8 @@ import tech.apter.junit.jupiter.robolectric.RobolectricExtension
 @ExtendWith(RobolectricExtension::class)
 @Config(application = VendroidApplication::class, sdk = [35])
 class OpenSourceNoticesTest {
-    private val assets = ApplicationProvider.getApplicationContext<Context>().assets
+    // Read lazily: the Robolectric environment exists only once a test runs.
+    private val assets get() = ApplicationProvider.getApplicationContext<Context>().assets
 
     private fun read(path: String) = OpenSourceNotices.read(assets, path)
 
