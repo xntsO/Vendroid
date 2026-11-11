@@ -1,3 +1,0 @@
-• Ny Tyrkisk oversettelse.
-• LibreSSL oppdatert til nyeste versjon.
-• Fikset en feil som forårsaker krasj ved knappetrykk på Android 6.0.

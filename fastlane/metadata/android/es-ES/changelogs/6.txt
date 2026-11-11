@@ -1,1 +1,0 @@
-• Se corrigió un error que causaba que la aplicación se bloqueara al presionar cualquier botón en Android 6.0.

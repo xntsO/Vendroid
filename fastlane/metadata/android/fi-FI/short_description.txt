@@ -1,1 +1,0 @@
-Kirjoita käyttöjärjestelmä ISO kuvia USB-asemille; juurihakemistoa ei tarvita

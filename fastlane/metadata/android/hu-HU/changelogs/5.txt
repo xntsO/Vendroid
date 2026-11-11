@@ -1,3 +1,0 @@
-• Sötét mód.
-• Lemezképfájlok mostantól megnyithatók külsős alkalmazás segítéségvel.
-• Kisebb hibajavítások.

@@ -1,1 +1,0 @@
-Írjon ISO lemezképeket USB eszközökre, root jogosultság nélkül

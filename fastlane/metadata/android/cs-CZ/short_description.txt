@@ -1,1 +1,0 @@
-Zapisujte obrazy ISO a DMG na úložiště USB bez potřeby oprávnění root

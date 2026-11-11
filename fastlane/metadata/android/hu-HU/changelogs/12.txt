@@ -1,2 +1,0 @@
-• Frissítések és hibajavítások a libaums könyvtárban fokozott stabilitást és megbízhatóságot eredményeznek a "kényes" USB és Android eszközök esetében.
-• Fordítások.

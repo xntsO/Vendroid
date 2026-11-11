@@ -1,3 +1,0 @@
-- Tema escuro.
-- Agora pode abrir ficheiros de imagem a partir de uma aplicação externa.
-- Pequenas correções.
