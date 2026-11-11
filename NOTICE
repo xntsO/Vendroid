@@ -1,0 +1,99 @@
+Vendroid
+========
+
+Copyright (C) 2026 Faisal Sumayli and Vendroid contributors.
+
+Vendroid is a modified version of EtchDroid.
+EtchDroid is Copyright (C) Davide Depau and EtchDroid contributors and is
+licensed under the GNU General Public License, version 3.
+
+  EtchDroid:    https://github.com/EtchDroid/EtchDroid
+  Derived from: commit e2eda57136d46fd3c465dee2e5ab31cdcb019a6e of 2026-07-03
+                https://github.com/EtchDroid/EtchDroid/tree/e2eda57136d46fd3c465dee2e5ab31cdcb019a6e
+  Modified:     from 2026-07-04 onward. Every change is in the history of
+                https://github.com/xntsO/Vendroid
+
+Vendroid is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License, version 3, as published by the
+Free Software Foundation. The license text is in the LICENSE file.
+
+Vendroid is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for details.
+
+Vendroid is not affiliated with EtchDroid or with the Ventoy project.
+
+
+Third-party software
+====================
+
+Ventoy
+------
+The app carries unmodified boot files of an official Ventoy release and
+writes them to your USB drive. Ventoy is under the GNU General Public
+License, version 3 or later, and contains other free software. Its notice,
+license texts and source links are in third_party/ventoy/ and in the app.
+
+libusb 1.0.26
+-------------
+Vendroid uses the libusb library, which is covered by the GNU Lesser General
+Public License, version 2.1 or later. libusb is Copyright (C) its authors,
+listed in the AUTHORS file of its source. The app ships libusb as separate
+shared libraries built from unmodified source:
+
+  https://github.com/libusb/libusb/tree/4239bc3a50014b8e6a5a2a59df1fff3b7469543b
+
+The scripts in scripts/native/ of the Vendroid source rebuild these
+libraries, so you can build a changed libusb and use it in the app.
+License text: third_party/licenses/LGPL-2.1.txt
+
+libaums 0.10.0 and libusbcommunication 0.3.0
+--------------------------------------------
+Copyright (C) 2014-2019 Magnus Jahnen and contributors. Apache License,
+version 2.0.
+
+  https://github.com/magnusja/libaums/tree/af89120aa434ccd97b985a6d66420c1b7e30a1ad
+
+Changed by Vendroid:
+  - massstorage/VendroidScsiBlockDevice.kt is adapted from ScsiBlockDevice.
+  - massstorage/VendroidUsbMassStorageDevice.kt is adapted from
+    UsbMassStorageDevice, first by EtchDroid and then by Vendroid.
+  - The native libraries are rebuilt for 16 KB memory pages, and
+    libusbcommunication/src/c/usb.c is changed by
+    scripts/native/jni-release-modes.patch.
+License text: third_party/licenses/Apache-2.0.txt
+
+exfatprogs 1.2.2
+----------------
+The exFAT up-case table in ventoy/ExFatUpcaseTable.kt holds bytes from
+mkfs/upcase.c, Copyright (C) 2019 Namjae Jeon <linkinjeon@kernel.org>, under
+the GNU General Public License, version 2 or later. Vendroid uses it under
+version 3.
+
+  https://github.com/exfatprogs/exfatprogs/blob/1.2.2/mkfs/upcase.c
+
+Libraries under the Apache License, version 2.0
+-----------------------------------------------
+  - AndroidX, Jetpack Compose and Material Components for Android,
+    Copyright (C) The Android Open Source Project
+  - Kotlin standard library and kotlinx.coroutines,
+    Copyright (C) JetBrains s.r.o. and contributors
+  - Lottie for Android, Copyright (C) Airbnb, Inc.
+  - Okio, Copyright (C) Square, Inc.
+License text: third_party/licenses/Apache-2.0.txt
+
+XZ for Java 1.10
+----------------
+Copyright (C) The XZ for Java authors and contributors. BSD Zero Clause
+License. https://tukaani.org/xz/java.html
+
+Android robot
+-------------
+The Vendroid icon is an original design by Faisal Sumayli that includes a
+likeness of the Android robot. The Android robot is reproduced or modified
+from work created and shared by Google and used according to terms described
+in the Creative Commons 3.0 Attribution License.
+https://creativecommons.org/licenses/by/3.0/
+
+
+Questions about these notices or a source request: contact@fhas.sa
