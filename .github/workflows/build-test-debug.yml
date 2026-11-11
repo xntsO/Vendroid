@@ -121,6 +121,8 @@ jobs:
           node --test services/ventoy-mirror/*.test.mjs
       - name: Test license assets and third-party source checks
         run: python3 -m unittest discover -s scripts/licenses -p 'test_*.py' -v
+      - name: Test store listing and removed branding
+        run: python3 -m unittest discover -s scripts/store -p 'test_*.py' -v
       - uses: astral-sh/setup-uv@v5
       - name: Install boot probe tools
         run: |
