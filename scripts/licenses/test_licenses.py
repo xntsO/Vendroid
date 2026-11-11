@@ -20,7 +20,7 @@ from ventoy_lock import (
     ASSET_ROOT, REQUIRED_LICENSES, ROOT, VENDOR_DIRECTORY, LicenseCheckError, check_notices, check_pins,
     commit_url, load_lock, packaged_files, tag_url, validate_lock,
 )
-from verify_apk import inspect_artifact
+from verify_apk import NOTICE_ROOT, inspect_artifact, notice_files
 
 
 VERSION = "9.9.9"
@@ -100,10 +100,16 @@ def serve(responses):
     return lambda url: io.BytesIO(responses[url])
 
 
-def artifact(path, vendor, *, version=VERSION, drop=None, change=None, extra=None):
+def artifact(path, vendor, *, version=VERSION, drop=None, change=None, extra=None,
+             notice_drop=None, notice_change=None, notice_extra=None):
     lock = load_lock(vendor)
     assets = "assets/" if path.suffix == ".apk" else "base/assets/"
     with zipfile.ZipFile(path, "w") as archive:
+        for name, data in notice_files().items():
+            if name != notice_drop:
+                archive.writestr(f"{assets}{NOTICE_ROOT}/{name}", data + b"!" if name == notice_change else data)
+        if notice_extra:
+            archive.writestr(f"{assets}{NOTICE_ROOT}/{notice_extra}", b"unexpected")
         for name, data in packaged_files(lock, vendor).items():
             if name == drop:
                 continue
@@ -259,6 +265,8 @@ class ArtifactFixtures(unittest.TestCase):
             artifact(self.path(name), self.vendor)
             report = inspect_artifact(self.path(name), self.vendor)
             self.assertTrue(report["ventoy_licenses_passed"])
+            self.assertTrue(report["notices_passed"])
+            self.assertEqual(sorted(report["notices"]), sorted(notice_files()))
             self.assertEqual(report["ventoy_version"], VERSION)
             self.assertEqual(report["ventoy_source_commit"], commit_url(self.lock))
             self.assertEqual(report["license_files"], len(LICENSES))
@@ -268,6 +276,14 @@ class ArtifactFixtures(unittest.TestCase):
                               "notice.apk": {"drop": "NOTICE.txt"},
                               "changed.aab": {"change": "License/license-busybox.txt"},
                               "extra.apk": {"extra": "License/license-unreviewed.txt"}}.items():
+            artifact(self.path(name), self.vendor, **options)
+            with self.subTest(name=name), self.assertRaises(LicenseCheckError):
+                inspect_artifact(self.path(name), self.vendor)
+
+    def test_missing_changed_or_stray_notice_entries_fail(self):
+        for name, options in {"no-notice.apk": {"notice_drop": "NOTICE.txt"},
+                              "changed-gpl.aab": {"notice_change": "GPL-3.0.txt"},
+                              "stray.apk": {"notice_extra": "MIT.txt"}}.items():
             artifact(self.path(name), self.vendor, **options)
             with self.subTest(name=name), self.assertRaises(LicenseCheckError):
                 inspect_artifact(self.path(name), self.vendor)

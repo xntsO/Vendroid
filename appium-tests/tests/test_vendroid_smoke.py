@@ -44,6 +44,28 @@ def test_home_identity_and_privacy_policy_action(driver: appium.webdriver.Remote
     assert "Davide Depau" in credits
     assert "no warranty" in credits
 
+    # About opens the packaged notices and license texts offline.
+    try:
+        driver.find_element(
+            "-android uiautomator",
+            'new UiScrollable(new UiSelector().scrollable(true))'
+            '.scrollIntoView(new UiSelector().resourceId("licensesButton"))',
+        )
+    except Exception:
+        pass  # The compact layout may have nothing to scroll; the button is then already visible.
+    wait_for_element(driver, '//*[@resource-id="licensesButton"]', timeout=15).click()
+    wait_for_element(driver, '//*[@resource-id="licenseDocument0"]', timeout=15).click()
+    notice = wait_for_element(driver, '//*[@resource-id="licenseText"]', timeout=15).get_attribute("text")
+    for phrase in ("modified version of EtchDroid", "Davide Depau", "libusb", "WITHOUT ANY"):
+        assert phrase in notice, phrase
+    wait_for_element(driver, '//*[@resource-id="licensesBack"]', timeout=15).click()
+    wait_for_element(driver, '//*[@resource-id="licenseDocument1"]', timeout=15).click()
+    gpl = wait_for_element(driver, '//*[@resource-id="licenseText"]', timeout=15).get_attribute("text")
+    assert "GNU GENERAL PUBLIC LICENSE" in gpl
+    wait_for_element(driver, '//*[@resource-id="closeLicenses"]', timeout=15).click()
+    wait_for_element(driver, '//*[@resource-id="aboutCredits"]', timeout=15)
+    assert driver.current_package == profile.package
+
     website = wait_for_element(driver, '//*[@resource-id="projectWebsiteButton"]', timeout=15)
     assert website.get_attribute("enabled") == "true"
     assert not driver.find_elements(
