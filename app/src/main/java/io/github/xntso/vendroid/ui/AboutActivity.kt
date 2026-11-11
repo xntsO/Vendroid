@@ -49,6 +49,7 @@ import io.github.xntso.vendroid.ui.composables.appiumTag
 import io.github.xntso.vendroid.plugins.reviews.WriteReviewHelper
 import io.github.xntso.vendroid.ui.composables.MainView
 import io.github.xntso.vendroid.ui.composables.ScreenSizeLayoutSelector
+import io.github.xntso.vendroid.ui.composables.OpenSourceLicensesDialog
 import io.github.xntso.vendroid.ui.composables.PrivacyPolicyDialog
 import io.github.xntso.vendroid.utils.ktexts.activity
 
@@ -182,6 +183,7 @@ fun AboutViewLayout(
 fun AboutView() {
     val context = LocalContext.current
     var showPrivacyPolicy by remember { mutableStateOf(false) }
+    var showLicenses by remember { mutableStateOf(false) }
     AboutViewLayout(
         modifier = Modifier.fillMaxSize(),
         appTitle = {
@@ -281,6 +283,12 @@ fun AboutView() {
             ) {
                 Text(stringResource(R.string.privacy_policy))
             }
+            OutlinedButton(
+                modifier = Modifier.appiumTag("licensesButton"),
+                onClick = { showLicenses = true }
+            ) {
+                Text(stringResource(R.string.open_source_licenses))
+            }
             val reviewHelper = remember { activity?.let { WriteReviewHelper(it) } }
             if (reviewHelper != null) {
                 OutlinedButton(onClick = { reviewHelper.launchReviewFlow() }) {
@@ -296,6 +304,9 @@ fun AboutView() {
     )
     if (showPrivacyPolicy) {
         PrivacyPolicyDialog { showPrivacyPolicy = false }
+    }
+    if (showLicenses) {
+        OpenSourceLicensesDialog { showLicenses = false }
     }
 }
 
