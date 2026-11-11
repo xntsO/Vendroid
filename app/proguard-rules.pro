@@ -23,3 +23,5 @@
 -dontobfuscate
 -keep class java.lang.ClassValue
 -dontwarn reactor.blockhound.integration.BlockHoundIntegration
+# Lottie depends on Okio 1, which references the optional JSR-305 annotations.
+-dontwarn javax.annotation.**
