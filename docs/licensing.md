@@ -67,6 +67,12 @@ Before shipping an APK whose notice names the mirror's source list, read `https:
 
 The Ventoy source archive is about 81 MB. Cloudflare's 100 MB upload limit on Free and Pro plans leaves little room. A larger future archive would fail the sync without changing the mirror.
 
+## Vendroid and EtchDroid
+
+Vendroid is a modified version of EtchDroid, © Davide Depau and contributors, GPL-3.0. The repository history starts at the bootstrap commit `092104e` of 2026-07-04, which was made from EtchDroid commit `e2eda57136d46fd3c465dee2e5ab31cdcb019a6e` of 2026-07-03. That commit was EtchDroid's `main` from 2026-07-03 until 2026-11-04, and the bootstrap tree shares more files with it than with any earlier commit; the files that separate it from the previous commit are that day's translation updates.
+
+[NOTICE](../NOTICE), the README and About credit EtchDroid, name that commit and the date modifications began, and state the no-warranty terms. The two mass-storage files adapted from libaums, `VendroidScsiBlockDevice.kt` and `VendroidUsbMassStorageDevice.kt`, say in their headers what EtchDroid and Vendroid changed, as Apache-2.0 section 4(b) asks. `scripts/licenses/test_notices.py` keeps these notices, the commit and the vendored license texts in place.
+
 ## Open questions for a lawyer
 
 These are not resolved by the changes above.
