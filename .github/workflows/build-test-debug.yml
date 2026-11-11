@@ -218,7 +218,7 @@ jobs:
             "https://github.com/ventoy/Ventoy/releases/download/v${VENTOY_VERSION}/ventoy-${VENTOY_VERSION}-linux.tar.gz"
 
       - name: Unit tests
-        run: ./gradlew testFossDebugUnitTest
+        run: ./gradlew verifyDependencyLicenses testFossDebugUnitTest
 
       - name: Build and lint
         run: ./gradlew assembleFossDebug assembleFossOptimized assembleFossPreview assembleFossGptCandidate lint

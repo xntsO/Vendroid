@@ -60,6 +60,7 @@ check(ventoyLockValue("version") == pinnedVentoyVersion) {
         "but the bundled payload is $pinnedVentoyVersion. Update both together."
 }
 val generatedVentoyLicenseAssets = layout.buildDirectory.dir("generated/ventoyLicenses/assets")
+val generatedNoticeAssets = layout.buildDirectory.dir("generated/openSourceNotices/assets")
 
 android {
     val sdkMin = 23
@@ -176,6 +177,7 @@ android {
             assets.srcDir(generatedVentoyPayloadAssets.get().asFile)
             assets.srcDir(generatedVentoyLicenseAssets.get().asFile)
             assets.srcDir(generatedPrivacyAssets.get().asFile)
+            assets.srcDir(generatedNoticeAssets.get().asFile)
         }
     }
     testOptions {
@@ -324,6 +326,38 @@ val prepareVentoyLicenses = tasks.register<Sync>("prepareVentoyLicenses") {
     into(generatedVentoyLicenseAssets.map { it.dir("ventoy_licenses") })
 }
 
+val prepareOpenSourceNotices = tasks.register<Sync>("prepareOpenSourceNotices") {
+    group = "vendroid"
+    description = "Packages Vendroid's notice and the license texts it refers to as app assets."
+    from(rootProject.layout.projectDirectory.file("NOTICE")) { rename { "NOTICE.txt" } }
+    from(rootProject.layout.projectDirectory.file("LICENSE")) { rename { "GPL-3.0.txt" } }
+    from(rootProject.layout.projectDirectory.dir("third_party/licenses")) {
+        include("*.txt")
+        exclude("dependency-groups.txt")
+    }
+    into(generatedNoticeAssets.map { it.dir("licenses") })
+}
+
+val verifyDependencyLicenses = tasks.register("verifyDependencyLicenses") {
+    group = "vendroid"
+    description = "Fails when the release runtime classpath has a Maven group without a recorded license."
+    val recorded = rootProject.layout.projectDirectory.file("third_party/licenses/dependency-groups.txt").asFile
+    inputs.file(recorded)
+    doLast {
+        val prefixes = recorded.readLines().map { it.trim() }
+            .filter { it.isNotEmpty() && !it.startsWith("#") }
+            .map { it.substringBefore(' ') }
+        val groups = configurations.getByName("fossReleaseRuntimeClasspath").incoming.resolutionResult.allComponents
+            .mapNotNull { (it.id as? org.gradle.api.artifacts.component.ModuleComponentIdentifier)?.group }
+            .toSortedSet()
+        val unknown = groups.filter { group -> prefixes.none { group == it || group.startsWith("$it.") } }
+        check(unknown.isEmpty()) {
+            "No license recorded for: ${unknown.joinToString()}. Find each license, then add the group to " +
+                "third_party/licenses/dependency-groups.txt and its notice to NOTICE."
+        }
+    }
+}
+
 tasks.named("preBuild") {
-    dependsOn(prepareVentoyPayload, preparePrivacyPolicy, prepareVentoyLicenses)
+    dependsOn(prepareVentoyPayload, preparePrivacyPolicy, prepareVentoyLicenses, prepareOpenSourceNotices)
 }
