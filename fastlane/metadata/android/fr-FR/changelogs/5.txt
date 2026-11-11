@@ -1,3 +1,0 @@
-- Thème sombre.
-- Vous pouvez désormais ouvrir des fichiers image à partir d'une application externe.
-- Correction de bugs mineurs.

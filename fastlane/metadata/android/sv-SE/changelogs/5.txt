@@ -1,3 +1,0 @@
-• Mörkt tema.
-• Du kan nu öppna bild-filer från en extern app.
-• Mindre buggfixar.

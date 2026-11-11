@@ -1,2 +1,0 @@
-• Updates and bug fixes to libaums will bring improved reliability with "picky" USB drives and Android devices.
-• Translation updates.

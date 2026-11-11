@@ -1,3 +1,0 @@
-• Karanlık tema.
-• Artık kalıp dosyalarını harici bir uygulamadan açabilirsiniz.
-• Küçük hata düzeltmeleri.

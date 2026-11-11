@@ -1,1 +1,0 @@
-• Bug behoben, welcher die Anwendung beim Drücken eines beliebigen Knopfs auf Android 6.0 abstürzen ließ.

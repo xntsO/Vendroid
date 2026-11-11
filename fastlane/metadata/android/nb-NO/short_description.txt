@@ -1,1 +1,0 @@
-Skriv ISO- og DMG-oppstartsfiler til USB-enheter, uten root

@@ -1,3 +1,0 @@
-• Tema oscuro.
-• Ahora puedes abrir archivos de imagen desde una aplicación externa.
-• Correcciones de errores menores.
