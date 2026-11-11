@@ -246,8 +246,9 @@ For pull requests:
 
 ## License and credits
 
-Vendroid is free software under the [GNU GPLv3](LICENSE). Third-party components keep
-their own licenses.
+Vendroid is free software under the [GNU GPLv3](LICENSE), copyright © 2026 Faisal Sumayli
+and Vendroid contributors. It comes with no warranty. [NOTICE](NOTICE) lists every credit.
+Third-party components keep their own licenses.
 
 - [Ventoy](https://github.com/ventoy/Ventoy) is the bootloader Vendroid installs. Vendroid
   ships its official release files and is not affiliated with the Ventoy project.
@@ -258,7 +259,9 @@ their own licenses.
   Its license texts are in [`third_party/ventoy/License`](third_party/ventoy/License) and in
   the app. Every [Vendroid release](https://github.com/xntsO/Vendroid/releases) carries a
   copy of that source and of the BusyBox source. [Licensing](docs/licensing.md) has the details.
-- [EtchDroid](https://github.com/EtchDroid/EtchDroid) is the app Vendroid is based on.
-  Vendroid started from its code.
+- Vendroid is a modified version of [EtchDroid](https://github.com/EtchDroid/EtchDroid),
+  © Davide Depau and contributors, GPLv3. It was derived from EtchDroid commit
+  [`e2eda57136d4`](https://github.com/EtchDroid/EtchDroid/tree/e2eda57136d46fd3c465dee2e5ab31cdcb019a6e)
+  on 2026-07-04 and has been changed since.
 - [libaums](https://github.com/magnusja/libaums) provides USB mass-storage access, together
   with [libusb](https://libusb.info).
