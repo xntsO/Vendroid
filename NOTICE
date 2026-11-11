@@ -36,10 +36,10 @@ license texts and source links are in third_party/ventoy/ and in the app.
 
 libusb 1.0.26
 -------------
-Vendroid uses the libusb library, which is covered by the GNU Lesser General
-Public License, version 2.1 or later. libusb is Copyright (C) its authors,
-listed in the AUTHORS file of its source. The app ships libusb as separate
-shared libraries built from unmodified source:
+Vendroid uses the libusb library, which is covered by the
+GNU Lesser General Public License, version 2.1 or later. libusb is
+Copyright (C) its authors, listed in the AUTHORS file of its source. The
+app ships libusb as separate shared libraries built from unmodified source:
 
   https://github.com/libusb/libusb/tree/4239bc3a50014b8e6a5a2a59df1fff3b7469543b
 
