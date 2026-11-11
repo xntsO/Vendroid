@@ -1,0 +1,13 @@
+# Maven groups on the release runtime classpath and their licenses.
+# verifyDependencyLicenses fails on a group that is not listed here.
+# A group also covers its subgroups. Add a notice to NOTICE for every new entry.
+androidx Apache-2.0
+com.airbnb.android Apache-2.0
+com.google.android.material Apache-2.0
+com.google.errorprone Apache-2.0
+com.google.guava Apache-2.0
+com.squareup.okio Apache-2.0
+me.jahnen.libaums Apache-2.0
+org.jetbrains Apache-2.0
+org.jspecify Apache-2.0
+org.tukaani 0BSD
