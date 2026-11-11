@@ -73,6 +73,12 @@ Vendroid is a modified version of EtchDroid, © Davide Depau and contributors, G
 
 [NOTICE](../NOTICE), the README and About credit EtchDroid, name that commit and the date modifications began, and state the no-warranty terms. The two mass-storage files adapted from libaums, `VendroidScsiBlockDevice.kt` and `VendroidUsbMassStorageDevice.kt`, say in their headers what EtchDroid and Vendroid changed, as Apache-2.0 section 4(b) asks. `scripts/licenses/test_notices.py` keeps these notices, the commit and the vendored license texts in place.
 
+## Notices in the app
+
+About has an **Open-source licenses** button. Its dialog shows, offline, Vendroid's `NOTICE`, the GPL-3.0 text from `LICENSE`, the LGPL-2.1 and Apache-2.0 texts from `third_party/licenses/`, the Ventoy notice, and every file of Ventoy's License folder. Gradle's `prepareOpenSourceNotices` task packages the first four under `assets/licenses/`, and `scripts/licenses/verify_apk.py` requires them in every APK and bundle, byte for byte, with no other files there.
+
+`verifyDependencyLicenses` runs in CI and fails when the release runtime classpath gains a Maven group that `third_party/licenses/dependency-groups.txt` does not list. To add a dependency, find its license, add its group there, and add its notice to `NOTICE`.
+
 ## Open questions for a lawyer
 
 These are not resolved by the changes above.
