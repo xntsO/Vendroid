@@ -1,6 +1,17 @@
 /*
  * (C) Copyright 2014-2019 magnusja <github@mgns.tech>
  *
+ * Modified by EtchDroid contributors (https://github.com/EtchDroid/EtchDroid):
+ * adapted from libaums UsbMassStorageDevice as EtchDroidUsbMassStorageDevice;
+ * exposes one block device per LUN instead of partitions, adds parcelable
+ * device descriptors that match a reconnected drive, and reports a missing
+ * permission or a failed initialization with the app's own exceptions.
+ *
+ * Modified by Vendroid contributors, 2026: renamed to
+ * VendroidUsbMassStorageDevice in package io.github.xntso.vendroid.massstorage;
+ * creates a VendroidScsiBlockDevice for each LUN instead of calling libaums'
+ * BlockDeviceDriverFactory.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
