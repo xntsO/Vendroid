@@ -165,6 +165,9 @@
     <string name="language_english">English</string>
     <string name="language_arabic">العربية</string>
     <string name="privacy_policy_language_note">The policy below is provided in English.</string>
+    <string name="open_source_licenses">Open-source licenses</string>
+    <string name="licenses_language_note">These notices and license texts are provided in English.</string>
+    <string name="licenses_back">Back</string>
     <string name="project_website">Project website</string>
     <string name="help_and_contact">Help and contact</string>
     <string name="ventoy_mirror_name">Vendroid update mirror</string>

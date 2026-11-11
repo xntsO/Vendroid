@@ -108,6 +108,9 @@
     <string name="language_english">English</string>
     <string name="language_arabic">العربية</string>
     <string name="privacy_policy_language_note">سياسة الخصوصية أدناه متاحة باللغة الإنجليزية.</string>
+    <string name="open_source_licenses">تراخيص المصادر المفتوحة</string>
+    <string name="licenses_language_note">هذه الإشعارات ونصوص التراخيص متاحة باللغة الإنجليزية.</string>
+    <string name="licenses_back">رجوع</string>
     <string name="install_ventoy">تثبيت Ventoy</string>
     <string name="ventoy_installer_name">مُثبّت Ventoy</string>
     <string name="force_install_ventoy">فرض التثبيت</string>
