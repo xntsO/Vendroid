@@ -15,7 +15,7 @@ Back up your USB drive before use. Installing Ventoy erases the selected drive. 
 
 Stable releases currently support MBR drives up to 2 TiB. The Vendroid beta channel includes experimental GPT and larger-drive support. Beta replaces the stable Vendroid installation and may contain unfinished features.
 
-Vendroid is open source and has no ads or account requirement. It uses work from Ventoy and EtchDroid and is not an official Ventoy project.
+Vendroid is open source and has no ads or account requirement. It is a modified version of EtchDroid by Davide Depau and contributors, installs Ventoy, and is not an official project of either.
 
 The bundled Ventoy 1.1.16 is free software under the GNU GPLv3 and contains other open-source components, including GRUB 2 and BusyBox. Their license texts are in the app. The Ventoy source code is tag v1.1.16, commit 2f66a309e4a3f0e08953aabfb0f1cf7e12b39f5d:
 https://github.com/ventoy/Ventoy/tree/v1.1.16

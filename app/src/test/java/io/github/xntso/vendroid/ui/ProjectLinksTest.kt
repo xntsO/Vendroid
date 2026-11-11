@@ -7,6 +7,7 @@ import io.github.xntso.vendroid.plugins.reviews.WriteReviewHelper
 import io.github.xntso.vendroid.utils.ProjectLinks
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.robolectric.Robolectric
@@ -38,5 +39,14 @@ class ProjectLinksTest {
         } finally {
             controller.pause().stop().destroy()
         }
+    }
+
+    @Test
+    fun `EtchDroid attribution links to the exact base commit`() {
+        assertTrue(Regex("[0-9a-f]{40}").matches(ProjectLinks.ETCHDROID_BASE_COMMIT))
+        assertEquals(
+            "https://github.com/EtchDroid/EtchDroid/tree/${ProjectLinks.ETCHDROID_BASE_COMMIT}",
+            ProjectLinks.ETCHDROID_SOURCE,
+        )
     }
 }
