@@ -1,6 +1,17 @@
 /*
  * (C) Copyright 2014 mjahnen <github@mgns.tech>
  *
+ * Modified by Vendroid contributors, 2026: renamed from libaums 0.10.0
+ * ScsiBlockDevice (commit af89120aa434ccd97b985a6d66420c1b7e30a1ad) and moved
+ * into Vendroid; reports the true block count instead of the last block
+ * address; reads the capacity with READ CAPACITY (16) when READ CAPACITY (10)
+ * is saturated; transfers data in bounded chunks through a zero-offset buffer,
+ * with READ (16) and WRITE (16) above 32-bit block addresses; adds
+ * SYNCHRONIZE CACHE with a bounded wait for its status; checks the command
+ * status signature and residue; bounds the REQUEST SENSE length; resets the
+ * Bulk-Only Transport after an incomplete transfer; and stops instead of
+ * replaying a command after a unit attention during I/O.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
