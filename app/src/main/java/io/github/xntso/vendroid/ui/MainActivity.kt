@@ -598,7 +598,7 @@ fun WindowsImageAlertDialog(
         )
     }, icon = {
         Icon(
-            imageVector = ImageVector.vectorResource(id = R.drawable.ic_windows),
+            imageVector = Icons.TwoTone.Info,
             contentDescription = null
         )
     }, confirmButton = {
