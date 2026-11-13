@@ -204,7 +204,8 @@ sequence. Code 30 was consumed by the first GPT candidate and code 31 by the fir
 `0.2.0-beta`, built from `6b1cbcb9`, whose tree matches `5ac9b9e` on `main`. Code 32 went
 to `0.2.0-beta.2`, built from `5f42150`, and code 33 to `0.2.0-beta.3`, built from
 `cbdf54b`. Code 34 went to the first signed `0.2.0-gpt-candidate`, built from `9b874b9`,
-and code 35 to the second, built from `9bb0dc8` after the license fixes, for the physical check.
+code 35 to the second, built from `9bb0dc8` after the license fixes, and code 36 to the third,
+built from `b888b78` after the slow-drive USB fixes, for the physical check.
 Increment `defaultVersionCode` before distributing the next distinct version. CI reads
 the code and version name directly from Gradle source. An explicit `VENDROID_VERSION_CODE`
 override must be at least the checked-in default and at most 2100000000.
