@@ -320,10 +320,15 @@ def test_ventoy_lifecycle_and_firmware(
                 driver, '//*[@text="Join Vendroid beta"]/ancestor-or-self::*[@clickable="true"][1]', timeout=15,
             )
             assert beta_button.get_attribute("enabled") == "true"
+        # The stable MBR xHCI run installs with the Linux-sized USB commands that the option
+        # selects, so the full lifecycle and boot checks below also cover that transfer path.
+        small_usb_transfers = profile.channel == "stable" and drive.bus == "xhci.0"
         app.configure_ventoy_options(
             driver, "TOOLS", 1, "64 KiB",
             partition_style=profile.partition_style,
+            small_usb_transfers=small_usb_transfers,
         )
+        record("install-options", {"small_usb_transfers": small_usb_transfers})
         driver.save_screenshot(str(evidence / "install-confirmation.png"))
         recording.mark("write-confirmation")
         app.confirm_write_image(driver)

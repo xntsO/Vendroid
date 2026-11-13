@@ -16,9 +16,27 @@ interface RawBlockDevice {
     fun flush() = Unit
 }
 
+/**
+ * Linux sends at most 240 sectors per USB storage command because some drives fail on larger
+ * ones. Vendroid otherwise sends up to 1 MiB.
+ */
+const val SMALL_USB_TRANSFER_BYTES = 240 * 512
+
+/**
+ * @param maxTransferBytes the most bytes one driver call may transfer, rounded down to whole
+ * blocks, or null for no limit beyond the driver's own.
+ */
 class BlockDeviceRawBlockDevice(
     private val driver: BlockDeviceDriver,
+    private val maxTransferBytes: Int? = null,
 ) : RawBlockDevice {
+    init {
+        require(maxTransferBytes == null || maxTransferBytes > 0) { "Transfer limit must be positive" }
+    }
+
+    private val maxAlignedTransferBytes: Int
+        get() = maxTransferBytes?.let { maxOf(blockSize, it - it % blockSize) } ?: Int.MAX_VALUE
+
     override val sizeBytes: Long
         get() = driver.blocks * driver.blockSize.toLong()
 
@@ -42,7 +60,7 @@ class BlockDeviceRawBlockDevice(
             val copyLength: Int
 
             if (withinBlock == 0 && remaining >= blockSize) {
-                copyLength = remaining - (remaining % blockSize)
+                copyLength = minOf(remaining - (remaining % blockSize), maxAlignedTransferBytes)
                 readBlocks(blockNumber, ByteBuffer.wrap(destination, outputOffset, copyLength).slice())
             } else {
                 copyLength = minOf(remaining, blockSize - withinBlock)
@@ -73,7 +91,7 @@ class BlockDeviceRawBlockDevice(
             val copyLength: Int
 
             val writeBuffer = if (withinBlock == 0 && remaining >= blockSize) {
-                copyLength = remaining - (remaining % blockSize)
+                copyLength = minOf(remaining - (remaining % blockSize), maxAlignedTransferBytes)
                 ByteBuffer.wrap(source, inputOffset, copyLength).slice()
             } else {
                 copyLength = minOf(remaining, blockSize - withinBlock)

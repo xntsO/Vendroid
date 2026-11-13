@@ -7,6 +7,7 @@ import io.github.xntso.vendroid.massstorage.UsbMassStorageDeviceDescriptor
 import io.github.xntso.vendroid.service.WorkerService
 import io.github.xntso.vendroid.utils.ktexts.safeParcelableExtra
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import io.github.xntso.vendroid.ventoy.VentoyClusterSize
@@ -54,6 +55,7 @@ class VentoyIntentTest {
             reservedSpaceBytes = 1024L * 1024 * 1024,
             clusterSize = VentoyClusterSize.KiB64,
             partitionStyle = VentoyPartitionStyle.Gpt,
+            smallUsbTransfers = true,
         )
         val intent = getProgressUpdateIntent(
             sourceUri = VENTOY_INSTALL_URI,
@@ -90,10 +92,20 @@ class VentoyIntentTest {
     }
 
     @Test
+    fun `smaller USB transfers are off by default and limit commands to 240 sectors`() {
+        assertNull(VentoyJobOptions().usbTransferLimitBytes())
+        assertEquals(
+            240 * 512,
+            VentoyJobOptions(smallUsbTransfers = true).usbTransferLimitBytes(),
+        )
+    }
+
+    @Test
     fun `update intent preserves operation and options`() {
         val options = VentoyJobOptions(
             label = "RECOVERY",
             onlinePayloadVersion = "1.1.17",
+            smallUsbTransfers = true,
         )
 
         val intent = getStartVentoyUpdateJobIntent(

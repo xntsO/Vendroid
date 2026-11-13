@@ -752,6 +752,7 @@ fun ConfirmationView(
                                         },
                                     )
                                     Text(
+                                        modifier = Modifier.appiumTag("ventoyOptionsSummary"),
                                         text = ventoyOptionsSummary(uiState.ventoyOptions),
                                         style = MaterialTheme.typography.labelMedium,
                                     )
@@ -1157,7 +1158,7 @@ private fun ventoyOptionsSummary(options: VentoyJobOptions): String {
     } else {
         "${options.reservedSpaceBytes / mebibyte} MiB"
     }
-    return stringResource(
+    val summary = stringResource(
         R.string.ventoy_options_summary,
         when (options.partitionStyle) {
             VentoyPartitionStyle.Mbr -> "MBR"
@@ -1167,6 +1168,11 @@ private fun ventoyOptionsSummary(options: VentoyJobOptions): String {
         cluster,
         reserved,
     )
+    return if (options.smallUsbTransfers) {
+        "$summary · ${stringResource(R.string.small_usb_transfers)}"
+    } else {
+        summary
+    }
 }
 
 @Composable
@@ -1281,6 +1287,7 @@ fun VentoyAdvancedOptionsBottomSheet(
     }
     var clusterSize by rememberSaveable(options) { mutableStateOf(options.clusterSize) }
     var partitionStyle by rememberSaveable(options) { mutableStateOf(options.partitionStyle) }
+    var smallUsbTransfers by rememberSaveable(options) { mutableStateOf(options.smallUsbTransfers) }
     var clusterMenuOpen by remember { mutableStateOf(false) }
     var unitMenuOpen by remember { mutableStateOf(false) }
     val parsedReservedAmount = reservedAmount.toLongOrNull()
@@ -1443,6 +1450,24 @@ fun VentoyAdvancedOptionsBottomSheet(
                     }
                 }
             }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.small_usb_transfers), fontWeight = FontWeight.Bold)
+                    Text(
+                        stringResource(R.string.small_usb_transfers_description),
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
+                Switch(
+                    modifier = Modifier.appiumTag("ventoySmallUsbTransfersSwitch"),
+                    checked = smallUsbTransfers,
+                    onCheckedChange = { smallUsbTransfers = it },
+                )
+            }
             Text(
                 stringResource(R.string.partitions_aligned_4k),
                 style = MaterialTheme.typography.labelMedium,
@@ -1473,6 +1498,7 @@ fun VentoyAdvancedOptionsBottomSheet(
                                 },
                                 clusterSize = clusterSize,
                                 partitionStyle = partitionStyle,
+                                smallUsbTransfers = smallUsbTransfers,
                             ),
                         )
                     },

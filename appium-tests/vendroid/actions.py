@@ -48,6 +48,7 @@ def configure_ventoy_options(
     reserved_mib: int,
     cluster_size: str,
     partition_style: str | None = None,
+    small_usb_transfers: bool = False,
 ):
     if partition_style is not None:
         partition_button = wait_for_element(driver, '//*[@resource-id="ventoyPartitionStyleButton"]')
@@ -70,7 +71,18 @@ def configure_ventoy_options(
         "mobile: replaceElementValue", {"elementId": reserve_field.id, "text": str(reserved_mib)}
     )
     WebDriverWait(driver, 5).until(lambda _: reserve_field.get_attribute("text") == str(reserved_mib))
+
+    transfers_switch = wait_for_element(driver, '//*[@resource-id="ventoySmallUsbTransfersSwitch"]')
+    if (transfers_switch.get_attribute("checked") == "true") != small_usb_transfers:
+        transfers_switch.click()
+    WebDriverWait(driver, 5).until(
+        lambda _: (transfers_switch.get_attribute("checked") == "true") == small_usb_transfers
+    )
     wait_for_element(driver, '//*[@resource-id="ventoyApplyOptionsButton"]').click()
+    summary = wait_for_element(driver, '//*[@resource-id="ventoyOptionsSummary"]', timeout=15)
+    WebDriverWait(driver, 5).until(
+        lambda _: ("Smaller USB transfers" in summary.get_attribute("text")) == small_usb_transfers
+    )
 
 
 def find_and_open_file(driver: Remote, filename: str):

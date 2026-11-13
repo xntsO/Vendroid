@@ -1295,6 +1295,47 @@ class BlockDeviceRawBlockDeviceTest {
     }
 
     @Test
+    fun `smaller USB transfers split aligned transfers into Linux sized commands`() {
+        val driver = CountingBlockDeviceDriver(blocks = 1024, blockSize = 512)
+        val device = BlockDeviceRawBlockDevice(driver, SMALL_USB_TRANSFER_BYTES)
+        val bytes = ByteArray(1000 * 512) { (it % 251).toByte() }
+
+        device.write(3L * 512, bytes)
+        val readBack = device.readBytes(3L * 512, bytes.size)
+
+        assertArrayEquals(bytes, readBack)
+        assertEquals(5, driver.writeCalls)
+        assertEquals(5, driver.readCalls)
+        assertEquals(SMALL_USB_TRANSFER_BYTES, driver.transferSizes.max())
+        assertEquals(1000 * 512, driver.transferSizes.take(5).sum())
+    }
+
+    @Test
+    fun `transfer limits round down to whole blocks and never below one block`() {
+        val largeBlocks = CountingBlockDeviceDriver(blocks = 64, blockSize = 4096)
+        BlockDeviceRawBlockDevice(largeBlocks, 10_000).write(0, ByteArray(8 * 4096))
+        assertEquals(listOf(8192, 8192, 8192, 8192), largeBlocks.transferSizes)
+
+        val tinyLimit = CountingBlockDeviceDriver(blocks = 16, blockSize = 512)
+        val bytes = ByteArray(3 * 512 + 100) { (it % 7).toByte() }
+        val device = BlockDeviceRawBlockDevice(tinyLimit, 100)
+        device.write(200, bytes)
+        assertArrayEquals(bytes, device.readBytes(200, bytes.size))
+        assertTrue(tinyLimit.transferSizes.all { it == 512 })
+    }
+
+    @Test
+    fun `install completes and verifies through smaller USB transfers`() {
+        val driver = CountingBlockDeviceDriver(blocks = 40L * 1024 * 2, blockSize = 512)
+        val device = BlockDeviceRawBlockDevice(driver, SMALL_USB_TRANSFER_BYTES)
+
+        VentoyInstaller(syntheticPayload()).install(device, VentoyInstallOptions(forceInstall = true))
+
+        assertTrue(driver.transferSizes.isNotEmpty())
+        assertTrue(driver.transferSizes.all { it <= SMALL_USB_TRANSFER_BYTES })
+    }
+
+    @Test
     fun `flush waits for a caching driver and classifies its failures`() {
         val driver = SynchronizingBlockDeviceDriver()
         val device = BlockDeviceRawBlockDevice(driver)
@@ -1381,17 +1422,21 @@ private class CountingBlockDeviceDriver(
     private val bytes = ByteArray((blocks * blockSize).toInt())
     var readCalls = 0
     var writeCalls = 0
+    /** Bytes per driver call, writes and reads in call order. */
+    val transferSizes = mutableListOf<Int>()
 
     override fun init() = Unit
 
     override fun read(deviceOffset: Long, buffer: ByteBuffer) {
         readCalls++
+        transferSizes += buffer.remaining()
         val offset = (deviceOffset * blockSize).toInt()
         buffer.put(bytes, offset, buffer.remaining())
     }
 
     override fun write(deviceOffset: Long, buffer: ByteBuffer) {
         writeCalls++
+        transferSizes += buffer.remaining()
         val offset = (deviceOffset * blockSize).toInt()
         buffer.get(bytes, offset, buffer.remaining())
     }
