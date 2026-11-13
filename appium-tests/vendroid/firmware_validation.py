@@ -58,7 +58,10 @@ INITRD /boot/initramfs-lts
 APPEND modules=loop,squashfs,sd-mod,usb-storage console=ttyS0,115200
 """
 # One Linux boot per channel and layout is enough; the uhci jobs keep their duration.
+# It also attaches the disk through xHCI: over emulated EHCI, Ventoy's Alpine hook spent
+# about 450 s reading the boot media before Alpine continued.
 LINUX_BOOT_CONTROLLER = "xhci"
+USB_CONTROLLER_DEVICES = {"ehci": "usb-ehci", "xhci": "qemu-xhci"}
 LINUX_LIMITATIONS = [
     "Boots one pinned Alpine Linux ISO through Ventoy's Linux hook under emulated x86 BIOS and/or x64 UEFI.",
     "Its GRUB and ISOLINUX entries are replaced through Ventoy's conf_replace plugin only to add a serial console.",
@@ -265,7 +268,10 @@ def _boot_mode(
     image: Path, directory: Path, mode: str, qemu: str, *,
     state=None, timeout: int = BOOT_TIMEOUT_SECONDS, accelerator: str = "tcg",
     failure_message: str = "Probe marker or matching firmware line missing from guest serial output",
+    usb_controller: str = "ehci",
 ) -> dict:
+    if usb_controller not in USB_CONTROLLER_DEVICES:
+        raise ValueError(f"Unsupported USB controller: {usb_controller}")
     state = state or _probe_state(mode)
     directory.mkdir()
     serial = directory / "serial.log"
@@ -278,6 +284,7 @@ def _boot_mode(
     result = {
         "mode": mode, "firmware": firmware, "passed": False, **state([]),
         "timed_out": False, "timeout_seconds": timeout, "accelerator": accelerator,
+        "usb_controller": usb_controller,
         "serial_log": str(serial), "qemu_log": str(stderr), "returncode": None,
     }
     command = [
@@ -288,8 +295,8 @@ def _boot_mode(
         "-qmp", f"unix:{qmp_path},server=on,wait=off",
         "-no-reboot", "-snapshot", "-boot", "strict=on",
         "-drive", f"file={_qemu_path(image)},format=raw,if=none,id=candidate,media=disk",
-        "-device", "usb-ehci,id=ehci",
-        "-device", "usb-storage,bus=ehci.0,drive=candidate,bootindex=1,removable=on",
+        "-device", f"{USB_CONTROLLER_DEVICES[usb_controller]},id={usb_controller}",
+        "-device", f"usb-storage,bus={usb_controller}.0,drive=candidate,bootindex=1,removable=on",
     ]
     started = time.monotonic()
     try:
@@ -437,6 +444,7 @@ def verify_linux_boot(
         report["modes"][mode] = _boot_mode(
             image, run / mode, mode, qemu, state=linux_boot_state, timeout=LINUX_BOOT_TIMEOUT_SECONDS,
             accelerator=accelerator, failure_message="Alpine banner or login prompt missing from guest serial output",
+            usb_controller=LINUX_BOOT_CONTROLLER,
         )
     report["passed"] = all(result["passed"] for result in report["modes"].values())
     Path(report["report_path"]).write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
