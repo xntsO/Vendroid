@@ -20,7 +20,10 @@ from vendroid.disk_validation import (
     inspect_image, mounted_data_partition, create_preservation_files,
     verify_preservation_files, damage_gpt_header, seed_payload,
 )
-from vendroid.firmware_validation import prepare_boot_files, verify_firmware_boot
+from vendroid.firmware_validation import (
+    linux_boot_required, prepare_boot_files, prepare_linux_boot_files, remove_linux_boot_files,
+    verify_firmware_boot, verify_linux_boot,
+)
 from vendroid.service_recording import ServiceRecording
 from vendroid.validation_profiles import LARGE_DRIVE_BYTES, configured_profile
 from vendroid.utils import (
@@ -348,6 +351,15 @@ def test_ventoy_lifecycle_and_firmware(
     (evidence / "preservation-sha256.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     record("install-and-file-copy", baseline)
     record("boot-after-install", verify_firmware_boot(drive.path, evidence / "boot-install"))
+    if linux_boot_required(drive.bus):
+        # The GRUB probe stops before Linux. Alpine also exercises Ventoy's Linux hook,
+        # which must find this USB disk again and mount the ISO from the exFAT partition.
+        with mounted_data_partition(drive.path, writable=True) as root:
+            prepare_linux_boot_files(root, Path(os.environ["VENDROID_LINUX_BOOT_ISO"]))
+        record("linux-boot-after-install", verify_linux_boot(drive.path, evidence / "linux-boot-install"))
+        with mounted_data_partition(drive.path, writable=True) as root:
+            remove_linux_boot_files(root)
+            prepare_boot_files(root, Path(os.environ["VENDROID_BOOT_PROBE_ISO"]))
 
     drive.attach()
     restart_and_scan(driver)
