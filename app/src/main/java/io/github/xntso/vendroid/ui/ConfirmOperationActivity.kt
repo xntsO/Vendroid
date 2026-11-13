@@ -1542,6 +1542,7 @@ fun LayFlatOnTableBottomSheet(
                     .fillMaxWidth(),
                 style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center
             )
+            LayFlatExplanation(stringResource(R.string.lay_flat_reason))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1614,6 +1615,10 @@ fun LayFlatOnTableBottomSheet(
                     .fillMaxWidth(),
                 style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center
             )
+            LayFlatExplanation(
+                "${stringResource(R.string.lay_flat_reason)} " +
+                    stringResource(R.string.lay_flat_starts_automatically),
+            )
 
             Row(
                 modifier = Modifier
@@ -1674,6 +1679,20 @@ fun LayFlatOnTableBottomSheet(
             }
         }
     }
+}
+
+@Composable
+private fun LayFlatExplanation(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier
+            .padding(horizontal = 24.dp)
+            .fillMaxWidth()
+            .appiumTag("layFlatExplanation"),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+    )
 }
 
 @PreviewScreenSizes

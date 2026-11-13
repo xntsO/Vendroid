@@ -59,6 +59,8 @@
     <string name="lay_your_device_flat_no_accel">ضع جهازك بشكل مسطح على طاولة قبل المتابعة.</string>
     <string name="continue_">استمر</string>
     <string name="skip">تخطي</string>
+    <string name="lay_flat_reason">تحريك الجوال أو كابل USB قد يفصل محرك الأقراص أثناء الكتابة عليه.</string>
+    <string name="lay_flat_starts_automatically">يبدأ Vendroid تلقائيًا عندما يستقر الجوال مسطحًا دون حركة، أو اضغط «تخطي» للبدء الآن.</string>
     <string name="developed_by">طور بواسطة %1$s وآخرون %2$s.
 \nكود المصدر متاح على %3$s.
 \nمُرخصة بموجب ترخيص GNU GPLv3.</string>
