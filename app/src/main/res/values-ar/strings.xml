@@ -87,6 +87,7 @@
     <string name="the_usb_drive_was_unplugged">تم فصل محرك أقراص USB</string>
     <string name="the_usb_drive_stopped_responding">توقف محرك أقراص USB عن الاستجابة</string>
     <string name="the_usb_device_content_does_not_match_the_image">محتوى جهاز USB لا يتطابق مع الصورة</string>
+    <string name="ventoy_verification_failed">كتب Vendroid برنامج Ventoy على محرك أقراص USB، لكن قراءته مرة أخرى أعادت بيانات مختلفة عند البايت %1$d. قد يكون محرك الأقراص مقلّدًا أو تالفًا. هيّئ محرك الأقراص لاستخدامه مرة أخرى، أو جرّب محرك أقراص آخر.</string>
     <string name="write_another_image">اكتب صورة أخرى</string>
     <string name="title_activity_confirm_operation">تأكيد العملية</string>
     <string name="no_image_uri_provided">لم يتم توفير صورة URI</string>

@@ -5,6 +5,7 @@ import io.github.xntso.vendroid.MemoryBufferBlockDeviceDriver
 import io.github.xntso.vendroid.VendroidApplication
 import io.github.xntso.vendroid.massstorage.CacheSynchronizingBlockDevice
 import io.github.xntso.vendroid.utils.exception.UsbCommunicationException
+import io.github.xntso.vendroid.utils.exception.VentoyVerificationFailedException
 import me.jahnen.libaums.core.driver.BlockDeviceDriver
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -1246,17 +1247,35 @@ class VentoyInstallerTest {
     fun `post-write verification rejects a corrupted VTOYEFI payload`() {
         val backing = memoryDevice(40L * 1024 * 1024)
         val plan = VentoyDiskLayout.plan(backing.sizeBytes, backing.blockSize, "1.1.16")
-        val device = CorruptingRawBlockDevice(
-            delegate = backing,
-            targetOffset = plan.partition2StartSector * 512 + 4096,
-        )
+        val targetOffset = plan.partition2StartSector * 512 + 4096 + 77
+        val device = CorruptingRawBlockDevice(delegate = backing, targetOffset = targetOffset)
 
-        assertThrows<IllegalArgumentException> {
+        val exception = assertThrows<VentoyVerificationFailedException> {
             VentoyInstaller(syntheticPayload()).install(
                 device,
                 VentoyInstallOptions(forceInstall = true),
             )
         }
+        assertEquals(targetOffset, exception.deviceOffset)
+    }
+
+    @Test
+    fun `post-write verification reports the first changed byte of the MBR boot core`() {
+        // Regression: a drive that altered the core image was reported as an unknown error
+        // at the start of the 1 MiB verification chunk (offset 512) instead of the bad byte.
+        val targetOffset = 512L + 300
+        val device = ReadCorruptingRawBlockDevice(
+            delegate = memoryDevice(40L * 1024 * 1024),
+            targetOffset = targetOffset,
+        )
+
+        val exception = assertThrows<VentoyVerificationFailedException> {
+            VentoyInstaller(syntheticPayload()).install(
+                device,
+                VentoyInstallOptions(forceInstall = true),
+            )
+        }
+        assertEquals(targetOffset, exception.deviceOffset)
     }
 }
 
@@ -1475,6 +1494,20 @@ private class DiscardingRawBlockDevice(
         destination.fill(0, destinationOffset, destinationOffset + length)
 
     override fun write(offset: Long, source: ByteArray, sourceOffset: Int, length: Int) = Unit
+}
+
+/** Stores writes faithfully but returns one changed byte, like a failing drive. */
+private class ReadCorruptingRawBlockDevice(
+    private val delegate: RawBlockDevice,
+    private val targetOffset: Long,
+) : RawBlockDevice by delegate {
+    override fun read(offset: Long, destination: ByteArray, destinationOffset: Int, length: Int) {
+        delegate.read(offset, destination, destinationOffset, length)
+        if (targetOffset in offset until offset + length) {
+            val index = destinationOffset + (targetOffset - offset).toInt()
+            destination[index] = (destination[index].toInt() xor 0x01).toByte()
+        }
+    }
 }
 
 private class CorruptingRawBlockDevice(
