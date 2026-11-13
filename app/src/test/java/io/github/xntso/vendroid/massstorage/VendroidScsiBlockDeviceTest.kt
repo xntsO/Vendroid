@@ -428,14 +428,59 @@ class VendroidScsiBlockDeviceTest {
     }
 
     @Test
-    fun `ordinary commands keep resetting after a status timeout`() {
+    fun `a slow write is awaited without resetting or replaying the command`() {
+        // Regression: a drive pausing more than 5 seconds mid-install was reset and the
+        // write replayed until recovery gave up and asked the user to reconnect it.
         val usb = FakeUsbCommunication(4095)
         val device = initialized(usb)
+        val data = pattern(512, 9)
+        usb.statusTimeoutsRemaining = 5
+
+        device.write(17, ByteBuffer.wrap(data))
+
+        assertEquals(1, usb.ioCommands.size)
+        assertEquals(0, usb.statusTimeoutsRemaining)
+        assertEquals(0, usb.resetCount)
+        assertArrayEquals(data, usb.block(17))
+    }
+
+    @Test
+    fun `a slow read is awaited without resetting or replaying the command`() {
+        val usb = FakeUsbCommunication(4095)
+        val device = initialized(usb)
+        val data = pattern(512, 4)
+        usb.seed(17, data)
+        usb.statusTimeoutsRemaining = 5
+        val destination = ByteBuffer.allocate(512)
+
+        device.read(17, destination)
+
+        assertEquals(1, usb.ioCommands.size)
+        assertEquals(0, usb.resetCount)
+        assertArrayEquals(data, destination.array())
+    }
+
+    @Test
+    fun `a write that never finishes fails after a bounded wait without a reset`() {
+        val usb = FakeUsbCommunication(4095)
+        val device = initialized(usb)
+        usb.statusTimeoutsRemaining = Int.MAX_VALUE
+
+        assertThrows<IOException> { device.write(17, ByteBuffer.allocate(512)) }
+
+        assertEquals(1, usb.ioCommands.size)
+        assertEquals(Int.MAX_VALUE - 6, usb.statusTimeoutsRemaining)
+        assertEquals(0, usb.resetCount)
+    }
+
+    @Test
+    fun `initialization commands keep resetting after a status timeout`() {
+        val usb = FakeUsbCommunication(4095)
         usb.statusTimeoutsRemaining = 1
 
-        device.read(17, ByteBuffer.allocate(512))
+        val device = initialized(usb)
 
-        assertEquals(2, usb.ioCommands.size)
+        assertEquals(4096L, device.blocks)
         assertTrue(usb.resetCount > 0)
     }
 
