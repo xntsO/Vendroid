@@ -3,7 +3,7 @@
 Vendroid uses the existing `foss` flavor and package `io.github.xntso.vendroid` on
 Google Play. Production and beta are tracks of the same app. The internal Gradle
 build type `preview` produces the optimized beta with version suffix `-beta`.
-Experimental GPT and drives above 2 TiB remain beta features until their physical
+Drives above 2 TiB remain a beta feature until their physical
 validation gates in [validation.md](validation.md) pass.
 
 ## First listing
