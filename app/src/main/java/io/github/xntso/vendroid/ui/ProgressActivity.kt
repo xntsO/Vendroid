@@ -126,6 +126,7 @@ import io.github.xntso.vendroid.utils.exception.InitException
 import io.github.xntso.vendroid.utils.exception.MissingPermissionException
 import io.github.xntso.vendroid.utils.exception.NotEnoughSpaceException
 import io.github.xntso.vendroid.utils.exception.UsbCommunicationException
+import io.github.xntso.vendroid.utils.exception.VentoyVerificationFailedException
 import io.github.xntso.vendroid.utils.exception.VerificationFailedException
 import io.github.xntso.vendroid.utils.exception.base.FatalException
 import io.github.xntso.vendroid.utils.exception.base.RecoverableException
@@ -1074,7 +1075,7 @@ fun FatalErrorView(
             )
         },
         suggestion = {
-            if (exception !is NotEnoughSpaceException) {
+            if (exception !is NotEnoughSpaceException && exception !is VentoyVerificationFailedException) {
                 Text(
                     text = stringResource(R.string.please_report_fatal_issue),
                     textAlign = TextAlign.Center,

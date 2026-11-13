@@ -1,5 +1,6 @@
 package io.github.xntso.vendroid.ventoy
 
+import io.github.xntso.vendroid.utils.exception.VentoyVerificationFailedException
 import org.tukaani.xz.XZInputStream
 import java.security.SecureRandom
 
@@ -497,8 +498,10 @@ class VentoyInstaller(
                 }
             }
             val actual = device.readBytes(offset + verified, read)
-            require(expected.copyOf(read).contentEquals(actual)) {
-                "Ventoy payload verification failed at device offset ${offset + verified}."
+            if (!expected.copyOf(read).contentEquals(actual)) {
+                var mismatch = 0
+                while (expected[mismatch] == actual[mismatch]) mismatch++
+                throw VentoyVerificationFailedException(offset + verified + mismatch)
             }
             verified += read
             onProgress(verified)
