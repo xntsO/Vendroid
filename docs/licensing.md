@@ -8,10 +8,10 @@ The APK carries boot files from the official Ventoy Linux release pinned in `app
 
 | Item | Value |
 | --- | --- |
-| Bundled version | Ventoy 1.1.16 |
-| Source tag | https://github.com/ventoy/Ventoy/tree/v1.1.16 |
-| Source commit | https://github.com/ventoy/Ventoy/commit/2f66a309e4a3f0e08953aabfb0f1cf7e12b39f5d |
-| Source archive | https://github.com/ventoy/Ventoy/archive/refs/tags/v1.1.16.tar.gz |
+| Bundled version | Ventoy 1.1.18 |
+| Source tag | https://github.com/ventoy/Ventoy/tree/v1.1.18 |
+| Source commit | https://github.com/ventoy/Ventoy/commit/6116894ab8abdf3ef8d43411a6732d34ee19214e |
+| Source archive | https://github.com/ventoy/Ventoy/archive/refs/tags/v1.1.18.tar.gz |
 
 [`third_party/ventoy/`](../third_party/ventoy) holds three things for exactly that release:
 

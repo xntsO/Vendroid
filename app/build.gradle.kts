@@ -3,7 +3,7 @@
 import java.security.MessageDigest
 import java.util.Locale
 
-val pinnedVentoyVersion = "1.1.16"
+val pinnedVentoyVersion = "1.1.18"
 val ventoyPayloadArchive = providers.gradleProperty("ventoyPayloadArchive")
     .orElse(providers.environmentVariable("VENTOY_PAYLOAD_ARCHIVE"))
     .orElse(

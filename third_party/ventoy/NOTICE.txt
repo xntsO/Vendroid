@@ -1,12 +1,12 @@
-Ventoy 1.1.16 in Vendroid
+Ventoy 1.1.18 in Vendroid
 =========================
 
-Vendroid writes boot files from the official Ventoy 1.1.16 Linux release to
+Vendroid writes boot files from the official Ventoy 1.1.18 Linux release to
 your USB drive: boot/boot.img, boot/core.img.xz and ventoy/ventoy.disk.img.xz.
 Vendroid does not modify them. Vendroid is not affiliated with the Ventoy
 project.
 
-Release: https://github.com/ventoy/Ventoy/releases/tag/v1.1.16
+Release: https://github.com/ventoy/Ventoy/releases/tag/v1.1.18
 
 
 Licenses
@@ -29,15 +29,15 @@ sections 15 and 16 of gpl-3.0.txt.
 Corresponding source
 --------------------
 
-The complete source of Ventoy 1.1.16 is this tag and commit of the Ventoy
+The complete source of Ventoy 1.1.18 is this tag and commit of the Ventoy
 repository:
 
-  Tag:     https://github.com/ventoy/Ventoy/tree/v1.1.16
-  Commit:  https://github.com/ventoy/Ventoy/commit/2f66a309e4a3f0e08953aabfb0f1cf7e12b39f5d
-  Archive: https://github.com/ventoy/Ventoy/archive/refs/tags/v1.1.16.tar.gz
+  Tag:     https://github.com/ventoy/Ventoy/tree/v1.1.18
+  Commit:  https://github.com/ventoy/Ventoy/commit/6116894ab8abdf3ef8d43411a6732d34ee19214e
+  Archive: https://github.com/ventoy/Ventoy/archive/refs/tags/v1.1.18.tar.gz
 
 Every Vendroid release on GitHub also carries a copy of that archive as
-ventoy-1.1.16-source.tar.gz, with this License folder and a checksum list:
+ventoy-1.1.18-source.tar.gz, with this License folder and a checksum list:
 
   https://github.com/xntsO/Vendroid/releases
 
