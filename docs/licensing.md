@@ -48,7 +48,7 @@ Checksums in the lock for BusyBox 1.30.0, 1.31.0 and 1.32.0 equal the `.sha256` 
 - `scripts/licenses/test_licenses.py` fails if the vendored License folder differs from the lock, if Gradle or either workflow pins another Ventoy version, or if the README, this page, the store description, or the current release notes stop naming the locked tag and commit.
 - `scripts/licenses/verify_apk.py` runs on every built APK, the signed APK, and the Play bundle. It requires every vendored file under `assets/ventoy_licenses/`, byte for byte, and a bundled payload of the locked version.
 - `scripts/licenses/prepare_sources.py` requires the pinned SHA-256 of each archive, the pinned commit recorded inside the Ventoy archive, a `License` folder identical to the vendored one, and the identified BusyBox binaries. A new file beside BusyBox fails the job until someone identifies it.
-- A unit test reads the packaged assets, and the Appium smoke test checks the About line.
+- A unit test reads the packaged assets. `AboutCreditsTest` checks that the About line links the word "GitHub" to the locked commit, and the Appium smoke test checks the line names the bundled version.
 
 ## Changing the bundled Ventoy version
 

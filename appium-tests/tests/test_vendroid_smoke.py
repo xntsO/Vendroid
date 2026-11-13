@@ -34,11 +34,12 @@ def test_home_identity_and_privacy_policy_action(driver: appium.webdriver.Remote
         driver, '//*[@text="Close"]/ancestor-or-self::*[@clickable="true"][1]', timeout=15,
     ).click()
 
-    # The bundled Ventoy is GPL software: About names its version and exact source commit.
+    # The bundled Ventoy is GPL software: About names its version and links its source from a word.
+    # AboutCreditsTest checks that the link opens the exact locked commit.
     lock = json.loads((Path(__file__).resolve().parents[2] / "third_party/ventoy/source-lock.json").read_text())
     credits = wait_for_element(driver, '//*[@resource-id="aboutCredits"]', timeout=15).get_attribute("text")
-    assert f"Ventoy {lock['version']}" in credits
-    assert f"github.com/ventoy/Ventoy@{lock['commit'][:12]}" in credits
+    assert f"Ventoy {lock['version']} is free software under the GNU GPLv3. Its source code: GitHub." in credits
+    assert "github.com" not in credits, "About must link addresses from words, not show them"
     # Vendroid is a modified EtchDroid: About credits its author and states the GPL warranty terms.
     assert "modified version of EtchDroid" in credits
     assert "Davide Depau" in credits

@@ -7,6 +7,8 @@ import androidx.core.net.toUri
 object ProjectLinks {
     const val WEBSITE = "https://vendroid.fhas.sa"
     const val HELP = "$WEBSITE/#faq"
+    const val SOURCE_CODE = "https://github.com/xntsO/Vendroid"
+    const val DEVELOPER_WEBSITE = "https://fhas.sa"
 
     /** The EtchDroid commit that Vendroid was derived from on 2026-07-04. */
     const val ETCHDROID_BASE_COMMIT = "e2eda57136d46fd3c465dee2e5ab31cdcb019a6e"
