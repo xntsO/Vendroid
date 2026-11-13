@@ -7,7 +7,8 @@
  * address; reads the capacity with READ CAPACITY (16) when READ CAPACITY (10)
  * is saturated; transfers data in bounded chunks through a zero-offset buffer,
  * with READ (16) and WRITE (16) above 32-bit block addresses; adds
- * SYNCHRONIZE CACHE with a bounded wait for its status; checks the command
+ * SYNCHRONIZE CACHE; waits a bounded time for the status of SYNCHRONIZE CACHE
+ * and block transfers instead of resetting the drive; checks the command
  * status signature and residue; bounds the REQUEST SENSE length; resets the
  * Bulk-Only Transport after an incomplete transfer; and stops instead of
  * replaying a command after a unit attention during I/O.
@@ -407,7 +408,11 @@ internal class VendroidScsiBlockDevice(
                 chunk.put(buffer.duplicate().apply { limit(position() + chunkBytes) })
                 chunk.flip()
             }
-            transferCommand(ScsiReadWrite(lun, direction, lba, chunkBlocks, chunkBytes), chunk)
+            transferCommand(
+                ScsiReadWrite(lun, direction, lba, chunkBlocks, chunkBytes),
+                chunk,
+                statusTimeouts = BLOCK_IO_STATUS_TIMEOUTS,
+            )
             if (direction == Direction.IN) {
                 chunk.flip()
                 buffer.put(chunk)
@@ -422,6 +427,10 @@ internal class VendroidScsiBlockDevice(
         private const val MAX_RECOVERY_ATTEMPTS = 5
         // With the transport's 5 second timeout this allows a flush one minute to finish.
         private const val SYNC_STATUS_TIMEOUTS = 11
+
+        // Cheap drives can pause a write while they reorganize flash. Wait as long as
+        // Linux waits for a SCSI command (30 seconds) instead of resetting mid-write.
+        private const val BLOCK_IO_STATUS_TIMEOUTS = 5
         private const val ASC_INVALID_OPCODE = 0x20
         private const val ASC_INVALID_CDB_FIELD = 0x24
         private val TAG = VendroidScsiBlockDevice::class.java.simpleName
