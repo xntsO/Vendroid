@@ -453,7 +453,10 @@ class WorkerService : LifecycleService() {
                 }
 
                 if (Intents.isVentoyOperation(mOperation)) {
-                    val rawBlockDevice = BlockDeviceRawBlockDevice(blockDev)
+                    val rawBlockDevice = BlockDeviceRawBlockDevice(
+                        blockDev,
+                        maxTransferBytes = mVentoyOptions.usbTransferLimitBytes(),
+                    )
                     imageSize = rawBlockDevice.sizeBytes
 
                     getProgressUpdateIntent(

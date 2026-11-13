@@ -37,6 +37,8 @@
     <string name="automatic">Automatic</string>
     <string name="reserve_space">Reserve space at the end</string>
     <string name="reserve_space_description">Leave unallocated space after the Ventoy partitions.</string>
+    <string name="small_usb_transfers" comment="Advanced Ventoy option that sends smaller USB storage commands">Smaller USB transfers</string>
+    <string name="small_usb_transfers_description">Slower, but may help drives that fail verification or disconnect during installation.</string>
     <string name="maximum_reserved_space">Maximum: %1$d %2$s</string>
     <string name="reserved_space">Reserved space</string>
     <string name="partitions_aligned_4k">✓ Partitions are always aligned to 4 KiB boundaries.</string>
@@ -150,7 +152,7 @@
     <string name="the_usb_drive_was_unplugged" comment="Error message">The USB drive was unplugged</string>
     <string name="the_usb_drive_stopped_responding" comment="Error message">The USB drive stopped responding</string>
     <string name="the_usb_device_content_does_not_match_the_image" comment="Error message displayed when the verification failed">The USB device content does not match the image</string>
-    <string name="ventoy_verification_failed" comment="Error message when the drive returns different Ventoy data than was written; parameter is the byte offset of the first difference">Vendroid wrote Ventoy to the USB drive, but reading it back returned different data at byte %1$d. The drive may be counterfeit or failing. Format the drive to use it again, or try another drive.</string>
+    <string name="ventoy_verification_failed" comment="Error message when the drive returns different Ventoy data than was written; parameter is the byte offset of the first difference">Vendroid wrote Ventoy to the USB drive, but reading it back returned different data at byte %1$d. The drive may be counterfeit, failing, or unable to handle large transfers. Format the drive to use it again. Then try again with Smaller USB transfers turned on in Advanced options, or use another drive.</string>
     <string name="write_another_image" comment="Displayed in the successful write page, when clicked the app goes back to the initial page">Write another image</string>
     <string name="title_activity_confirm_operation" comment="Title of the screen that displays the summary of the operation about to be performed">Confirm operation</string>
     <string name="no_image_uri_provided" comment="Error message (shown in a toast) when the operation confirmation screen is opened without a source file; the app redirects back to the home page">No image URI provided</string>

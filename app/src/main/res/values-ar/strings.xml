@@ -87,7 +87,7 @@
     <string name="the_usb_drive_was_unplugged">تم فصل محرك أقراص USB</string>
     <string name="the_usb_drive_stopped_responding">توقف محرك أقراص USB عن الاستجابة</string>
     <string name="the_usb_device_content_does_not_match_the_image">محتوى جهاز USB لا يتطابق مع الصورة</string>
-    <string name="ventoy_verification_failed">كتب Vendroid برنامج Ventoy على محرك أقراص USB، لكن قراءته مرة أخرى أعادت بيانات مختلفة عند البايت %1$d. قد يكون محرك الأقراص مقلّدًا أو تالفًا. هيّئ محرك الأقراص لاستخدامه مرة أخرى، أو جرّب محرك أقراص آخر.</string>
+    <string name="ventoy_verification_failed">كتب Vendroid برنامج Ventoy على محرك أقراص USB، لكن قراءته مرة أخرى أعادت بيانات مختلفة عند البايت %1$d. قد يكون محرك الأقراص مقلّدًا أو تالفًا أو غير قادر على التعامل مع عمليات النقل الكبيرة. هيّئ محرك الأقراص لاستخدامه مرة أخرى، ثم أعد المحاولة بعد تفعيل «عمليات نقل USB أصغر» في الخيارات المتقدمة، أو استخدم محرك أقراص آخر.</string>
     <string name="write_another_image">اكتب صورة أخرى</string>
     <string name="title_activity_confirm_operation">تأكيد العملية</string>
     <string name="no_image_uri_provided">لم يتم توفير صورة URI</string>
@@ -130,6 +130,8 @@
     <string name="automatic">تلقائي</string>
     <string name="reserve_space">حجز مساحة في النهاية</string>
     <string name="reserve_space_description">ترك مساحة غير مخصصة بعد أقسام Ventoy.</string>
+    <string name="small_usb_transfers">عمليات نقل USB أصغر</string>
+    <string name="small_usb_transfers_description">أبطأ، لكنها قد تساعد محركات الأقراص التي تفشل في التحقق أو تنقطع أثناء التثبيت.</string>
     <string name="maximum_reserved_space">الحد الأقصى: %1$d %2$s</string>
     <string name="reserved_space">المساحة المحجوزة</string>
     <string name="partitions_aligned_4k">✓ تتم محاذاة الأقسام دائمًا إلى حدود 4 KiB.</string>

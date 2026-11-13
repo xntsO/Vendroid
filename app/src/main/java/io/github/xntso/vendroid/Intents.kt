@@ -8,6 +8,7 @@ import android.os.Parcelable
 import io.github.xntso.vendroid.massstorage.UsbMassStorageDeviceDescriptor
 import io.github.xntso.vendroid.utils.exception.base.VendroidException
 import io.github.xntso.vendroid.utils.ktexts.safeParcelableExtra
+import io.github.xntso.vendroid.ventoy.SMALL_USB_TRANSFER_BYTES
 import io.github.xntso.vendroid.ventoy.VentoyClusterSize
 import io.github.xntso.vendroid.ventoy.VentoyInstallOptions
 import io.github.xntso.vendroid.ventoy.VentoyPartitionStyle
@@ -43,7 +44,11 @@ data class VentoyJobOptions(
     val clusterSize: VentoyClusterSize = VentoyClusterSize.Automatic,
     val partitionStyle: VentoyPartitionStyle = VentoyPartitionStyle.Mbr,
     val onlinePayloadVersion: String? = null,
+    /** Limits each USB command to the size Linux uses, for drives that fail on larger ones. */
+    val smallUsbTransfers: Boolean = false,
 ) : Parcelable {
+    fun usbTransferLimitBytes(): Int? = if (smallUsbTransfers) SMALL_USB_TRANSFER_BYTES else null
+
     fun toInstallOptions(): VentoyInstallOptions = VentoyInstallOptions(
         forceInstall = forceInstall,
         label = label,
