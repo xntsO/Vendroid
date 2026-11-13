@@ -43,17 +43,18 @@ def assert_mirror_controls_without_age(driver: Remote):
 
 
 def _scroll_advanced_options_to(driver: Remote, resource_id: str):
-    # Compose omits sheet rows below the viewport from the accessibility tree.
-    for container in ('resourceId("ventoyAdvancedOptionsSheet")', "scrollable(true)"):
-        try:
-            driver.find_element(
-                "-android uiautomator",
-                f"new UiScrollable(new UiSelector().{container})"
-                f'.scrollIntoView(new UiSelector().resourceId("{resource_id}"))',
-            )
+    # Compose omits sheet rows below the viewport from the accessibility tree. Only scroll
+    # forward: UiScrollable first swipes down to the beginning, which dismisses a modal sheet.
+    target = f'//*[@resource-id="{resource_id}"]'
+    for _ in range(8):
+        if any(element.is_displayed() for element in driver.find_elements("xpath", target)):
             return
-        except Exception:
-            pass  # A tall screen may have nothing to scroll; the element is then already visible.
+        sheet = wait_for_element(driver, '//*[@resource-id="ventoyAdvancedOptionsSheet"]')
+        can_scroll_more = driver.execute_script(
+            "mobile: scrollGesture", {"elementId": sheet.id, "direction": "down", "percent": 0.5},
+        )
+        if not can_scroll_more:
+            return
 
 
 def configure_ventoy_options(
