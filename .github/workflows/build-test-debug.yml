@@ -95,6 +95,9 @@ jobs:
       - name: Test validation evidence requirements
         working-directory: appium-tests
         run: python3 -m unittest discover -s tests -p test_validation_summary.py -v
+      - name: Test BIOS/UEFI and Linux boot harness
+        working-directory: appium-tests
+        run: python3 -m unittest discover -s tests -p test_firmware_validation.py -v
       - name: Test confirmed USB permission readiness
         working-directory: appium-tests
         run: |
@@ -314,6 +317,7 @@ jobs:
       VENDROID_TEST_USB_BUS: ${{ matrix.controller }}.0
       VENDROID_EVIDENCE_DIR: ${{ github.workspace }}/vm-outputs/validation
       VENDROID_BOOT_PROBE_ISO: ${{ github.workspace }}/vm-outputs/boot-probe.iso
+      VENDROID_LINUX_BOOT_ISO: ${{ github.workspace }}/.vendroid-cache/alpine-virt-3.24.4-x86_64.iso
       VENDROID_PAYLOAD_FIXTURES: ${{ github.workspace }}/.vendroid-cache
 
     steps:
@@ -353,6 +357,12 @@ jobs:
             https://github.com/ventoy/Ventoy/releases/download/v1.1.17/ventoy-1.1.17-linux.tar.gz
           echo 'dfed601b689fa4f552bc4c44dc0a45ef893226630fb11f43ca3ab618ff429279  .vendroid-cache/ventoy-1.1.15-linux.tar.gz' | sha256sum -c -
           echo '7fb4ed08cef6a6b4d39dd19260d8c80291a78dfdf9af7d461571e23cbbc43805  .vendroid-cache/ventoy-1.1.17-linux.tar.gz' | sha256sum -c -
+          # Test-only Linux ISO for the Ventoy Linux-hook boot; never packaged.
+          if [ "${{ matrix.controller }}" = xhci ]; then
+            curl --fail --location --retry 3 --output "$VENDROID_LINUX_BOOT_ISO" \
+              https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/x86_64/alpine-virt-3.24.4-x86_64.iso
+            echo "157d353f8e54252cad2d9812a0d56bb7fa2231fc154a110e1d180d7480ef8b4f  $VENDROID_LINUX_BOOT_ISO" | sha256sum -c -
+          fi
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
