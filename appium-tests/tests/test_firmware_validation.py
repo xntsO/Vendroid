@@ -19,7 +19,7 @@ def iso_fixture(path: Path) -> Path:
 class LinuxBootStateTest(unittest.TestCase):
     def test_banner_and_login_prompt_are_both_required(self):
         console = ["Mounting boot media, please wait ......done", "",
-                   "Welcome to Alpine Linux 3.24", "Kernel 6.18.60-0-virt on x86_64 (/dev/ttyS0)", "",
+                   "Welcome to Alpine Linux 3.24", "Kernel 6.18.60-0-lts on x86_64 (/dev/ttyS0)", "",
                    "localhost login: "]
         self.assertTrue(firmware.linux_boot_state(console)["passed"])
         for missing in ("Welcome to Alpine Linux 3.24", "localhost login: "):
@@ -60,14 +60,25 @@ class LinuxBootFilesTest(unittest.TestCase):
 
         copied = self.root / firmware.LINUX_IMAGE.lstrip("/")
         self.assertEqual(copied.read_bytes(), self.iso.read_bytes())
-        entry = (self.root / firmware.LINUX_BOOT_CONFIG.lstrip("/")).read_text(encoding="utf-8")
-        self.assertIn("console=ttyS0,115200", entry)
-        self.assertIn("linux /boot/vmlinuz-virt", entry)
+        grub = (self.root / firmware.LINUX_BOOT_CONFIG.lstrip("/")).read_text(encoding="utf-8")
+        syslinux = (self.root / firmware.LINUX_SYSLINUX_CONFIG.lstrip("/")).read_text(encoding="utf-8")
+        for entry in (grub, syslinux):
+            self.assertIn("console=ttyS0,115200", entry)
+            self.assertIn("/boot/vmlinuz-lts", entry)
+            self.assertIn("/boot/initramfs-lts", entry)
+            # Ventoy overrides the file within the ISO; stay inside one 2048-byte sector.
+            self.assertLessEqual(len(entry.encode("utf-8")), 2048)
+        # Without a timeout prompt that waits for input, ISOLINUX boots on its own.
+        self.assertIn("PROMPT 0", syslinux)
+        self.assertNotIn("SERIAL", syslinux)
         config = json.loads((self.root / "ventoy" / "ventoy.json").read_text(encoding="utf-8"))
         self.assertIn({"VTOY_DEFAULT_IMAGE": firmware.LINUX_IMAGE}, config["control"])
-        self.assertEqual(config["conf_replace"], [{
-            "iso": firmware.LINUX_IMAGE, "org": "/boot/grub/grub.cfg", "new": firmware.LINUX_BOOT_CONFIG,
-        }])
+        # UEFI boots the ISO's GRUB config and BIOS its ISOLINUX config; replace both.
+        self.assertEqual(config["conf_replace"], [
+            {"iso": firmware.LINUX_IMAGE, "org": "/boot/grub/grub.cfg", "new": firmware.LINUX_BOOT_CONFIG},
+            {"iso": firmware.LINUX_IMAGE, "org": "/boot/syslinux/syslinux.cfg",
+             "new": firmware.LINUX_SYSLINUX_CONFIG},
+        ])
         # Ventoy's control plugin accepts only string values.
         self.assertTrue(all(isinstance(value, str) for item in config["control"] for value in item.values()))
         self.assertEqual(result["conf_replace"], config["conf_replace"])
@@ -82,6 +93,7 @@ class LinuxBootFilesTest(unittest.TestCase):
 
         self.assertFalse((self.root / firmware.LINUX_IMAGE.lstrip("/")).exists())
         self.assertFalse((self.root / firmware.LINUX_BOOT_CONFIG.lstrip("/")).exists())
+        self.assertFalse((self.root / firmware.LINUX_SYSLINUX_CONFIG.lstrip("/")).exists())
         self.assertTrue(keep.exists())
 
     def test_rejects_a_non_iso_and_an_unmounted_root(self):

@@ -317,7 +317,7 @@ jobs:
       VENDROID_TEST_USB_BUS: ${{ matrix.controller }}.0
       VENDROID_EVIDENCE_DIR: ${{ github.workspace }}/vm-outputs/validation
       VENDROID_BOOT_PROBE_ISO: ${{ github.workspace }}/vm-outputs/boot-probe.iso
-      VENDROID_LINUX_BOOT_ISO: ${{ github.workspace }}/.vendroid-cache/alpine-virt-3.24.4-x86_64.iso
+      VENDROID_LINUX_BOOT_ISO: ${{ github.workspace }}/.vendroid-cache/alpine-standard-3.24.4-x86_64.iso
       VENDROID_PAYLOAD_FIXTURES: ${{ github.workspace }}/.vendroid-cache
 
     steps:
@@ -364,8 +364,8 @@ jobs:
           # Test-only Linux ISO for the Ventoy Linux-hook boot; never packaged.
           if [ "${{ matrix.controller }}" = xhci ]; then
             curl --fail --location --retry 3 --output "$VENDROID_LINUX_BOOT_ISO" \
-              https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/x86_64/alpine-virt-3.24.4-x86_64.iso
-            echo "157d353f8e54252cad2d9812a0d56bb7fa2231fc154a110e1d180d7480ef8b4f  $VENDROID_LINUX_BOOT_ISO" | sha256sum -c -
+              https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/x86_64/alpine-standard-3.24.4-x86_64.iso
+            echo "92e3e4e4c6b8e265a889278de2a633c0f1456ca52820952666ecb395c3d23582  $VENDROID_LINUX_BOOT_ISO" | sha256sum -c -
           fi
 
       - name: Set up Android SDK

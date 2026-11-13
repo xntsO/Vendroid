@@ -218,9 +218,12 @@ def validation_drive(qemu, request):
     try:
         with tempfile.TemporaryDirectory(prefix="vendroid-validation-") as directory:
             path = Path(directory) / "usb.img"
+            bus = os.environ.get("VENDROID_TEST_USB_BUS", "uhci.0")
+            # The Linux boot copies a 370 MB ISO to the data partition; the sparse image stays cheap.
+            default_size = (1024 if linux_boot_required(bus) else 256) * 1024 * 1024
             with path.open("wb") as image:
-                image.truncate(getattr(request, "param", 256 * 1024 * 1024))
-            drive = ValidationDrive(qemu, path, "validation-usb", os.environ.get("VENDROID_TEST_USB_BUS", "uhci.0"))
+                image.truncate(getattr(request, "param", default_size))
+            drive = ValidationDrive(qemu, path, "validation-usb", bus)
             try:
                 drive.attach()
                 yield drive

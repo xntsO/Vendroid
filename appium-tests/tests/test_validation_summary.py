@@ -46,7 +46,7 @@ class ValidationSummaryTest(unittest.TestCase):
                         for mode in ("bios", "uefi"):
                             (run / mode).mkdir(parents=True)
                             (run / mode / "serial.log").write_text(
-                                "Welcome to Alpine Linux 3.24\nKernel 6.18.60-0-virt on x86_64 (/dev/ttyS0)\n\n"
+                                "Welcome to Alpine Linux 3.24\nKernel 6.18.60-0-lts on x86_64 (/dev/ttyS0)\n\n"
                                 "localhost login: \n", encoding="utf-8",
                             )
                             details["modes"][mode] = {"passed": True, "banner_seen": True, "login_seen": True}
