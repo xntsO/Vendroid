@@ -117,6 +117,18 @@ class LinuxBootFilesTest(unittest.TestCase):
         self.assertEqual(list(outside.iterdir()), [])
 
 
+class UsbControllerTest(unittest.TestCase):
+    def test_linux_boot_uses_xhci_and_unknown_controllers_are_rejected(self):
+        # Over emulated EHCI, Ventoy's Alpine hook took about 450 s per boot.
+        self.assertEqual(firmware.USB_CONTROLLER_DEVICES[firmware.LINUX_BOOT_CONTROLLER], "qemu-xhci")
+        self.assertEqual(firmware.USB_CONTROLLER_DEVICES["ehci"], "usb-ehci")
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaises(ValueError):
+                firmware._boot_mode(Path(directory) / "disk.img", Path(directory) / "run", "bios",
+                                    "qemu-system-x86_64", usb_controller="ohci")
+            self.assertFalse((Path(directory) / "run").exists())
+
+
 class LinuxBootArgumentsTest(unittest.TestCase):
     def test_invalid_modes_are_rejected_before_any_boot(self):
         for modes in ((), ("bios", "bios"), ("arm",)):

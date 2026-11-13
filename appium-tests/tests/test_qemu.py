@@ -1,9 +1,11 @@
 import base64
+import threading
 import os
 import tempfile
 import struct
 import hashlib
 import json
+from contextlib import contextmanager
 from pathlib import Path
 from time import sleep
 from typing import Generator
@@ -39,6 +41,30 @@ used(appium_service)
 
 # Built by scripts/make-relabelled-payload.sh from the verified official bundled release.
 NEWER_FIXTURE_VERSION = "1.1.99"
+
+
+@contextmanager
+def appium_keepalive(driver: appium.webdriver.Remote, interval_seconds: float = 120):
+    """Send a cheap command periodically so a long host-only step cannot end the session.
+
+    The main thread must not use the driver inside this block.
+    """
+    stop = threading.Event()
+
+    def ping():
+        while not stop.wait(interval_seconds):
+            try:
+                driver.current_package
+            except Exception:  # The caller's next real command reports a lost session.
+                pass
+
+    thread = threading.Thread(target=ping, name="appium-keepalive", daemon=True)
+    thread.start()
+    try:
+        yield
+    finally:
+        stop.set()
+        thread.join(timeout=30)
 
 
 def unplug_and_reconnect_usb(
@@ -359,7 +385,10 @@ def test_ventoy_lifecycle_and_firmware(
         # which must find this USB disk again and mount the ISO from the exFAT partition.
         with mounted_data_partition(drive.path, writable=True) as root:
             prepare_linux_boot_files(root, Path(os.environ["VENDROID_LINUX_BOOT_ISO"]))
-        record("linux-boot-after-install", verify_linux_boot(drive.path, evidence / "linux-boot-install"))
+        # Both boots can outlast Appium's idle timeout while only the host is busy.
+        with appium_keepalive(driver):
+            linux_boot = verify_linux_boot(drive.path, evidence / "linux-boot-install")
+        record("linux-boot-after-install", linux_boot)
         with mounted_data_partition(drive.path, writable=True) as root:
             remove_linux_boot_files(root)
             prepare_boot_files(root, Path(os.environ["VENDROID_BOOT_PROBE_ISO"]))
