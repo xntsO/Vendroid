@@ -52,7 +52,7 @@ class ValidationSummaryTest(unittest.TestCase):
                             details["modes"][mode] = {"passed": True, "banner_seen": True, "login_seen": True}
                         self.write(run / "report.json", details)
                     elif name == "partition-style-policy":
-                        details = {"default": "mbr", "gpt_enabled": profile.layout == "gpt"}
+                        details = {"default": "mbr", "gpt_enabled": profile.gpt_enabled}
                     elif name in summary.BOOT_DIRECTORIES:
                         run = evidence / summary.BOOT_DIRECTORIES[name] / "firmware-fixture"
                         details = {"passed": True, "modes": {}}

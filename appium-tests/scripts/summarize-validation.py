@@ -92,7 +92,7 @@ def lifecycle_passed(report, profile, controller, commit, base_version, evidence
     if len(by_name) != len(checkpoints) or not expected <= by_name.keys():
         return False
     policy = by_name["partition-style-policy"]["details"]
-    if policy.get("default") != "mbr" or policy.get("gpt_enabled") is not (profile.layout == "gpt"):
+    if policy.get("default") != "mbr" or policy.get("gpt_enabled") is not profile.gpt_enabled:
         return False
     if controller == LINUX_BOOT_CONTROLLER and not linux_boot_passed(by_name[LINUX_BOOT_CHECKPOINT]["details"], evidence):
         return False

@@ -345,12 +345,16 @@ def test_ventoy_lifecycle_and_firmware(
         )
         gpt_enabled = gpt_option.get_attribute("enabled") == "true"
         driver.save_screenshot(str(evidence / "partition-style-menu.png"))
-        assert gpt_enabled == (style == "gpt"), "GPT availability differs from the channel policy"
+        assert gpt_enabled == profile.gpt_enabled, "GPT availability differs from the channel policy"
         driver.back()
         record("partition-style-policy", {"default": "mbr", "gpt_enabled": gpt_enabled})
         app.open_ventoy_advanced_options(driver)
         wait_for_element(driver, '//*[@text="MBR (Recommended)"]', timeout=15)
-        if style == "mbr":
+        beta_prompts = driver.find_elements("xpath", '//*[@text="Join Vendroid beta"]')
+        if profile.gpt_enabled:
+            # GPT is available here, so Advanced options must not send users to the beta for it.
+            assert not beta_prompts, "A GPT-enabled channel must not ask users to join the beta"
+        else:
             beta_button = wait_for_element(
                 driver, '//*[@text="Join Vendroid beta"]/ancestor-or-self::*[@clickable="true"][1]', timeout=15,
             )
