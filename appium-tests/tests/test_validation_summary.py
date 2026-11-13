@@ -35,10 +35,23 @@ class ValidationSummaryTest(unittest.TestCase):
                             "version": profile.version(VERSION), "commit": COMMIT,
                             "usb_bus": f"{controller}.0", "passed": True}
                 required = summary.COMMON_CHECKPOINTS | (summary.GPT_CHECKPOINTS if profile.layout == "gpt" else set())
+                if controller == "xhci":
+                    required |= {summary.LINUX_BOOT_CHECKPOINT}
                 checkpoints = []
                 for name in sorted(required):
                     details = None
-                    if name == "partition-style-policy":
+                    if name == summary.LINUX_BOOT_CHECKPOINT:
+                        run = evidence / summary.LINUX_BOOT_DIRECTORY / "linux-fixture"
+                        details = {"passed": True, "modes": {}}
+                        for mode in ("bios", "uefi"):
+                            (run / mode).mkdir(parents=True)
+                            (run / mode / "serial.log").write_text(
+                                "Welcome to Alpine Linux 3.24\nKernel 6.18.60-0-virt on x86_64 (/dev/ttyS0)\n\n"
+                                "localhost login: \n", encoding="utf-8",
+                            )
+                            details["modes"][mode] = {"passed": True, "banner_seen": True, "login_seen": True}
+                        self.write(run / "report.json", details)
+                    elif name == "partition-style-policy":
                         details = {"default": "mbr", "gpt_enabled": profile.layout == "gpt"}
                     elif name in summary.BOOT_DIRECTORIES:
                         run = evidence / summary.BOOT_DIRECTORIES[name] / "firmware-fixture"
@@ -151,6 +164,32 @@ class ValidationSummaryTest(unittest.TestCase):
                 path.write_bytes(original)
         self.path("boot-install/firmware-fixture/uefi/serial.log").write_text(summary.BOOT_MARKER + "\n")
         self.assertFalse(self.result()[1])
+
+    def test_xhci_lifecycle_requires_the_alpine_login_on_both_firmwares(self):
+        lifecycle = self.path("lifecycle.json")
+        original = lifecycle.read_bytes()
+        report = json.loads(original)
+        report["checkpoints"] = [item for item in report["checkpoints"]
+                                 if item["name"] != summary.LINUX_BOOT_CHECKPOINT]
+        self.write(lifecycle, report)
+        self.assertFalse(self.result()[1])
+        lifecycle.write_bytes(original)
+        self.assertTrue(self.result()[1])
+
+        for mode, text in (("bios", "Welcome to Alpine Linux 3.24\n"), ("uefi", "localhost login: \n"),
+                           ("uefi", "Mounting boot media, please wait ......\n")):
+            with self.subTest(mode=mode, text=text):
+                serial = self.path(f"{summary.LINUX_BOOT_DIRECTORY}/linux-fixture/{mode}/serial.log")
+                kept = serial.read_bytes()
+                serial.write_text(text, encoding="utf-8")
+                self.assertFalse(self.result()[1])
+                serial.write_bytes(kept)
+
+    def test_uhci_lifecycle_does_not_require_the_alpine_boot(self):
+        lifecycle = self.path("lifecycle.json", controller="uhci")
+        names = {item["name"] for item in json.loads(lifecycle.read_text(encoding="utf-8"))["checkpoints"]}
+        self.assertNotIn(summary.LINUX_BOOT_CHECKPOINT, names)
+        self.assertTrue(self.result()[1])
 
     def test_wrong_commit_file_blocks_validation(self):
         directory = self.path("lifecycle.json").parent.parent

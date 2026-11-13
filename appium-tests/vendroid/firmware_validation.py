@@ -29,6 +29,30 @@ LIMITATIONS = [
 ]
 
 
+LINUX_IMAGE = "/vendroid-ci-alpine.iso"
+LINUX_BOOT_CONFIG = "/ventoy/vendroid-ci-alpine-grub.cfg"
+# Emulated USB is slow without KVM; Ventoy's hook must find the disk and mount the ISO.
+LINUX_BOOT_TIMEOUT_SECONDS = 600
+LINUX_BANNER = "Welcome to Alpine Linux"
+LINUX_LOGIN_PROMPT = "login:"
+# Alpine's own entry plus a serial console. Ventoy reads the ISO's /boot/grub/grub.cfg
+# in both BIOS and UEFI, and conf_replace substitutes this file without changing the ISO.
+LINUX_GRUB_CONFIG = """set timeout=1
+
+menuentry "Linux virt (Vendroid CI serial console)" {
+linux /boot/vmlinuz-virt modules=loop,squashfs,sd-mod,usb-storage console=tty0 console=ttyS0,115200
+initrd /boot/initramfs-virt
+}
+"""
+# One Linux boot per channel and layout is enough; the uhci jobs keep their duration.
+LINUX_BOOT_CONTROLLER = "xhci"
+LINUX_LIMITATIONS = [
+    "Boots one pinned Alpine Linux ISO through Ventoy's Linux hook under emulated x86 BIOS and/or x64 UEFI.",
+    "Its boot entry is replaced through Ventoy's conf_replace plugin only to add a serial console.",
+    "Does not validate Secure Boot, vendor firmware, physical USB hardware, or other distributions.",
+]
+
+
 class FirmwareBootError(AssertionError):
     """A requested mode failed; report and report.json retain all diagnostics."""
 
@@ -76,6 +100,58 @@ def prepare_boot_files(mount_root: str | Path, probe_iso: str | Path) -> dict:
     }
     config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
     return {"probe_iso": str(destination), "ventoy_json": str(config_path), "control": config["control"]}
+
+
+def _linux_fixture_paths(mount_root: str | Path) -> tuple[Path, Path, Path, Path]:
+    root = Path(mount_root).resolve(strict=True)
+    if not root.is_dir() or not root.is_mount():
+        raise ValueError(f"Expected a mounted data partition: {root}")
+    paths = (root / LINUX_IMAGE.lstrip("/"), root / LINUX_BOOT_CONFIG.lstrip("/"), root / "ventoy" / "ventoy.json")
+    for path in (*paths, root / "ventoy"):
+        if path.is_symlink() or not path.resolve().is_relative_to(root):
+            raise ValueError(f"Refusing a boot-file path outside the mounted fixture: {path}")
+    return root, *paths
+
+
+def prepare_linux_boot_files(mount_root: str | Path, linux_iso: str | Path) -> dict:
+    """Copy the pinned Alpine ISO and make Ventoy boot it with a serial console.
+
+    Replaces /ventoy/ventoy.json. Call prepare_boot_files afterwards to restore the
+    GRUB probe for later checkpoints. The caller verifies the ISO's pinned SHA-256.
+    https://www.ventoy.net/en/plugin_bootconf_replace.html
+    """
+    root, destination, boot_config, config_path = _linux_fixture_paths(mount_root)
+    source = Path(linux_iso).resolve(strict=True)
+    if not source.is_file():
+        raise ValueError(f"Expected a regular Linux ISO: {source}")
+    with source.open("rb") as image:
+        image.seek(16 * 2048 + 1)
+        if image.read(5) != b"CD001":
+            raise ValueError(f"Linux image is not an ISO9660 image: {source}")
+    config_path.parent.mkdir(exist_ok=True)
+    shutil.copyfile(source, destination)
+    boot_config.write_text(LINUX_GRUB_CONFIG, encoding="utf-8")
+    config = {
+        "control": [
+            {"VTOY_DEFAULT_IMAGE": LINUX_IMAGE},
+            {"VTOY_MENU_TIMEOUT": "2"},
+            {"VTOY_SECONDARY_BOOT_MENU": "1"},
+            {"VTOY_SECONDARY_TIMEOUT": "2"},
+        ],
+        "conf_replace": [
+            {"iso": LINUX_IMAGE, "org": "/boot/grub/grub.cfg", "new": LINUX_BOOT_CONFIG},
+        ],
+    }
+    config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+    return {"linux_iso": str(destination), "boot_config": str(boot_config), "ventoy_json": str(config_path),
+            "control": config["control"], "conf_replace": config["conf_replace"]}
+
+
+def remove_linux_boot_files(mount_root: str | Path) -> None:
+    """Delete the Alpine ISO and its boot entry. The caller restores ventoy.json."""
+    _, destination, boot_config, _ = _linux_fixture_paths(mount_root)
+    for path in (destination, boot_config):
+        path.unlink(missing_ok=True)
 
 
 def _check_detached_disk(image: Path) -> None:
@@ -148,7 +224,30 @@ def _capture_screen(qmp_path: Path, output: Path) -> None:
                         break
 
 
-def _boot_mode(image: Path, directory: Path, mode: str, qemu: str) -> dict:
+def _probe_state(mode: str):
+    expected_firmware = f"VENDROID_CI_BOOT_FIRMWARE={'pc' if mode == 'bios' else 'efi'}"
+
+    def state(lines: list[str]) -> dict:
+        marker = BOOT_MARKER in lines
+        firmware = expected_firmware in lines
+        return {"marker_seen": marker, "firmware_seen": firmware, "passed": marker and firmware}
+
+    return state
+
+
+def linux_boot_state(lines: list[str]) -> dict:
+    """Alpine reached userspace: its issue banner and a getty login prompt on the serial console."""
+    banner = any(line.lstrip().startswith(LINUX_BANNER) for line in lines)
+    login = any(line.rstrip().endswith(LINUX_LOGIN_PROMPT) for line in lines)
+    return {"banner_seen": banner, "login_seen": login, "passed": banner and login}
+
+
+def _boot_mode(
+    image: Path, directory: Path, mode: str, qemu: str, *,
+    state=None, timeout: int = BOOT_TIMEOUT_SECONDS, accelerator: str = "tcg",
+    failure_message: str = "Probe marker or matching firmware line missing from guest serial output",
+) -> dict:
+    state = state or _probe_state(mode)
     directory.mkdir()
     serial = directory / "serial.log"
     stderr = directory / "qemu.log"
@@ -158,12 +257,13 @@ def _boot_mode(image: Path, directory: Path, mode: str, qemu: str) -> dict:
     qmp_path = Path(qmp_directory.name) / "monitor.sock"
     firmware = "SeaBIOS (QEMU default)" if mode == "bios" else "OVMF_CODE_4M.fd (Secure Boot disabled)"
     result = {
-        "mode": mode, "firmware": firmware, "passed": False, "marker_seen": False,
-        "firmware_seen": False, "timed_out": False, "timeout_seconds": BOOT_TIMEOUT_SECONDS,
+        "mode": mode, "firmware": firmware, "passed": False, **state([]),
+        "timed_out": False, "timeout_seconds": timeout, "accelerator": accelerator,
         "serial_log": str(serial), "qemu_log": str(stderr), "returncode": None,
     }
     command = [
-        qemu, "-no-user-config", "-nodefaults", "-machine", "pc", "-accel", "tcg",
+        qemu, "-no-user-config", "-nodefaults", "-machine", "pc", "-accel", accelerator,
+        *(["-cpu", "max"] if accelerator == "kvm" else []),
         "-m", "1024", "-smp", "1", "-vga", "std", "-display", "none",
         "-monitor", "none", "-serial", f"file:{serial}", "-nic", "none",
         "-qmp", f"unix:{qmp_path},server=on,wait=off",
@@ -194,22 +294,15 @@ def _boot_mode(image: Path, directory: Path, mode: str, qemu: str) -> dict:
                 env={**os.environ, "TMPDIR": str(directory)},
             )
             try:
-                deadline = time.monotonic() + BOOT_TIMEOUT_SECONDS
-                expected_firmware = f"VENDROID_CI_BOOT_FIRMWARE={'pc' if mode == 'bios' else 'efi'}"
+                deadline = time.monotonic() + timeout
                 while True:
                     # Only guest serial output counts. Never search QEMU's own log.
-                    lines = serial.read_text(encoding="utf-8", errors="replace").splitlines()
-                    result["marker_seen"] = BOOT_MARKER in lines
-                    result["firmware_seen"] = expected_firmware in lines
-                    if result["marker_seen"] and result["firmware_seen"]:
-                        result["passed"] = True
+                    result.update(state(serial.read_text(encoding="utf-8", errors="replace").splitlines()))
+                    if result["passed"]:
                         break
                     if process.poll() is not None:
                         # Read once more after exit to catch the final serial write.
-                        lines = serial.read_text(encoding="utf-8", errors="replace").splitlines()
-                        result["marker_seen"] = BOOT_MARKER in lines
-                        result["firmware_seen"] = expected_firmware in lines
-                        result["passed"] = result["marker_seen"] and result["firmware_seen"]
+                        result.update(state(serial.read_text(encoding="utf-8", errors="replace").splitlines()))
                         break
                     if time.monotonic() >= deadline:
                         result["timed_out"] = True
@@ -226,7 +319,7 @@ def _boot_mode(image: Path, directory: Path, mode: str, qemu: str) -> dict:
                 _stop_process(process)
                 result["returncode"] = process.returncode
         if not result["passed"]:
-            result["error"] = "Probe marker or matching firmware line missing from guest serial output"
+            result["error"] = failure_message
     except (OSError, subprocess.SubprocessError) as error:
         result["passed"] = False
         result["error"] = str(error)
@@ -272,6 +365,60 @@ def verify_firmware_boot(
     for mode in modes:
         _check_detached_disk(image)
         report["modes"][mode] = _boot_mode(image, run / mode, mode, qemu)
+    report["passed"] = all(result["passed"] for result in report["modes"].values())
+    Path(report["report_path"]).write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    if not report["passed"]:
+        raise FirmwareBootError(report)
+    return report
+
+
+def linux_boot_required(usb_bus: str) -> bool:
+    """Lifecycle jobs on this controller must record linux-boot-after-install."""
+    return usb_bus == f"{LINUX_BOOT_CONTROLLER}.0"
+
+
+def linux_boot_accelerator() -> str:
+    """KVM when the runner exposes it; the Linux boot is impractically slow under TCG."""
+    return "kvm" if os.access("/dev/kvm", os.R_OK | os.W_OK) else "tcg"
+
+
+def verify_linux_boot(
+    image_path: str | Path, output_dir: str | Path, modes: tuple[str, ...] = ("bios", "uefi"),
+) -> dict:
+    """Boot the Alpine ISO from prepare_linux_boot_files to its login prompt.
+
+    Same contract as verify_firmware_boot, with a fresh linux-* subdirectory and
+    report.json. Passing requires Alpine's issue banner and getty prompt on the
+    guest serial console, which Ventoy's Linux hook reaches only after it finds
+    this USB disk and mounts the ISO. Budget 600s per mode.
+    """
+    modes = tuple(modes)
+    if not modes or len(set(modes)) != len(modes) or any(mode not in ("bios", "uefi") for mode in modes):
+        raise ValueError("modes must contain unique entries from ('bios', 'uefi') and cannot be empty")
+    if os.name != "posix" or not Path("/proc").is_dir():
+        raise ValueError("Linux boot validation requires the Linux CI runner")
+    image = Path(image_path).resolve(strict=True)
+    _check_detached_disk(image)
+    qemu = shutil.which("qemu-system-x86_64")
+    if qemu is None:
+        raise FileNotFoundError("qemu-system-x86_64 is required")
+    accelerator = linux_boot_accelerator()
+    output = Path(output_dir).resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    run = Path(tempfile.mkdtemp(prefix="linux-", dir=output))
+    report = {
+        "image_path": str(image), "image_format": "raw", "accelerator": accelerator,
+        "snapshot": True, "network": False, "secure_boot": False,
+        "linux_image": LINUX_IMAGE, "banner": LINUX_BANNER, "login_prompt": LINUX_LOGIN_PROMPT,
+        "limitations": list(LINUX_LIMITATIONS), "report_path": str(run / "report.json"),
+        "passed": False, "modes": {},
+    }
+    for mode in modes:
+        _check_detached_disk(image)
+        report["modes"][mode] = _boot_mode(
+            image, run / mode, mode, qemu, state=linux_boot_state, timeout=LINUX_BOOT_TIMEOUT_SECONDS,
+            accelerator=accelerator, failure_message="Alpine banner or login prompt missing from guest serial output",
+        )
     report["passed"] = all(result["passed"] for result in report["modes"].values())
     Path(report["report_path"]).write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     if not report["passed"]:

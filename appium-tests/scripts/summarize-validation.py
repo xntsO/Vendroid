@@ -9,7 +9,7 @@ import sys
 
 # The CLI runs from the repository root; the shared profiles live in appium-tests.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from vendroid.firmware_validation import BOOT_MARKER
+from vendroid.firmware_validation import BOOT_MARKER, LINUX_BOOT_CONTROLLER, linux_boot_state
 from vendroid.validation_profiles import LARGE_DRIVE_BYTES, PROFILES
 
 
@@ -60,6 +60,25 @@ def boot_passed(boot, evidence, directory):
     return True
 
 
+LINUX_BOOT_CHECKPOINT = "linux-boot-after-install"
+LINUX_BOOT_DIRECTORY = "linux-boot-install"
+
+
+def linux_boot_passed(boot, evidence):
+    reports = list((evidence / LINUX_BOOT_DIRECTORY).glob("linux-*/report.json"))
+    if len(reports) != 1 or read_report(reports[0]) != boot or boot.get("passed") is not True:
+        return False
+    for mode in ("bios", "uefi"):
+        result = boot["modes"][mode]
+        if not all(result.get(key) is True for key in ("passed", "banner_seen", "login_seen")):
+            return False
+        # Re-read the guest console instead of trusting the recorded flags.
+        lines = (reports[0].parent / mode / "serial.log").read_text(encoding="utf-8", errors="replace").splitlines()
+        if not linux_boot_state(lines)["passed"]:
+            return False
+    return True
+
+
 def lifecycle_passed(report, profile, controller, commit, base_version, evidence):
     if not identity_matches(report, profile, controller, commit, base_version) or report.get("layout") != profile.layout:
         return False
@@ -68,10 +87,14 @@ def lifecycle_passed(report, profile, controller, commit, base_version, evidence
         return False
     by_name = {item["name"]: item for item in checkpoints if item.get("passed") is True}
     expected = COMMON_CHECKPOINTS | (GPT_CHECKPOINTS if profile.layout == "gpt" else set())
+    if controller == LINUX_BOOT_CONTROLLER:
+        expected |= {LINUX_BOOT_CHECKPOINT}
     if len(by_name) != len(checkpoints) or not expected <= by_name.keys():
         return False
     policy = by_name["partition-style-policy"]["details"]
     if policy.get("default") != "mbr" or policy.get("gpt_enabled") is not (profile.layout == "gpt"):
+        return False
+    if controller == LINUX_BOOT_CONTROLLER and not linux_boot_passed(by_name[LINUX_BOOT_CHECKPOINT]["details"], evidence):
         return False
     return all(boot_passed(by_name[name]["details"], evidence, directory)
                for name, directory in BOOT_DIRECTORIES.items() if name in expected)
