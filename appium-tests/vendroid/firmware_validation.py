@@ -31,24 +31,37 @@ LIMITATIONS = [
 
 LINUX_IMAGE = "/vendroid-ci-alpine.iso"
 LINUX_BOOT_CONFIG = "/ventoy/vendroid-ci-alpine-grub.cfg"
+LINUX_SYSLINUX_CONFIG = "/ventoy/vendroid-ci-alpine-syslinux.cfg"
 # Emulated USB is slow without KVM; Ventoy's hook must find the disk and mount the ISO.
 LINUX_BOOT_TIMEOUT_SECONDS = 600
 LINUX_BANNER = "Welcome to Alpine Linux"
 LINUX_LOGIN_PROMPT = "login:"
-# Alpine's own entry plus a serial console. Ventoy reads the ISO's /boot/grub/grub.cfg
-# in both BIOS and UEFI, and conf_replace substitutes this file without changing the ISO.
+# Alpine standard's own entries with the serial console in place of "quiet". Ventoy
+# boots the ISO's GRUB config under UEFI and its ISOLINUX config under BIOS;
+# conf_replace substitutes both without changing the ISO. Alpine's minimal virt
+# kernel cannot be used: Ventoy's hook then fails to mount the boot media.
+# Each replacement stays within the ISO sector of the file it replaces.
 LINUX_GRUB_CONFIG = """set timeout=1
 
-menuentry "Linux virt (Vendroid CI serial console)" {
-linux /boot/vmlinuz-virt modules=loop,squashfs,sd-mod,usb-storage console=tty0 console=ttyS0,115200
-initrd /boot/initramfs-virt
+menuentry "Linux lts" {
+linux /boot/vmlinuz-lts modules=loop,squashfs,sd-mod,usb-storage console=ttyS0,115200
+initrd /boot/initramfs-lts
 }
+"""
+LINUX_SYSLINUX_CONFIG_TEXT = """TIMEOUT 10
+PROMPT 0
+DEFAULT lts
+
+LABEL lts
+KERNEL /boot/vmlinuz-lts
+INITRD /boot/initramfs-lts
+APPEND modules=loop,squashfs,sd-mod,usb-storage console=ttyS0,115200
 """
 # One Linux boot per channel and layout is enough; the uhci jobs keep their duration.
 LINUX_BOOT_CONTROLLER = "xhci"
 LINUX_LIMITATIONS = [
     "Boots one pinned Alpine Linux ISO through Ventoy's Linux hook under emulated x86 BIOS and/or x64 UEFI.",
-    "Its boot entry is replaced through Ventoy's conf_replace plugin only to add a serial console.",
+    "Its GRUB and ISOLINUX entries are replaced through Ventoy's conf_replace plugin only to add a serial console.",
     "Does not validate Secure Boot, vendor firmware, physical USB hardware, or other distributions.",
 ]
 
@@ -102,11 +115,14 @@ def prepare_boot_files(mount_root: str | Path, probe_iso: str | Path) -> dict:
     return {"probe_iso": str(destination), "ventoy_json": str(config_path), "control": config["control"]}
 
 
-def _linux_fixture_paths(mount_root: str | Path) -> tuple[Path, Path, Path, Path]:
+def _linux_fixture_paths(mount_root: str | Path) -> tuple[Path, Path, Path, Path, Path]:
     root = Path(mount_root).resolve(strict=True)
     if not root.is_dir() or not root.is_mount():
         raise ValueError(f"Expected a mounted data partition: {root}")
-    paths = (root / LINUX_IMAGE.lstrip("/"), root / LINUX_BOOT_CONFIG.lstrip("/"), root / "ventoy" / "ventoy.json")
+    paths = (
+        root / LINUX_IMAGE.lstrip("/"), root / LINUX_BOOT_CONFIG.lstrip("/"),
+        root / LINUX_SYSLINUX_CONFIG.lstrip("/"), root / "ventoy" / "ventoy.json",
+    )
     for path in (*paths, root / "ventoy"):
         if path.is_symlink() or not path.resolve().is_relative_to(root):
             raise ValueError(f"Refusing a boot-file path outside the mounted fixture: {path}")
@@ -120,7 +136,7 @@ def prepare_linux_boot_files(mount_root: str | Path, linux_iso: str | Path) -> d
     GRUB probe for later checkpoints. The caller verifies the ISO's pinned SHA-256.
     https://www.ventoy.net/en/plugin_bootconf_replace.html
     """
-    root, destination, boot_config, config_path = _linux_fixture_paths(mount_root)
+    root, destination, boot_config, syslinux_config, config_path = _linux_fixture_paths(mount_root)
     source = Path(linux_iso).resolve(strict=True)
     if not source.is_file():
         raise ValueError(f"Expected a regular Linux ISO: {source}")
@@ -131,6 +147,7 @@ def prepare_linux_boot_files(mount_root: str | Path, linux_iso: str | Path) -> d
     config_path.parent.mkdir(exist_ok=True)
     shutil.copyfile(source, destination)
     boot_config.write_text(LINUX_GRUB_CONFIG, encoding="utf-8")
+    syslinux_config.write_text(LINUX_SYSLINUX_CONFIG_TEXT, encoding="utf-8")
     config = {
         "control": [
             {"VTOY_DEFAULT_IMAGE": LINUX_IMAGE},
@@ -140,17 +157,19 @@ def prepare_linux_boot_files(mount_root: str | Path, linux_iso: str | Path) -> d
         ],
         "conf_replace": [
             {"iso": LINUX_IMAGE, "org": "/boot/grub/grub.cfg", "new": LINUX_BOOT_CONFIG},
+            {"iso": LINUX_IMAGE, "org": "/boot/syslinux/syslinux.cfg", "new": LINUX_SYSLINUX_CONFIG},
         ],
     }
     config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
-    return {"linux_iso": str(destination), "boot_config": str(boot_config), "ventoy_json": str(config_path),
+    return {"linux_iso": str(destination), "boot_config": str(boot_config),
+            "syslinux_config": str(syslinux_config), "ventoy_json": str(config_path),
             "control": config["control"], "conf_replace": config["conf_replace"]}
 
 
 def remove_linux_boot_files(mount_root: str | Path) -> None:
-    """Delete the Alpine ISO and its boot entry. The caller restores ventoy.json."""
-    _, destination, boot_config, _ = _linux_fixture_paths(mount_root)
-    for path in (destination, boot_config):
+    """Delete the Alpine ISO and its boot entries. The caller restores ventoy.json."""
+    _, destination, boot_config, syslinux_config, _ = _linux_fixture_paths(mount_root)
+    for path in (destination, boot_config, syslinux_config):
         path.unlink(missing_ok=True)
 
 
