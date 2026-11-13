@@ -1,13 +1,13 @@
 {
   "schema": 1,
-  "version": "1.1.16",
-  "tag": "v1.1.16",
-  "commit": "2f66a309e4a3f0e08953aabfb0f1cf7e12b39f5d",
+  "version": "1.1.18",
+  "tag": "v1.1.18",
+  "commit": "6116894ab8abdf3ef8d43411a6732d34ee19214e",
   "source_archive": {
-    "name": "ventoy-1.1.16-source.tar.gz",
-    "url": "https://github.com/ventoy/Ventoy/archive/refs/tags/v1.1.16.tar.gz",
-    "size": 81278633,
-    "sha256": "6f82ce5c9c2a8d51cb6fc65714c4e8c9c271826fae7246a7b0cbf783d92c383a"
+    "name": "ventoy-1.1.18-source.tar.gz",
+    "url": "https://github.com/ventoy/Ventoy/archive/refs/tags/v1.1.18.tar.gz",
+    "size": 81295549,
+    "sha256": "083ea5b7b9c0ca30c55fbfa21d8cdc7cee5c2dc3b034b4e65a664a9aa22d29bb"
   },
   "license_files": {
     "BSD-2-Clause-Patent.txt": "933548fda5cb67f388953375b71973290c66b38c68a743cce0100404caf22559",

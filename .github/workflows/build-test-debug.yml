@@ -37,7 +37,7 @@ concurrency:
 env:
   BLISSOS_FILE: Bliss-v16.9.7-x86_64-OFFICIAL-foss-20241011.iso
   BLISSOS_URL: https://deac-riga.dl.sourceforge.net/project/blissos-x86/Official/BlissOS16/FOSS/Generic/
-  VENTOY_VERSION: '1.1.16'
+  VENTOY_VERSION: '1.1.18'
   # Public certificate from the signed 0.1.2 APK; see docs/validation.md.
   VENDROID_SIGNER_SHA256: b388ad9d2290967480630cbd4a48f4f8c6784305c05da3541ad780821d9fbeb1
   # Raise when a build leaves CI; see the version code section of docs/google-play.md.
@@ -339,7 +339,7 @@ jobs:
             /etc/apt/apt-mirrors.txt
           sudo apt-get update -o Acquire::Retries=3
           sudo DEBIAN_FRONTEND=noninteractive apt-get install --yes --no-install-recommends \
-            qemu-system-x86 qemu-utils ovmf exfatprogs exfat-fuse ffmpeg
+            qemu-system-x86 qemu-utils ovmf exfatprogs exfat-fuse ffmpeg mtools xz-utils
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
@@ -349,10 +349,14 @@ jobs:
           mkdir -p vm-outputs/validation .vendroid-cache
           curl --fail --location --retry 3 --output .vendroid-cache/ventoy-1.1.15-linux.tar.gz \
             https://github.com/ventoy/Ventoy/releases/download/v1.1.15/ventoy-1.1.15-linux.tar.gz
-          curl --fail --location --retry 3 --output .vendroid-cache/ventoy-1.1.17-linux.tar.gz \
-            https://github.com/ventoy/Ventoy/releases/download/v1.1.17/ventoy-1.1.17-linux.tar.gz
+          curl --fail --location --retry 3 --output .vendroid-cache/ventoy-1.1.18-linux.tar.gz \
+            https://github.com/ventoy/Ventoy/releases/download/v1.1.18/ventoy-1.1.18-linux.tar.gz
           echo 'dfed601b689fa4f552bc4c44dc0a45ef893226630fb11f43ca3ab618ff429279  .vendroid-cache/ventoy-1.1.15-linux.tar.gz' | sha256sum -c -
-          echo '7fb4ed08cef6a6b4d39dd19260d8c80291a78dfdf9af7d461571e23cbbc43805  .vendroid-cache/ventoy-1.1.17-linux.tar.gz' | sha256sum -c -
+          echo 'd86ff9de63d94c8b8f1f6b14d23c55af4b88e8207bf2893890892a6a97b1ad54  .vendroid-cache/ventoy-1.1.18-linux.tar.gz' | sha256sum -c -
+          # No release is newer than the bundled 1.1.18: relabel its verified boot files as 1.1.99
+          # so the lifecycle can prove that a newer installed payload is never replaced.
+          bash appium-tests/scripts/make-relabelled-payload.sh \
+            .vendroid-cache/ventoy-1.1.18-linux.tar.gz 1.1.18 1.1.99 .vendroid-cache/ventoy-1.1.99-linux.tar.gz
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4

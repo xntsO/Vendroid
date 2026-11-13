@@ -59,7 +59,7 @@ in a portrait layout. See [docs/images](docs/images/README.md) for where they co
 - **Repair** a Ventoy drive that has the same version, again without touching your files.
 - **Refuse downgrades.** Vendroid will not replace a newer or unknown Ventoy version with
   its own.
-- **Works offline.** The official Ventoy 1.1.16 files are bundled and checked by SHA-256
+- **Works offline.** The official Ventoy 1.1.18 files are bundled and checked by SHA-256
   before use.
 - **Optional online update.** Vendroid can download a newer official Ventoy package from its
   update mirror, verify its SHA-256, and keep it for later offline use.
@@ -210,15 +210,15 @@ Vendroid has one `foss` product flavor. It requires Java 17 and the Android SDK.
 | `fossGptCandidate` | Stable package with GPT enabled, for testing before GPT moves to stable. |
 | `fossRelease` | The stable release. |
 
-The app bundles Ventoy `1.1.16`. CI rebuilds the pinned USB libraries for 16 KB pages
+The app bundles Ventoy `1.1.18`. CI rebuilds the pinned USB libraries for 16 KB pages
 before Gradle resolves dependencies. These commands document the CI inputs:
 
 ```sh
 mkdir -p .vendroid-cache
 sdkmanager 'ndk;28.2.13676358' 'cmake;3.22.1'
 python3 scripts/native/prepare.py --sdk-root "$ANDROID_HOME"
-curl -fL -o .vendroid-cache/ventoy-1.1.16-linux.tar.gz \
-  https://github.com/ventoy/Ventoy/releases/download/v1.1.16/ventoy-1.1.16-linux.tar.gz
+curl -fL -o .vendroid-cache/ventoy-1.1.18-linux.tar.gz \
+  https://github.com/ventoy/Ventoy/releases/download/v1.1.18/ventoy-1.1.18-linux.tar.gz
 ./gradlew assembleFossDebug
 ```
 
@@ -253,9 +253,9 @@ Third-party components keep their own licenses.
 - [Ventoy](https://github.com/ventoy/Ventoy) is the bootloader Vendroid installs. Vendroid
   ships its official release files and is not affiliated with the Ventoy project.
   Ventoy is GPLv3 software and contains other free software such as GRUB 2 and BusyBox.
-  The bundled Ventoy 1.1.16 is built from tag
-  [`v1.1.16`](https://github.com/ventoy/Ventoy/tree/v1.1.16), commit
-  [`2f66a309e4a3f0e08953aabfb0f1cf7e12b39f5d`](https://github.com/ventoy/Ventoy/commit/2f66a309e4a3f0e08953aabfb0f1cf7e12b39f5d).
+  The bundled Ventoy 1.1.18 is built from tag
+  [`v1.1.18`](https://github.com/ventoy/Ventoy/tree/v1.1.18), commit
+  [`6116894ab8abdf3ef8d43411a6732d34ee19214e`](https://github.com/ventoy/Ventoy/commit/6116894ab8abdf3ef8d43411a6732d34ee19214e).
   Its license texts are in [`third_party/ventoy/License`](third_party/ventoy/License) and in
   the app. Every [Vendroid release](https://github.com/xntsO/Vendroid/releases) carries a
   copy of that source and of the BusyBox source. [Licensing](docs/licensing.md) has the details.

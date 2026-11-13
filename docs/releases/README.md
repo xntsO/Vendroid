@@ -17,9 +17,9 @@ Every release that carries an APK must include this section, stable or beta. Cop
 ```markdown
 ## Third-party source
 
-This release bundles the unmodified boot files of Ventoy 1.1.16, which is GPLv3 software. Their source is tag [`v1.1.16`](https://github.com/ventoy/Ventoy/tree/v1.1.16), commit [`2f66a309e4a3f0e08953aabfb0f1cf7e12b39f5d`](https://github.com/ventoy/Ventoy/commit/2f66a309e4a3f0e08953aabfb0f1cf7e12b39f5d), of the Ventoy repository.
+This release bundles the unmodified boot files of Ventoy 1.1.18, which is GPLv3 software. Their source is tag [`v1.1.18`](https://github.com/ventoy/Ventoy/tree/v1.1.18), commit [`6116894ab8abdf3ef8d43411a6732d34ee19214e`](https://github.com/ventoy/Ventoy/commit/6116894ab8abdf3ef8d43411a6732d34ee19214e), of the Ventoy repository.
 
-The assets below include a copy of that source as `ventoy-1.1.16-source.tar.gz`, Ventoy's license texts as `ventoy-1.1.16-licenses.zip`, and the BusyBox source that Ventoy's binaries come from as `busybox-*.tar.bz2`. `THIRD-PARTY-SOURCES.md` explains each file, and `third-party-sources.sha256` lists their checksums. The same license texts are inside the app.
+The assets below include a copy of that source as `ventoy-1.1.18-source.tar.gz`, Ventoy's license texts as `ventoy-1.1.18-licenses.zip`, and the BusyBox source that Ventoy's binaries come from as `busybox-*.tar.bz2`. `THIRD-PARTY-SOURCES.md` explains each file, and `third-party-sources.sha256` lists their checksums. The same license texts are inside the app.
 ```
 
 The workflows attach those files. The stable tag workflow adds them to the draft release, and the Google Play workflow adds them to a published prerelease together with the beta APK. Check that they are present before announcing a release. See [licensing](../licensing.md) for what they cover.

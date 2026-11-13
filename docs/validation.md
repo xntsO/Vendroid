@@ -36,8 +36,8 @@ Candidate distribution consumes its versionCode. The first 0.2.0 candidate used 
 - Ordinary nested files, including binary and Unicode-name files, hashed from the mounted exFAT partition before and after maintenance.
 - USB detach and reattach, permission acquisition, and installed-version detection.
 - Healthy repair and separate primary/backup GPT-header damage and repair.
-- A real 1.1.15 payload followed by an app-driven update to bundled 1.1.16.
-- A real 1.1.17 payload that the app must refuse to downgrade on two connections, with boot code, partition metadata, and ordinary file hashes preserved.
+- A real 1.1.15 payload followed by an app-driven update to bundled 1.1.18.
+- A payload newer than the bundled one that the app must refuse to downgrade on two connections, with boot code, partition metadata, and ordinary file hashes preserved. No real release is newer than the bundled 1.1.18, so `appium-tests/scripts/make-relabelled-payload.sh` builds it from the verified official 1.1.18 archive and changes only the version line in its VTOYEFI `grub/grub.cfg` to 1.1.99. The app reads the installed version from that line. The fixture is never booted or published.
 - SeaBIOS and OVMF boot of an ISO through the app-created Ventoy disk. Success requires a serial marker from inside that ISO, after installation, after each repair, and after update.
 - A sparse 3 TiB drive: stable and the GPT candidate refuse it without Vendroid writes; Preview installs GPT and preserves files through reconnection. This tests capacity arithmetic and high-LBA metadata, not real large-drive compatibility or every data sector.
 
@@ -116,4 +116,4 @@ Regression tests also cover drives that are slow or unreliable during block I/O.
 
 Stable GPT and large-capacity permissions are separate. Stable GPT remains disabled, and stable and the GPT candidate refuse drives above 2 TiB. Installation exposes the partition-style selector before Advanced options, with MBR Recommended as the default. The candidate allows ordinary GPT validation while retaining the stable capacity gate. When stable GPT is enabled, validate GPT in the optimized stable package and record the final physical promotion checks. No stable promotion or release publication is implied by a passing validation run.
 
-References: [Ventoy control plugin](https://www.ventoy.net/en/plugin_control.html), [QEMU device removal](https://www.qemu.org/docs/master/interop/qemu-qmp-ref.html), [Ventoy 1.1.15](https://github.com/ventoy/Ventoy/releases/tag/v1.1.15), [Ventoy 1.1.17](https://github.com/ventoy/Ventoy/releases/tag/v1.1.17).
+References: [Ventoy control plugin](https://www.ventoy.net/en/plugin_control.html), [QEMU device removal](https://www.qemu.org/docs/master/interop/qemu-qmp-ref.html), [Ventoy 1.1.15](https://github.com/ventoy/Ventoy/releases/tag/v1.1.15), [Ventoy 1.1.18](https://github.com/ventoy/Ventoy/releases/tag/v1.1.18).

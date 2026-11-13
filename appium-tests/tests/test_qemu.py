@@ -34,6 +34,9 @@ from vendroid.utils import (
 
 used(appium_service)
 
+# Built by scripts/make-relabelled-payload.sh from the verified official bundled release.
+NEWER_FIXTURE_VERSION = "1.1.99"
+
 
 def unplug_and_reconnect_usb(
     driver: appium.webdriver.Remote,
@@ -382,7 +385,8 @@ def test_ventoy_lifecycle_and_firmware(
     record("updated-version-detected")
     record("boot-after-update", verify_firmware_boot(drive.path, evidence / "boot-update"))
 
-    seed_payload(drive.path, fixtures / "ventoy-1.1.17-linux.tar.gz", style)
+    # No real release is newer than the bundled one: the official boot files relabelled 1.1.99.
+    seed_payload(drive.path, fixtures / f"ventoy-{NEWER_FIXTURE_VERSION}-linux.tar.gz", style)
     before_downgrade = file_digest(drive.path)
     before_boot = boot_region_digest(drive.path)
     # Reconnect twice: the newer version and blocked action must survive the
@@ -391,7 +395,7 @@ def test_ventoy_lifecycle_and_firmware(
         try:
             drive.attach()
             restart_and_scan(driver)
-            assert_detected_version(driver, "1.1.17")
+            assert_detected_version(driver, NEWER_FIXTURE_VERSION)
             wait_for_element(driver, '//*[contains(@text,"Downgrade is blocked")]', timeout=30)
             button = wait_for_element(driver, '//*[@resource-id="writeImageButton"]', timeout=15)
             assert button.get_attribute("enabled") == "false"
@@ -401,7 +405,8 @@ def test_ventoy_lifecycle_and_firmware(
     after_downgrade = file_digest(drive.path)
     after_boot = boot_region_digest(drive.path)
     (evidence / "downgrade-check.json").write_text(json.dumps({
-        "automounter": "normal", "detected_version_after_reconnect": "1.1.17",
+        "automounter": "normal", "detected_version_after_reconnect": NEWER_FIXTURE_VERSION,
+        "newer_fixture": "Official bundled-version boot files; only the VTOYEFI version line is relabelled.",
         "before_image_sha256": before_downgrade, "after_image_sha256": after_downgrade,
         "image_bytes_unchanged": before_downgrade == after_downgrade,
         "before_boot_sha256": before_boot, "after_boot_sha256": after_boot,
