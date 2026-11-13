@@ -1311,6 +1311,7 @@ fun VentoyAdvancedOptionsBottomSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .imePadding()
+                .appiumTag("ventoyAdvancedOptionsSheet")
                 .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
