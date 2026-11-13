@@ -13,7 +13,7 @@ You need an Android device with USB host support, a compatible USB drive, and an
 
 Back up your USB drive before use. Installing Ventoy erases the selected drive. Keep it connected throughout an operation. Update and repair are intended to preserve ordinary files, but backups remain essential.
 
-Stable releases currently support MBR drives up to 2 TiB. The Vendroid beta channel includes experimental GPT and larger-drive support. Beta replaces the stable Vendroid installation and may contain unfinished features.
+Stable releases support MBR and GPT drives up to 2 TiB, with MBR recommended. The Vendroid beta channel adds experimental support for larger drives. Beta replaces the stable Vendroid installation and may contain unfinished features.
 
 Vendroid is open source and has no ads or account requirement. It is a modified version of EtchDroid by Davide Depau and contributors, installs Ventoy, and is not an official project of either.
 

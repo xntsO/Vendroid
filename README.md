@@ -82,8 +82,8 @@ that can open the drive.
    to read and write the drive's sectors. Android never has to mount the drive, so root is
    not needed.
 2. **Ventoy's layout.** Vendroid writes the layout Ventoy expects: a large exFAT partition
-   for your files and a 32 MiB `VTOYEFI` partition at the end of the drive. Stable builds
-   use an MBR partition table. The beta can also use GPT.
+   for your files and a 32 MiB `VTOYEFI` partition at the end of the drive. MBR is the
+   recommended partition table, and GPT is available too.
 3. **Official boot files.** The boot code and the `VTOYEFI` image come from the official
    Ventoy Linux package. The build pins the version, and the app checks each file's SHA-256.
 4. **Its own exFAT formatter.** Vendroid formats the data partition itself. CI checks the
@@ -149,7 +149,7 @@ to erase it. If the drive already has Ventoy, the confirmation screen offers **U
 ## Limitations
 
 - **USB drives only.** The phone's built-in SD card slot is not supported.
-- **Stable builds install MBR only.** GPT is experimental and available in the beta.
+- **MBR is recommended.** GPT is available for drives up to 2 TiB.
 - **Drives larger than 2 TiB** need GPT, so they work only in the beta.
 - **512-byte sectors only.** Drives that report another logical sector size are refused.
 - **The data partition is exFAT.** FAT32, NTFS, and UDF are not available.
@@ -207,7 +207,7 @@ Vendroid has one `foss` product flavor. It requires Java 17 and the Android SDK.
 | `fossDebug` | Development build. |
 | `fossOptimized` | Minified build with debug signing, used by the automated tests. |
 | `fossPreview` | The beta. Same package and name as stable, with `-beta` added to the version and GPT enabled. |
-| `fossGptCandidate` | Stable package with GPT enabled, for testing before GPT moves to stable. |
+| `fossGptCandidate` | Stable package with GPT enabled under a `-gpt-candidate` version, for signed physical-check builds. |
 | `fossRelease` | The stable release. |
 
 The app bundles Ventoy `1.1.18`. CI rebuilds the pinned USB libraries for 16 KB pages
