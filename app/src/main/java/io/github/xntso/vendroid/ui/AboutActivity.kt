@@ -1,5 +1,6 @@
 package io.github.xntso.vendroid.ui
 
+import android.content.Context
 import android.graphics.Typeface
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -34,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -216,18 +218,6 @@ fun AboutView() {
             )
         },
         contributorsInfo = {
-            val developerName = stringResource(R.string.developer_name)
-            val github = "GitHub"
-            val etchDroid = "EtchDroid"
-            val developerLine = stringResource(R.string.developer_credit, developerName)
-            val sourceLine = stringResource(R.string.project_source, github)
-            val etchDroidLine = stringResource(R.string.etchdroid_attribution, etchDroid, developerName)
-            val ventoySource = "github.com/ventoy/Ventoy@${BuildConfig.VENTOY_SOURCE_COMMIT.take(12)}"
-            val ventoySourceLine = stringResource(
-                R.string.ventoy_source_notice,
-                BuildConfig.VENTOY_VERSION,
-                ventoySource,
-            )
             val linkStyle = SpanStyle(
                 color = MaterialTheme.colorScheme.primary,
                 textDecoration = TextDecoration.Underline,
@@ -238,27 +228,8 @@ fun AboutView() {
             } else {
                 TextDirection.Ltr
             }
-            val annotatedText = buildAnnotatedString {
-                appendLinkedText(developerLine, developerName, "https://github.com/xntso", linkStyle)
-                append("\n")
-                appendLinkedText(
-                    sourceLine,
-                    github,
-                    "https://github.com/xntsO/Vendroid",
-                    linkStyle,
-                )
-                append("\n\n")
-                appendLinkedText(etchDroidLine, etchDroid, ProjectLinks.ETCHDROID_SOURCE, linkStyle)
-                append("\n\n")
-                appendLinkedText(
-                    ventoySourceLine,
-                    ventoySource,
-                    ProjectLinks.ventoySource(BuildConfig.VENTOY_SOURCE_COMMIT),
-                    linkStyle,
-                )
-                append("\n\n")
-                append(stringResource(R.string.gpl_license_notice))
-            }
+            val context = LocalContext.current
+            val annotatedText = aboutCreditsText(aboutCreditLines(context), linkStyle)
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -348,6 +319,57 @@ fun AboutViewPreview() {
         AboutView()
     }
 }
+
+/** One About credit line; [linkedText] is the visible word that opens [url]. */
+internal data class AboutCreditLine(val text: String, val linkedText: String? = null, val url: String? = null)
+
+/** Credit groups in display order, each a block of lines. Links use words, never raw addresses. */
+internal fun aboutCreditLines(context: Context): List<List<AboutCreditLine>> {
+    val developerName = context.getString(R.string.developer_name)
+    val github = "GitHub"
+    val etchDroid = "EtchDroid"
+    return listOf(
+        listOf(
+            AboutCreditLine(
+                context.getString(R.string.developer_credit, developerName),
+                developerName,
+                ProjectLinks.DEVELOPER_WEBSITE,
+            ),
+            AboutCreditLine(context.getString(R.string.project_source, github), github, ProjectLinks.SOURCE_CODE),
+        ),
+        listOf(
+            AboutCreditLine(
+                context.getString(R.string.etchdroid_attribution, etchDroid, developerName),
+                etchDroid,
+                ProjectLinks.ETCHDROID_SOURCE,
+            ),
+        ),
+        listOf(
+            // The link still opens the exact commit the bundled payload was built from.
+            AboutCreditLine(
+                context.getString(R.string.ventoy_source_notice, BuildConfig.VENTOY_VERSION, github),
+                github,
+                ProjectLinks.ventoySource(BuildConfig.VENTOY_SOURCE_COMMIT),
+            ),
+        ),
+        listOf(AboutCreditLine(context.getString(R.string.gpl_license_notice))),
+    )
+}
+
+internal fun aboutCreditsText(groups: List<List<AboutCreditLine>>, linkStyle: SpanStyle): AnnotatedString =
+    buildAnnotatedString {
+        groups.forEachIndexed { groupIndex, lines ->
+            if (groupIndex > 0) append("\n\n")
+            lines.forEachIndexed { lineIndex, line ->
+                if (lineIndex > 0) append("\n")
+                if (line.linkedText != null && line.url != null) {
+                    appendLinkedText(line.text, line.linkedText, line.url, linkStyle)
+                } else {
+                    append(line.text)
+                }
+            }
+        }
+    }
 
 private fun androidx.compose.ui.text.AnnotatedString.Builder.appendLinkedText(
     text: String,
