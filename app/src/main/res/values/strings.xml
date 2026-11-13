@@ -105,6 +105,8 @@
     <string name="continue_" comment="Button displayed in the dialog that forces the user to lay the device flat on a table before continuing, when the device has no gravity sensor; when pressed the operation starts.">Continue</string>
     <string name="lay_your_device_flat" comment="Title of the dialog that forces the user to lay the device flat on a table before continuing, when the device has a gravity sensor">Lay your device flat on a table and don\'t touch it</string>
     <string name="skip" comment="Button displayed in the dialog that forces the user to lay the device flat on a table before continuing, when the device has a gravity sensor; when pressed the flat check is skipped and the operation starts.">Skip</string>
+    <string name="lay_flat_reason" comment="Explains, below the lay-flat title, why the device should stay still during the operation">Moving the phone or its USB cable can disconnect the drive while Vendroid writes to it.</string>
+    <string name="lay_flat_starts_automatically" comment="Follows lay_flat_reason when the device has a gravity sensor; Skip is the button label from the skip string">Vendroid starts on its own once the phone lies flat and still, or tap Skip to start now.</string>
     <string name="developed_by" comment="Displayed in the about page; parameters are: author name, the word &quot;contributors&quot; (translated separately), &quot;GitHub&quot;">Developed by %1$s and other %2$s.\nSource code available on %3$s.\nLicensed under the GNU GPLv3 license.</string>
     <string name="about_project_summary">Vendroid is an open-source Android app for installing Ventoy on USB drives and managing boot image files.</string>
     <string name="developer_name" translatable="false">Faisal Sumayli</string>

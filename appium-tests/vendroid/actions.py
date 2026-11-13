@@ -182,9 +182,12 @@ def confirm_write_image(driver: Remote):
 def skip_lay_flat_sheet(driver: Remote):
     try:
         lay_flat_skip_btn = wait_for_element(driver, '//android.widget.TextView[@resource-id="layFlatSkipButton"]')
-        lay_flat_skip_btn.click()
     except TimeoutException:
-        pass
+        return
+    # Outside the try: a missing explanation must fail here, not be skipped as "no sheet".
+    explanation = wait_for_element(driver, '//*[@resource-id="layFlatExplanation"]')
+    assert "disconnect the drive" in explanation.get_attribute("text"), "Lay-flat sheet must say why"
+    lay_flat_skip_btn.click()
 
 
 def wait_for_success(driver: Remote, timeout: int = 120):
