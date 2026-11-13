@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -38,7 +40,9 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.tooling.preview.PreviewScreenSizes
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.xntso.vendroid.AppSettings
@@ -96,7 +100,7 @@ fun AboutViewLayout(
                     .padding(horizontal = 16.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(48.dp)
+                verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -110,7 +114,7 @@ fun AboutViewLayout(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(32.dp),
+                        .padding(vertical = 8.dp),
                     horizontalArrangement = Arrangement.Center
                 ) {
                     logo()
@@ -228,9 +232,13 @@ fun AboutView() {
                 color = MaterialTheme.colorScheme.primary,
                 textDecoration = TextDecoration.Underline,
             )
+            // Lines that start with a Latin name must still follow the UI's reading direction.
+            val textDirection = if (LocalLayoutDirection.current == LayoutDirection.Rtl) {
+                TextDirection.Rtl
+            } else {
+                TextDirection.Ltr
+            }
             val annotatedText = buildAnnotatedString {
-                append(stringResource(R.string.about_project_summary))
-                append("\n\n")
                 appendLinkedText(developerLine, developerName, "https://github.com/xntso", linkStyle)
                 append("\n")
                 appendLinkedText(
@@ -239,30 +247,51 @@ fun AboutView() {
                     "https://github.com/xntsO/Vendroid",
                     linkStyle,
                 )
-                append("\n")
+                append("\n\n")
                 appendLinkedText(etchDroidLine, etchDroid, ProjectLinks.ETCHDROID_SOURCE, linkStyle)
-                append("\n")
+                append("\n\n")
                 appendLinkedText(
                     ventoySourceLine,
                     ventoySource,
                     ProjectLinks.ventoySource(BuildConfig.VENTOY_SOURCE_COMMIT),
                     linkStyle,
                 )
-                append("\n")
+                append("\n\n")
                 append(stringResource(R.string.gpl_license_notice))
-
             }
 
-            Text(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .appiumTag("aboutCredits"),
-                text = annotatedText,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    color = MaterialTheme.colorScheme.onBackground,
-                    textAlign = TextAlign.Center
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Text(
+                    modifier = Modifier.fillMaxWidth(),
+                    text = stringResource(R.string.about_project_summary),
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        color = MaterialTheme.colorScheme.onBackground,
+                        textAlign = TextAlign.Center,
+                        textDirection = textDirection,
+                    ),
                 )
-            )
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                ) {
+                    Text(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .appiumTag("aboutCredits"),
+                        text = annotatedText,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Start,
+                            textDirection = textDirection,
+                        ),
+                    )
+                }
+            }
 
         },
         actionButtons = {
