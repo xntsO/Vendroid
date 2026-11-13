@@ -42,6 +42,20 @@ def assert_mirror_controls_without_age(driver: Remote):
     ), "Optional mirror downloads must not require an age entry"
 
 
+def _scroll_advanced_options_to(driver: Remote, resource_id: str):
+    # Compose omits sheet rows below the viewport from the accessibility tree.
+    for container in ('resourceId("ventoyAdvancedOptionsSheet")', "scrollable(true)"):
+        try:
+            driver.find_element(
+                "-android uiautomator",
+                f"new UiScrollable(new UiSelector().{container})"
+                f'.scrollIntoView(new UiSelector().resourceId("{resource_id}"))',
+            )
+            return
+        except Exception:
+            pass  # A tall screen may have nothing to scroll; the element is then already visible.
+
+
 def configure_ventoy_options(
     driver: Remote,
     label: str,
@@ -72,12 +86,14 @@ def configure_ventoy_options(
     )
     WebDriverWait(driver, 5).until(lambda _: reserve_field.get_attribute("text") == str(reserved_mib))
 
+    _scroll_advanced_options_to(driver, "ventoySmallUsbTransfersSwitch")
     transfers_switch = wait_for_element(driver, '//*[@resource-id="ventoySmallUsbTransfersSwitch"]')
     if (transfers_switch.get_attribute("checked") == "true") != small_usb_transfers:
         transfers_switch.click()
     WebDriverWait(driver, 5).until(
         lambda _: (transfers_switch.get_attribute("checked") == "true") == small_usb_transfers
     )
+    _scroll_advanced_options_to(driver, "ventoyApplyOptionsButton")
     wait_for_element(driver, '//*[@resource-id="ventoyApplyOptionsButton"]').click()
     summary = wait_for_element(driver, '//*[@resource-id="ventoyOptionsSummary"]', timeout=15)
     WebDriverWait(driver, 5).until(
