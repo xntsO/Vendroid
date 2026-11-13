@@ -207,7 +207,8 @@ to `0.2.0-beta.2`, built from `5f42150`, and code 33 to `0.2.0-beta.3`, built fr
 code 35 to the second, built from `9bb0dc8` after the license fixes, and code 36 to the third,
 built from `b888b78` after the slow-drive USB fixes, for the physical check. Code 37 went to an
 unpublished signed `0.2.0-beta`, built from `07a16c2` with the Play workflow's prepare mode, for the
-owner's phone test before publishing.
+owner's phone test before publishing. Code 38 went to the `0.2.0-beta` published to the closed
+track from `5392dd2`, bundle SHA-256 `c49bb6124c71cc4f276216b8ec4e2ce38574effca35df2bf5ab43dddf4826001`.
 Increment `defaultVersionCode` before distributing the next distinct version. CI reads
 the code and version name directly from Gradle source. An explicit `VENDROID_VERSION_CODE`
 override must be at least the checked-in default and at most 2100000000.
