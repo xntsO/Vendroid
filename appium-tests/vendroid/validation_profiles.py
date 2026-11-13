@@ -13,6 +13,9 @@ class ValidationProfile:
     partition_style: str
     layout: str
     supports_large_drives: bool
+    # Whether the partition-style menu offers GPT. Stable gained it at the GPT promotion;
+    # its lifecycle still installs MBR, the recommended default.
+    gpt_enabled: bool
 
     def version(self, base_version: str) -> str:
         return base_version + self.version_suffix
@@ -20,13 +23,13 @@ class ValidationProfile:
 
 PROFILES = {
     "stable": ValidationProfile(
-        "stable", "io.github.xntso.vendroid", "Vendroid", "", "MBR (Recommended)", "mbr", False,
+        "stable", "io.github.xntso.vendroid", "Vendroid", "", "MBR (Recommended)", "mbr", False, True,
     ),
     "preview": ValidationProfile(
-        "preview", "io.github.xntso.vendroid", "Vendroid", "-beta", "GPT (Preview)", "gpt", True,
+        "preview", "io.github.xntso.vendroid", "Vendroid", "-beta", "GPT (Preview)", "gpt", True, True,
     ),
     "gpt-candidate": ValidationProfile(
-        "gpt-candidate", "io.github.xntso.vendroid", "Vendroid", "-gpt-candidate", "GPT", "gpt", False,
+        "gpt-candidate", "io.github.xntso.vendroid", "Vendroid", "-gpt-candidate", "GPT", "gpt", False, True,
     ),
 }
 

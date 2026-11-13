@@ -34,7 +34,7 @@ val vendroidVersionCode = providers.environmentVariable("VENDROID_VERSION_CODE")
         }
         code
     }
-val stableGptEnabled = false
+val stableGptEnabled = true
 // Distribution sets a numbered suffix from the release tag, such as -beta.2.
 val betaVersionSuffix = providers.environmentVariable("VENDROID_BETA_SUFFIX").orNull
     ?.takeIf { it.isNotEmpty() }
@@ -133,7 +133,7 @@ android {
             }
         }
         create("gptCandidate") {
-            // Exercise GPT in the stable package before its physical promotion gate.
+            // Stable package with GPT, kept for signed candidates now that stable has GPT too.
             // Large-drive permission remains tied to IS_PREVIEW, which stays false.
             initWith(getByName("optimized"))
             matchingFallbacks += listOf("release")
